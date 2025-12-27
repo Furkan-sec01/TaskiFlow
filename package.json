@@ -1,0 +1,10 @@
+{
+  "name": "taskiflow-root",
+  "version": "1.0.0",
+  "description": "TaskiFlow Ana Proje Klasörü",
+  "scripts": {
+    "test": "echo \"Hata: test belirtilmedi\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

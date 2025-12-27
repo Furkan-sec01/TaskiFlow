@@ -1,0 +1,75 @@
+// server/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id            Int            @id @default(autoincrement())
+  name          String
+  users         User[]
+  notifications Notification[]
+  createdAt     DateTime       @default(now())
+}
+
+model User {
+  id               Int          @id @default(autoincrement())
+  email            String       @unique
+  password         String
+  name             String?
+  bio              String?      // Biyografi alanı
+  organizationId   Int
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  status           String       @default("active") // "pending" | "active"
+  verificationToken String?     @unique
+  projects         Project[]
+  tasks            Task[]
+  createdAt        DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([verificationToken])
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  tasks       Task[]
+  createdAt   DateTime @default(now())
+}
+
+model Task {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  status      String   @default("TODO") // TODO, IN_PROGRESS, DONE
+  priority    String   @default("MEDIUM") // LOW, MEDIUM, HIGH
+  dueDate     DateTime?
+  
+  projectId   Int
+  project     Project  @relation(fields: [projectId], references: [id])
+  
+  userId      Int?     // Görevi yapacak kişi (opsiyonel)
+  user        User?    @relation(fields: [userId], references: [id])
+  
+  createdAt   DateTime @default(now())
+}
+
+
+model Notification {
+  id             Int          @id @default(autoincrement())
+  message        String
+  type           String       // "success", "alert", "info"
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+}
