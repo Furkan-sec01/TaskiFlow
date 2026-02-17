@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import {
-  LayoutDashboard, CheckSquare, Users, Settings, LogOut, Bell, Search, Plus, X, Flag, AlertCircle, CheckCircle, Clock
+  LayoutDashboard, FolderKanban, Users, Settings, LogOut, Bell, Search, Plus, X, 
+  Folder, Calendar, ChevronRight, AlertCircle, Activity, Layout as LayoutIcon
 } from "lucide-react";
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
@@ -13,249 +14,273 @@ const Dashboard = () => {
   const navigate = useNavigate();
   
   const [currentUser, setCurrentUser] = useState<any>(null);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [tasks, setTasks] = useState<any[]>([]); 
+  const [projects, setProjects] = useState<any[]>([]); 
+  const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [chartData, setChartData] = useState<any[]>([]);
   
-  const [newTask, setNewTask] = useState({ title: "", date: "", time: "", priority: "MEDIUM" });
+  const [newProject, setNewProject] = useState({ title: "", description: "" });
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    if (!storedUser) {
+    const token = localStorage.getItem("token");
+
+    if (!storedUser || !token) {
       navigate("/login"); 
     } else {
       const user = JSON.parse(storedUser);
       setCurrentUser(user);
-      fetchTasks(user.id);
+      fetchProjects();
     }
   }, []);
 
-  const fetchTasks = async (userId: number) => {
+  const calculateChartData = (projectList: any[]) => {
+    const daysMap: any = { "Pzt": 0, "Sal": 0, "Çar": 0, "Per": 0, "Cum": 0, "Cmt": 0, "Paz": 0 };
+    const dayNames = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
+
+    projectList.forEach((proj) => {
+      const date = new Date(proj.createdAt);
+      const dayName = dayNames[date.getDay()];
+      if (daysMap[dayName] !== undefined) daysMap[dayName]++;
+    });
+
+    const formattedData = [
+      { name: "Pzt", projects: daysMap["Pzt"] },
+      { name: "Sal", projects: daysMap["Sal"] },
+      { name: "Çar", projects: daysMap["Çar"] },
+      { name: "Per", projects: daysMap["Per"] },
+      { name: "Cum", projects: daysMap["Cum"] },
+      { name: "Cmt", projects: daysMap["Cmt"] },
+      { name: "Paz", projects: daysMap["Paz"] },
+    ];
+    setChartData(formattedData);
+  };
+
+  const fetchProjects = async () => {
     setErrorMessage("");
+    const token = localStorage.getItem("token");
     try {
-      // 🛠️ DÜZELTME: localhost yerine 127.0.0.1 yazıldı
-      const response = await fetch(`http://127.0.0.1:5000/api/tasks?userId=${userId}`);
-      
+      const response = await fetch("http://localhost:5000/api/project", {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       if (response.ok) {
         const data = await response.json();
-        const taskArray = Array.isArray(data) ? data : [];
-        setTasks(taskArray);
-        calculateGraphData(taskArray);
-      } else { 
-        setTasks([]); 
-        throw new Error("Veri alınamadı"); 
+        setProjects(Array.isArray(data) ? data : []);
+        calculateChartData(data);
+      } else {
+        throw new Error("Projeler yüklenemedi.");
       }
-    } catch (error) { 
-        setTasks([]);
-        setErrorMessage("Sunucuya bağlanılamadı."); 
+    } catch (error) {
+      setErrorMessage("Sunucuyla bağlantı kurulamadı.");
     }
   };
 
-  const filteredTasks = tasks.filter((task) => 
-    task.title?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const calculateGraphData = (taskList: any[]) => {
-    const counts: any = { Pzt: 0, Sal: 0, Çar: 0, Per: 0, Cum: 0, Cmt: 0, Paz: 0 };
-    const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
-    taskList.forEach((task) => {
-      if (task.dueDate) {
-        const d = new Date(task.dueDate);
-        const day = dayNames[d.getDay()];
-        if (counts[day] !== undefined) counts[day]++;
-      }
-    });
-    setChartData([
-      { name: 'Pzt', tasks: counts['Pzt'] }, { name: 'Sal', tasks: counts['Sal'] },
-      { name: 'Çar', tasks: counts['Çar'] }, { name: 'Per', tasks: counts['Per'] },
-      { name: 'Cum', tasks: counts['Cum'] }, { name: 'Cmt', tasks: counts['Cmt'] },
-      { name: 'Paz', tasks: counts['Paz'] },
-    ]);
-  };
-
-  const handleAddTask = async (e: React.FormEvent) => {
+  const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTask.title || !currentUser) return;
+    if (!newProject.title) return;
     setIsLoading(true);
+    const token = localStorage.getItem("token");
     try {
-      // 🛠️ DÜZELTME: localhost yerine 127.0.0.1 yazıldı
-      const res = await fetch("http://127.0.0.1:5000/api/tasks", {
-        method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ 
-            title: newTask.title,
-            priority: newTask.priority,
-            date: newTask.date, 
-            userId: currentUser.id 
-        }),
+      const res = await fetch("http://localhost:5000/api/project", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(newProject)
       });
-      if (res.ok) { 
-        await fetchTasks(currentUser.id);
+      if (res.ok) {
         setIsModalOpen(false); 
-        setNewTask({ title: "", date: "", time: "", priority: "MEDIUM" }); 
-      } else {
-        alert("Görev eklenirken bir hata oluştu.");
+        setNewProject({ title: "", description: "" }); 
+        fetchProjects(); 
       }
-    } catch (error) { 
-        console.error(error);
-        alert("Sunucuyla iletişim hatası."); 
-    } finally { 
-        setIsLoading(false); 
+    } catch (error) {
+      alert("İşlem sırasında bir hata oluştu.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleLogout = () => {
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
     navigate("/login");
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "Tarih Yok";
-    return new Date(dateString).toLocaleDateString("tr-TR", { day: "numeric", month: "long" });
-  };
-
-  // Yardımcı Fonksiyonlar
-  const getPriorityLabel = (p: string) => p === "HIGH" ? "Yüksek" : p === "MEDIUM" ? "Orta" : "Düşük";
-  const getPriorityColor = (p: string) => p === "HIGH" ? "bg-red-100 text-red-600" : p === "MEDIUM" ? "bg-orange-100 text-orange-600" : "bg-green-100 text-green-600";
-  const getPriorityBadgeColor = (p: string) => p === "HIGH" ? "bg-red-50 text-red-600" : p === "MEDIUM" ? "bg-orange-50 text-orange-600" : "bg-green-50 text-green-600";
-
   return (
-    <div className={`flex h-screen font-sans transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-[#F3F4F6] text-gray-800'}`}>
+    <div className={`flex h-screen overflow-hidden transition-colors duration-500 ${darkMode ? 'bg-[#0F172A] text-slate-200' : 'bg-[#F1F5F9] text-slate-900'}`}>
       
       {/* MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className={`w-full max-w-lg p-8 rounded-3xl shadow-2xl transition-colors ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Yeni Görev Oluştur</h2>
-              <button onClick={() => setIsModalOpen(false)} className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}><X size={20}/></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-md p-6">
+          <div className={`w-full max-w-lg p-10 rounded-[2rem] shadow-2xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold tracking-tight">Yeni Proje Kaydı</h2>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-all"><X size={20}/></button>
             </div>
-            <form onSubmit={handleAddTask} className="space-y-5">
-              <div><label className="block text-sm font-semibold mb-2">Görev Adı</label><input type="text" placeholder="Yapılacak iş..." className={`w-full px-4 py-3 rounded-xl border outline-none ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'}`} value={newTask.title} onChange={(e) => setNewTask({...newTask, title: e.target.value})} /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-semibold mb-2">Tarih</label><input type="date" className={`w-full px-4 py-3 rounded-xl border outline-none ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'}`} value={newTask.date} onChange={(e) => setNewTask({...newTask, date: e.target.value})} /></div>
-                <div><label className="block text-sm font-semibold mb-2">Saat</label><input type="time" className={`w-full px-4 py-3 rounded-xl border outline-none ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200'}`} value={newTask.time} onChange={(e) => setNewTask({...newTask, time: e.target.value})} /></div>
+            <form onSubmit={handleCreateProject} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold mb-2 opacity-70">PROJE ADI</label>
+                <input type="text" required value={newProject.title} onChange={(e) => setNewProject({...newProject, title: e.target.value})} className={`w-full px-6 py-4 rounded-xl border-2 outline-none focus:border-blue-500 transition-all font-medium ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`} placeholder="E-Ticaret Web Sitesi..." />
               </div>
-              <div className="flex gap-3">
-                {[
-                    { val: 'LOW', label: 'Düşük' }, 
-                    { val: 'MEDIUM', label: 'Orta' }, 
-                    { val: 'HIGH', label: 'Yüksek' }
-                ].map((p) => (
-                  <button key={p.val} type="button" onClick={() => setNewTask({...newTask, priority: p.val})}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border flex items-center justify-center gap-2 ${newTask.priority === p.val ? 'bg-blue-100 text-blue-600 border-blue-200' : (darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200')}`}>
-                    <Flag size={16}/> {p.label}
-                  </button>
-                ))}
+              <div>
+                <label className="block text-sm font-semibold mb-2 opacity-70">AÇIKLAMA</label>
+                <textarea rows={3} value={newProject.description} onChange={(e) => setNewProject({...newProject, description: e.target.value})} className={`w-full px-6 py-4 rounded-xl border-2 outline-none focus:border-blue-500 transition-all font-medium ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`} placeholder="Projenin temel hedefleri..." />
               </div>
-              <button type="submit" disabled={isLoading} className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all shadow-lg">{isLoading ? "Ekleniyor..." : "Görevi Ekle"}</button>
+              <button type="submit" disabled={isLoading} className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98]">
+                {isLoading ? "İşleniyor..." : "Projeyi Onayla"}
+              </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* SOL MENÜ */}
-      <aside className={`hidden w-72 flex-col border-r md:flex transition-colors duration-300 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-        <div className={`h-20 flex items-center px-8 border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
-          <div className="h-10 w-10 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl mr-3">T</div>
-          <span className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>TaskiFlow</span>
+      {/* SIDEBAR */}
+      <aside className={`hidden w-80 flex-col border-r shadow-sm md:flex ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+        <div className="h-28 flex items-center px-10">
+          <div className="h-10 w-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl mr-3 shadow-blue-500/30 shadow-lg">T</div>
+          <span className="text-xl font-bold tracking-tight">TaskiFlow</span>
         </div>
-        <nav className="flex-1 px-4 py-8 space-y-2">
-          <Link to="/dashboard" className="flex items-center px-4 py-3 rounded-xl bg-blue-600 text-white shadow-lg"><LayoutDashboard size={22} /> <span className="ml-3 font-medium">Genel Bakış</span></Link>
-          <Link to="/tasks" className={`flex items-center px-4 py-3 rounded-xl ${darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}><CheckSquare size={22} /> <span className="ml-3 font-medium">Görevlerim</span></Link>
-          <Link to="/team" className={`flex items-center px-4 py-3 rounded-xl ${darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}><Users size={22} /> <span className="ml-3 font-medium">Ekip Arkadaşları</span></Link>
-          <Link to="/settings" className={`flex items-center px-4 py-3 rounded-xl ${darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}><Settings size={22} /> <span className="ml-3 font-medium">Ayarlar</span></Link>
+        <nav className="flex-1 px-6 space-y-1">
+          <NavItem to="/dashboard" icon={<LayoutDashboard size={20}/>} label="Genel Bakış" active darkMode={darkMode} />
+          <NavItem to="/projects" icon={<FolderKanban size={20}/>} label="Projelerim" darkMode={darkMode} />
+          <NavItem to="/team" icon={<Users size={20}/>} label="Ekip Yönetimi" darkMode={darkMode} />
+          <NavItem to="/settings" icon={<Settings size={20}/>} label="Sistem Ayarları" darkMode={darkMode} />
         </nav>
-        <div className={`p-6 border-t ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
-          <button onClick={handleLogout} className={`flex items-center justify-center w-full px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${darkMode ? 'text-red-400 bg-red-900/20 hover:bg-red-900/30' : 'text-red-600 bg-red-50 hover:bg-red-100'}`}>
-            <LogOut size={18} className="mr-2" /> Çıkış Yap
+        <div className="p-8 border-t dark:border-slate-800">
+          <button onClick={handleLogout} className="flex items-center gap-3 w-full px-5 py-4 text-red-500 font-bold hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl transition-all">
+            <LogOut size={20} /> Oturumu Kapat
           </button>
         </div>
       </aside>
 
-      {/* İÇERİK */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
-        <header className={`h-20 backdrop-blur-md border-b flex items-center justify-between px-8 sticky top-0 z-20 transition-colors ${darkMode ? 'bg-gray-900/80 border-gray-700' : 'bg-white/80 border-gray-200'}`}>
-          <div className="flex items-center gap-4">
-            <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-              Merhaba, {currentUser?.name || "Kullanıcı"} 👋
-            </h2>
-            <div className="relative group hidden sm:block">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input type="text" placeholder="Ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
-                className={`pl-10 pr-4 py-2 rounded-full text-sm outline-none transition-all w-64 ${darkMode ? 'bg-gray-800 focus:bg-gray-700 text-white' : 'bg-gray-100 focus:bg-white'}`} />
-            </div>
+      {/* MAIN */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <header className={`h-24 flex items-center justify-between px-12 border-b ${darkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-white/70 border-slate-200'} backdrop-blur-xl`}>
+          <div>
+            <h1 className="text-2xl font-bold">Hoş Geldiniz, {currentUser?.name?.split(' ')[0]}</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <Link to="/notifications" className={`relative p-2 rounded-full ${darkMode ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}><Bell size={20} /></Link>
-            <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 text-white px-5 py-2.5 rounded-full font-bold shadow-lg flex gap-2"><Plus size={20}/> Yeni Görev</button>
+          <div className="flex items-center gap-6">
+            <div className="relative hidden lg:block">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input type="text" placeholder="Proje kayıtlarında ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`pl-12 pr-6 py-3 rounded-xl text-sm w-72 outline-none border transition-all ${darkMode ? 'bg-slate-800 border-slate-700 focus:border-blue-500' : 'bg-slate-100 border-transparent focus:bg-white focus:border-slate-300'}`} />
+            </div>
+            <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 text-white px-7 py-3 rounded-xl font-bold shadow-blue-500/20 shadow-xl flex items-center gap-2 hover:bg-blue-700 transition-all active:scale-95">
+              <Plus size={20}/> Yeni Proje
+            </button>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8">
-          {errorMessage && <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl flex items-center gap-2"><AlertCircle size={20} /> {errorMessage}</div>}
+        <div className="flex-1 overflow-y-auto p-12 space-y-12 bg-transparent">
+          {errorMessage && <div className="p-5 bg-red-50 text-red-600 rounded-2xl flex items-center gap-3 border border-red-100 font-semibold shadow-sm"><AlertCircle size={20}/> {errorMessage}</div>}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <StatCard darkMode={darkMode} title="Toplam Görev" value={tasks.length} color="bg-blue-500" icon={<CheckSquare className="text-white"/>} />
-            <StatCard darkMode={darkMode} title="Tamamlanan" value={tasks.filter(t => t.status === "DONE").length} color="bg-indigo-500" icon={<CheckCircle className="text-white"/>} />
-            <StatCard darkMode={darkMode} title="Bekleyen" value={tasks.filter(t => t.status !== "DONE").length} color="bg-orange-500" icon={<Clock className="text-white"/>} />
-          </div>
+          {/* PROJE GRID */}
+          <section>
+            <div className="flex items-baseline justify-between mb-10">
+              <h2 className="text-3xl font-bold tracking-tight">Kayıtlı Projeler</h2>
+              <div className="h-[2px] flex-1 mx-8 bg-slate-200 dark:bg-slate-800 opacity-50"></div>
+              <span className="text-sm font-bold opacity-40 uppercase tracking-widest">{projects.length} TOPLAM</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
+              {projects.length === 0 ? (
+                <div className="col-span-full py-24 text-center border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-[3rem] opacity-30">
+                   <LayoutIcon size={48} className="mx-auto mb-4" />
+                   <p className="font-bold text-lg">Görüntülenecek proje bulunamadı.</p>
+                </div>
+              ) : (
+                projects.filter(p => p.title.toLowerCase().includes(searchTerm.toLowerCase())).map((project) => (
+                  <ProjectCard key={project.id} project={project} darkMode={darkMode} />
+                ))
+              )}
+            </div>
+          </section>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className={`lg:col-span-2 p-6 rounded-3xl border shadow-sm transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
-              <h3 className={`text-lg font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Haftalık Performans</h3>
+          {/* ANALİZ ALANI */}
+          <section className="grid grid-cols-1 lg:grid-cols-4 gap-10 pb-12">
+            <div className="lg:col-span-1 space-y-6">
+              <StatBox title="Toplam Proje" value={projects.length} icon={<Folder size={22}/>} accentColor="blue" darkMode={darkMode} />
+              <StatBox title="Ekip Mevcudu" value="0" icon={<Users size={22}/>} accentColor="purple" darkMode={darkMode} />
+            </div>
+
+            <div className={`lg:col-span-3 p-10 rounded-[2.5rem] border shadow-sm ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+              <div className="flex items-center justify-between mb-10">
+                <h3 className="text-xl font-bold tracking-tight">Proje Oluşturma Trendi</h3>
+                <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-white-800 rounded-full text-[10px] font-black tracking-widest opacity-60">
+                  <div className="w-2 h-2 rounded-full bg-blue-500"></div> GERÇEK ZAMANLI
+                </div>
+              </div>
               <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? '#374151' : '#E5E7EB'} />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: darkMode ? '#9CA3AF' : '#6B7280'}} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fill: darkMode ? '#9CA3AF' : '#6B7280'}} />
-                    <Tooltip contentStyle={{backgroundColor: darkMode ? '#1F2937' : '#fff', borderColor: darkMode ? '#374151' : '#f3f4f6', color: darkMode ? '#fff' : '#000'}} />
-                    <Area type="monotone" dataKey="tasks" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.1} />
+                    <defs>
+                      <linearGradient id="colorProj" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? '#334155' : '#E2E8F0'} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontWeight: 'bold'}} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                    <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', background: darkMode ? '#1e293b' : '#fff'}} />
+                    <Area type="monotone" dataKey="projects" stroke="#3B82F6" strokeWidth={3} fill="url(#colorProj)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             </div>
-
-            <div className={`p-6 rounded-3xl border shadow-sm flex flex-col transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
-              <div className="flex items-center justify-between mb-6">
-                <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{searchTerm ? `Sonuçlar (${filteredTasks.length})` : `Son Görevler (${tasks.length})`}</h3>
-                <Link to="/tasks" className="text-blue-600 text-sm font-medium hover:underline">Tümü</Link>
-              </div>
-              <div className="space-y-4 overflow-y-auto pr-2 max-h-[400px]">
-                {filteredTasks.length === 0 ? <div className="text-center py-10 text-gray-400">Görev bulunamadı.</div> : filteredTasks.map((task, index) => (
-                  <div key={task.id || index} className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${darkMode ? 'hover:bg-gray-700 border-transparent hover:border-gray-600' : 'hover:bg-gray-50 border-transparent hover:border-gray-100'}`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`h-10 w-10 rounded-full flex items-center justify-center text-lg font-bold ${getPriorityColor(task.priority)}`}>
-                        {task.title ? task.title.charAt(0).toUpperCase() : "?"}
-                      </div>
-                      <div>
-                        <p className={`text-sm font-bold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{task.title}</p>
-                        <p className="text-xs text-gray-500">{formatDate(task.dueDate)}</p>
-                      </div>
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded-md font-bold ${getPriorityBadgeColor(task.priority)}`}>
-                        {getPriorityLabel(task.priority)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          </section>
         </div>
       </main>
     </div>
   );
 };
 
-const StatCard = ({ title, value, icon, color, darkMode }: any) => (
-  <div className={`p-6 rounded-3xl border shadow-sm flex justify-between items-start transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
-    <div><p className="text-gray-500 text-sm mb-1">{title}</p><h3 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{value}</h3></div>
-    <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shadow-md ${color}`}>{icon}</div>
+// YARDIMCI BİLEŞENLER
+const NavItem = ({ to, icon, label, active = false, darkMode }: any) => (
+  <Link to={to} className={`flex items-center gap-4 px-6 py-4 rounded-xl font-bold transition-all ${active ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-slate-800'}`}>
+    {icon} <span className="text-sm">{label}</span>
+  </Link>
+);
+
+const StatBox = ({ title, value, icon, accentColor, darkMode }: any) => {
+  const accentClasses: any = {
+    blue: "text-blue-600 bg-blue-50 dark:bg-blue-900/20",
+    purple: "text-purple-600 bg-purple-50 dark:bg-purple-900/20",
+    emerald: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20",
+  };
+  return (
+    <div className={`p-8 rounded-3xl border shadow-sm transition-all hover:shadow-md ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-[10px] font-black tracking-[0.2em] opacity-40 uppercase">{title}</p>
+        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${accentClasses[accentColor]}`}>
+          {icon}
+        </div>
+      </div>
+      <h3 className="text-3xl font-bold tracking-tight">{value}</h3>
+    </div>
+  );
+};
+
+const ProjectCard = ({ project, darkMode }: any) => (
+  <div className={`group p-8 rounded-[2.5rem] border transition-all hover:shadow-2xl hover:border-blue-500/50 hover:-translate-y-1 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+    <div className="flex justify-between items-start mb-8">
+      <div className="h-14 w-14 bg-slate-100 dark:bg-slate-800 text-blue-600 rounded-2xl flex items-center justify-center transition-all group-hover:bg-blue-600 group-hover:text-white shadow-inner">
+        <FolderKanban size={24} />
+      </div>
+      <span className="text-[10px] font-bold tracking-widest bg-blue-50 dark:bg-blue-900/30 text-blue-600 px-3 py-1 rounded-full">KAYITLI</span>
+    </div>
+    <h4 className="text-xl font-bold mb-3 tracking-tight group-hover:text-blue-500 transition-colors">{project.title}</h4>
+    <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-8 h-10">{project.description || "Resmi kayıt açıklaması bulunmuyor."}</p>
+    <div className="flex items-center justify-between pt-6 border-t border-slate-100 dark:border-slate-800">
+      <div className="flex items-center gap-2 text-slate-400 font-bold text-[10px]">
+        <Calendar size={14} /> {new Date(project.createdAt).toLocaleDateString("tr-TR")}
+      </div>
+      <Link to={`/projects/${project.id}`} className="text-blue-600 font-bold text-sm flex items-center gap-1 hover:gap-3 transition-all">
+        Dosyayı Aç <ChevronRight size={18} />
+      </Link>
+    </div>
   </div>
 );
 

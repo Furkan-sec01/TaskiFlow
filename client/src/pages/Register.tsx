@@ -16,18 +16,24 @@ const Register = () => {
     e.preventDefault(); // Sayfanın yenilenmesini engelle
 
     try {
-      // Backend'e (Sunucuya) verileri gönder
       const res = await fetch("http://localhost:5000/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
       });
 
-      if (res.ok) {
-        alert("Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz.");
-        navigate("/login"); // Başarılıysa giriş sayfasına git
-      } else {
-        const data = await res.json();
+      const data = await res.json();
+
+      if(res.ok){
+        localStorage.setItem("token",data.token);
+        localStorage.setItem("user",JSON.stringify(data.user));
+
+        alert("Kayıt Başarılı.");
+        navigate("/dashboard");
+
+        window.location.reload();
+      }
+      else{
         alert(data.error || "Kayıt başarısız oldu.");
       }
     } catch (error) {
