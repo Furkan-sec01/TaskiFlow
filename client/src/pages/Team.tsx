@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import { LayoutDashboard, CheckSquare, Users, Settings, Mail, UserPlus, Trash2, LogOut } from "lucide-react";
+import NotificationDropdown from "../components/NotificationDropdown";
 
 const Team = () => {
   const { darkMode } = useTheme();
@@ -18,7 +19,6 @@ const Team = () => {
     fetchUsers();
   }, []);
 
-  // 1. Kullanıcıları Listele (Backend'e Bağlı)
   const fetchUsers = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -27,7 +27,7 @@ const Team = () => {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/users", {
+      const res = await fetch("http://localhost:5000/api/organizations/members", {
         headers: { "Authorization": `Bearer ${token}` }
       });
 
@@ -45,6 +45,49 @@ const Team = () => {
       setUsers([]);
     }
   };
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem("token");
+
+    if(!newMember.email){
+      alert("Lütfen bir e-posta adresi girin.");
+      return;
+    }
+
+    setIsSending(true);
+
+    try{
+      const res = await fetch("http://localhost:5000/api/organizations/invite",{
+        method: "POST",
+        headers: {
+          "Content-Type":"application/json",
+          "Authorization": `Bearer ${token}`
+        },
+
+        body: JSON.stringify({
+          email: newMember.email
+        })
+      });
+      const data = await res.json();
+      
+      if(res.ok){
+        alert("Davet bildirimi başarıyla gönderildi!");
+        setIsModalOpen(false);
+        setNewMember({name: "", email: ""});
+      }
+      else{
+        alert(data.message || "Davet gönderilirken bir hata oluştu.");
+      }
+    } catch(error){
+      console.error("Davet hatası:", error);
+      alert("Sunucuya bağlanılamadı.");
+    } finally{
+      setIsSending(false);
+    }
+  }
+
+
 
   // 2. Çıkış Yap
   const handleLogout = () => {
@@ -64,15 +107,41 @@ const Team = () => {
   return (
     <div className={`flex h-screen font-sans transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-[#F3F4F6] text-gray-800'}`}>
       
-      {/* MODAL */}
-      {isModalOpen && (
+     {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className={`p-8 rounded-3xl shadow-2xl w-full max-w-md transition-colors ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
             <h2 className="text-2xl font-bold mb-6">Ekip Arkadaşı Davet Et</h2>
-            <div className="p-4 bg-yellow-50 text-yellow-800 rounded-xl mb-4 text-sm font-semibold">
-                ⚠️ Davet sistemi henüz aktif değil.
-            </div>
-            <button onClick={() => setIsModalOpen(false)} className="w-full py-3 bg-gray-200 text-gray-800 rounded-xl font-bold">Kapat</button>
+            
+            <form onSubmit={handleInvite} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1 opacity-70">E-posta Adresi</label>
+                <input 
+                  type="email"
+                  required
+                  placeholder="arkadas@sirket.com"
+                  className={`w-full p-3 rounded-xl border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} outline-none focus:ring-2 focus:ring-blue-500`}
+                  value={newMember.email}
+                  onChange={(e) => setNewMember({...newMember, email: e.target.value})}
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setIsModalOpen(false)} 
+                  className={`flex-1 py-3 rounded-xl font-bold ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}
+                >
+                  İptal
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isSending}
+                  className={`flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-opacity ${isSending ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {isSending ? "Gönderiliyor..." : "Davet Gönder"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -100,6 +169,7 @@ const Team = () => {
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Ekip Yönetimi</h1>
+          <NotificationDropdown />
           <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2">
             <UserPlus size={20}/> Yeni Üye Ekle
           </button>
