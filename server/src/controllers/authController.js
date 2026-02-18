@@ -7,44 +7,56 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 //kayıt ol
 exports.register = async (req, res) => {
-  const {email, password, name} = req.body;
+  const { email, password, name } = req.body;
 
-  try{
-    const existingUser = await prisma.user.findUnique({where: {email}});
-    if(existingUser) return res.status(400).json({error: "E-posta Kullanımda."});
+  try {
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) return res.status(400).json({ error: "E-posta Kullanımda." });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const newUser = await prisma.$transaction(async (tx) => {
-      const org = await tx.organization.create({
-        data: {name: `${name}'s Workspace`}
+      
+      const user = await tx.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          name,
+          status: "active"
+        }
       });
 
-      return await tx.user.create({
+      const org = await tx.organization.create({
         data: {
-          email, password: hashedPassword, name,
-          organizationId: org.id, status: "active"
+          name: `${name}'s Workspace`,
+          ownerId: user.id
         }
+      });
+
+  
+      return await tx.user.update({
+        where: { id: user.id },
+        data: { organizationId: org.id }
       });
     });
 
-      const token = jwt.sign(
-        {
-          userId: newUser.id,
-          email: newUser.email,
-          organizationId: newUser.organizationId  
-        },
-        JWT_SECRET,
-        {expiresIn: '24h'}
-      );
+    const token = jwt.sign(
+      {
+        userId: newUser.id,
+        email: newUser.email,
+        organizationId: newUser.organizationId
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
 
-      res.status(201).json({message: "Kayıt Başarılı",token, user: newUser});
+    const { password: _, ...userData } = newUser;
+    res.status(201).json({ message: "Kayıt Başarılı", token, user: userData });
 
-  } catch(error){
+  } catch (error) {
     console.error("Register Error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Kayıt işlemi başarısız oldu." });
   }
-}
+};
 
 
 //login

@@ -28,7 +28,7 @@ const NotificationDropdown = () => {
   const handleAction = async (notificationId: string, action: "ACCEPT" | "REJECT") => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/notifications/respond-invite", {
+      const res = await fetch("http://localhost:5000/api/notifications/respond-invite", { // Backend route isminle (respond-invite) eşleştiğinden emin ol
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -37,14 +37,33 @@ const NotificationDropdown = () => {
         body: JSON.stringify({ notificationId, action })
       });
 
+      const data = await res.json(); // Backend'den gelen yanıtı (mesaj ve token) alıyoruz
+
       if (res.ok) {
+        // 1. Bildirimi arayüzden kaldır
         setNotifications(prev => prev.filter(n => n.id !== notificationId));
-        if (action === "ACCEPT") {
+
+        if (action === "ACCEPT" && data.token) {
+          // 🔥 KRİTİK NOKTA: Eski token'ın üzerine yenisini yazıyoruz!
+          localStorage.setItem("token", data.token);
+          
+          // Opsiyonel: Eğer user objesini de localStorage'da tutuyorsan onu da güncellemen iyi olur
+          // Örn: const user = JSON.parse(localStorage.getItem("user") || "{}");
+          // user.organizationId = data.newOrganizationId; // Backend'den geliyorsa
+          // localStorage.setItem("user", JSON.stringify(user));
+
+          // Sayfayı yenile ki yeni token ile tüm Context/State baştan kurulsun
           window.location.reload();
+        } else if (action === "ACCEPT") {
+             // Eğer ACCEPT dedik ama token gelmediyse (hata durumu)
+             console.error("Yeni token alınamadı.");
         }
+      } else {
+        alert(data.error || "İşlem başarısız.");
       }
     } catch (error) {
-      console.error("İşlem sırasında hata oluştu");
+      console.error("İşlem sırasında hata oluştu:", error);
+      alert("Sunucuya bağlanılamadı.");
     } finally {
       setLoading(false);
     }

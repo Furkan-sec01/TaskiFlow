@@ -10,6 +10,7 @@ datasource db {
 model Organization {
   id            String         @id @default(uuid())
   name          String
+  ownerId       String
   users         User[]         
   notifications Notification[] 
   createdAt     DateTime       @default(now())

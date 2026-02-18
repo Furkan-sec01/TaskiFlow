@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
-import { LayoutDashboard, CheckSquare, Users, Settings, Mail, UserPlus, Trash2, LogOut } from "lucide-react";
+import { LayoutDashboard, CheckSquare, Users, Settings, Mail, UserPlus, Trash2, LogOut, AlertTriangle, UserMinus, User } from "lucide-react";
 import NotificationDropdown from "../components/NotificationDropdown";
 
 const Team = () => {
@@ -13,6 +13,7 @@ const Team = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newMember, setNewMember] = useState({ name: "", email: "" });
   const [isSending, setIsSending] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
 
   // Sayfa Yüklendiğinde Çalışacak
   useEffect(() => {
@@ -71,14 +72,12 @@ const Team = () => {
       });
       const data = await res.json();
       
-      if(res.ok){
-        alert("Davet bildirimi başarıyla gönderildi!");
-        setIsModalOpen(false);
-        setNewMember({name: "", email: ""});
+      if(!res.ok){
+        alert(data.error || "Bir hata oluştu");
+        return;
       }
-      else{
-        alert(data.message || "Davet gönderilirken bir hata oluştu.");
-      }
+      alert("Davet Başarıyla Gönderildi");
+
     } catch(error){
       console.error("Davet hatası:", error);
       alert("Sunucuya bağlanılamadı.");
@@ -87,7 +86,40 @@ const Team = () => {
     }
   }
 
+  const handleLeaveOrganization = async ()=> {
+    const confirmLeave = window.confirm(
+      "Bu ekipten ayrılmak istediğinize emin misiniz? Tüm proje erişimleriniz sonlanacak ve yeni bir kişisel çalışma alanına aktarılacaksınız."
+    );
 
+    if(!confirmLeave) return;
+
+    setIsLeaving(true);
+    const token = localStorage.getItem("token");
+
+    try{
+      const res = await fetch("http://localhost:5000/api/organizations/leave",{
+        method:"POST",
+        headers: {"Authorization": `Bearer ${token}`}
+      });
+
+      const data = await res.json();
+      if(!res.ok){
+        alert(data.error || "Ayrılma işlemi başarısız.");
+        return;
+      }
+
+      alert("Başarıyla ayrıldınız. Yeni workspace'iniz hazır!");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      navigate("/login");
+
+
+    }catch(error){
+      alert("Sunucuyla bağlantı kurulamadı.");
+    }finally {
+      setIsLeaving(false);
+    }
+  }
 
   // 2. Çıkış Yap
   const handleLogout = () => {
@@ -199,6 +231,34 @@ const Team = () => {
                 </div>
               ))
           )}
+        </div>
+
+        <div className={`mt-16 p-8 rounded-[2rem] border-2 border-dashed transition-colors ${darkMode ? 'border-red-900/30 bg-red-900/10' : 'border-red-100 bg-red-50/30'}`}>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex gap-4">
+                    <div className="p-3 bg-red-100 text-red-600 rounded-2xl h-fit">
+                        <UserMinus size={24} />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold text-red-600">Ekipten Ayrıl</h3>
+                        <p className={`text-sm mt-1 max-w-md ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Mevcut organizasyondan ayrıldığınızda tüm projelerinizden ve ekip iletişiminden koparsınız. 
+                            <strong> Not:</strong> Ekip sahibiyseniz önce sahipliği devretmeniz gerekir.
+                        </p>
+                    </div>
+                </div>
+                <button 
+                    onClick={handleLeaveOrganization}
+                    disabled={isLeaving}
+                    className={`px-8 py-3 rounded-xl font-bold transition-all ${
+                        isLeaving 
+                        ? 'bg-gray-300 cursor-not-allowed' 
+                        : 'bg-white text-red-600 border border-red-200 hover:bg-red-600 hover:text-white shadow-sm'
+                    }`}
+                >
+                    {isLeaving ? "Ayrılıyorsunuz..." : "Organizasyondan Ayrıl"}
+                </button>
+            </div>
         </div>
       </main>
     </div>

@@ -1,5 +1,6 @@
 const {PrismaClient} = require("@prisma/client");
 const prisma = new PrismaClient();
+const jwt = require("jsonwebtoken");
 
 exports.getMyNotifications = async (req, res) =>{
     try{
@@ -25,6 +26,8 @@ exports.getMyNotifications = async (req, res) =>{
 exports.respondToInvıte = async (req, res) => {
     const { notificationId, action } = req.body;
     const currentUserId = req.user.id || req.user.userId;
+    const currentOrgId = req.user.organizationId
+    
 
     if (!currentUserId) {
         return res.status(401).json({ error: "Kullanıcı kimliği bulunamadı." });
@@ -40,12 +43,30 @@ exports.respondToInvıte = async (req, res) => {
             return res.status(404).json({ message: "Davet kaydı bulunamadı." });
         }
 
+        let newToken = null;
+
         if (action === "ACCEPT") {
-            await prisma.user.update({
+            const updateUser = await prisma.user.update({
                 where: { id: currentUserId }, 
                 data: {
                     organizationId: invitation.organizationId 
                 }
+            });
+
+            newToken = jwt.sign(
+                {
+                    userId: updateUser.id,
+                    email: updateUser.email,
+                    organizationId: updateUser.organizationId
+                },
+                process.env.JWT_SECRET,
+                {
+                    expiresIn: '24h'
+                }
+            );
+
+            await prisma.organization.delete({
+                where: {id: currentOrgId}
             });
         }
 
@@ -54,7 +75,8 @@ exports.respondToInvıte = async (req, res) => {
         });
 
         return res.json({
-            message: action === "ACCEPT" ? "Başarıyla ekibe katıldınız!" : "Davet reddedildi."
+            message: action === "ACCEPT" ? "Başarıyla ekibe katıldınız!" : "Davet reddedildi.",
+            token: newToken
         });
 
     } catch (error) {

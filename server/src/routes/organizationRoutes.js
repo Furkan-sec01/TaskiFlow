@@ -8,5 +8,6 @@ router.use(authenticateToken);
 
 router.get("/members",orgController.getMembers);
 router.post("/invite",orgController.inviteMember);
+router.post("/leave",orgController.leaveOrganization);
 
 module.exports = router;
