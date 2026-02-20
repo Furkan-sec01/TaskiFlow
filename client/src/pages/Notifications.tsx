@@ -37,7 +37,7 @@ const Notifications = () => {
         </div>
         <nav className="flex-1 px-4 py-8 space-y-2">
           <Link to="/dashboard" className="flex items-center px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-100"><LayoutDashboard size={22} /><span className="ml-3 font-medium">Genel Bakış</span></Link>
-          <Link to="/tasks" className="flex items-center px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-100"><CheckSquare size={22} /><span className="ml-3 font-medium">Görevlerim</span></Link>
+          <Link to="/tasks" className="flex items-center px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-100"><CheckSquare size={22} /><span className="ml-3 font-medium">Projelerim</span></Link>
           <Link to="/team" className="flex items-center px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-100"><Users size={22} /><span className="ml-3 font-medium">Ekip Arkadaşları</span></Link>
           <Link to="/settings" className="flex items-center px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-100"><Settings size={22} /><span className="ml-3 font-medium">Ayarlar</span></Link>
         </nav>

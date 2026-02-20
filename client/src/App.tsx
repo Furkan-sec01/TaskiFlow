@@ -27,6 +27,7 @@ import Tasks from "./pages/Tasks";
 import Team from "./pages/Team";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
+import Reports from "./pages/Reports";
 
 // Components
 import Footer from "./components/Footer";
@@ -61,6 +62,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/team" element={<Team />} />
+              <Route path="/reports" element={<Reports />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/settings" element={<Settings />} />
 

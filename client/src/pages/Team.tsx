@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
-import { LayoutDashboard, CheckSquare, Users, Settings, Mail, UserPlus, Trash2, LogOut } from "lucide-react";
+import { LayoutDashboard, CheckSquare, Users, Settings, Mail, UserPlus, Trash2, LogOut, BarChart2 } from "lucide-react";
 
 const Team = () => {
   const { darkMode } = useTheme();
@@ -84,6 +84,14 @@ const Team = () => {
           <span className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>TaskiFlow</span>
         </div>
         <nav className="flex-1 px-4 py-8 space-y-2">
+
+          <Link to="/reports" className={`flex items-center px-4 py-3 rounded-xl hover:bg-opacity-10 ${darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}>
+  <BarChart2 size={22}/>
+  <span className="ml-3 font-medium">Raporlar</span>
+</Link>
+
+
+
           <Link to="/dashboard" className={`flex items-center px-4 py-3 rounded-xl hover:bg-opacity-10 ${darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}><LayoutDashboard size={22} /><span className="ml-3 font-medium">Genel Bakış</span></Link>
           <Link to="/projects" className={`flex items-center px-4 py-3 rounded-xl hover:bg-opacity-10 ${darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}><CheckSquare size={22} /><span className="ml-3 font-medium">Projelerim</span></Link>
           <Link to="/team" className="flex items-center px-4 py-3 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-200"><Users size={22} /><span className="ml-3 font-medium">Ekip Arkadaşları</span></Link>
