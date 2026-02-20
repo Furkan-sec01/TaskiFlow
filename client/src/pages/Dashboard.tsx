@@ -19,6 +19,11 @@ const Dashboard = () => {
   const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const[memberCount, setMemberCount] = useState(0);
+  const[projectCount, setProjectCount] = useState(0);
+
+  
   
   const [newProject, setNewProject] = useState({ title: "", description: "" });
   const [searchTerm, setSearchTerm] = useState("");
@@ -35,6 +40,32 @@ const Dashboard = () => {
       fetchProjects();
     }
   }, []);
+  
+  useEffect(()=>{
+
+    const fetchMemberCount = async () =>{
+
+      const token = localStorage.getItem("token");
+      if(!token) return;
+
+      try{
+        const res =await fetch("http://localhost:5000/api/organizations/members", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+
+        if(Array.isArray(data)){
+          setMemberCount(data.length);
+        }
+      }catch(error){
+        console.log("Mevcut Çekme Hatası: ",error);
+      }
+    };
+
+    fetchMemberCount();
+    
+  },[]);
 
   const calculateChartData = (projectList: any[]) => {
     const daysMap: any = { "Pzt": 0, "Sal": 0, "Çar": 0, "Per": 0, "Cum": 0, "Cmt": 0, "Paz": 0 };
@@ -69,6 +100,7 @@ const Dashboard = () => {
       if (response.ok) {
         const data = await response.json();
         setProjects(Array.isArray(data) ? data : []);
+        setProjectCount(data.length);
         calculateChartData(data);
       } else {
         throw new Error("Projeler yüklenemedi.");
@@ -201,8 +233,8 @@ const Dashboard = () => {
           {/* ANALİZ ALANI */}
           <section className="grid grid-cols-1 lg:grid-cols-4 gap-10 pb-12">
             <div className="lg:col-span-1 space-y-6">
-              <StatBox title="Toplam Proje" value={projects.length} icon={<Folder size={22}/>} accentColor="blue" darkMode={darkMode} />
-              <StatBox title="Ekip Mevcudu" value="0" icon={<Users size={22}/>} accentColor="purple" darkMode={darkMode} />
+              <StatBox title="Toplam Proje" value={projectCount} icon={<Folder size={22}/>} accentColor="blue" darkMode={darkMode} />
+              <StatBox title="Ekip Mevcudu" value={memberCount} icon={<Users size={22}/>} accentColor="purple" darkMode={darkMode} />
             </div>
 
             <div className={`lg:col-span-3 p-10 rounded-[2.5rem] border shadow-sm ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
