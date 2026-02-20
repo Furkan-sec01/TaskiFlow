@@ -209,32 +209,7 @@ const Team = () => {
         </div>
       )}
 
-      {/* SOL MENÜ */}
-      <aside className={`hidden w-72 flex-col border-r md:flex transition-colors duration-300 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-        <div className={`h-20 flex items-center px-8 border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
-          <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl mr-3">T</div>
-          <span className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>TaskiFlow</span>
-        </div>
-        <nav className="flex-1 px-4 py-8 space-y-2">
-
-          <Link to="/reports" className={`flex items-center px-4 py-3 rounded-xl hover:bg-opacity-10 ${darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}>
-  <BarChart2 size={22}/>
-  <span className="ml-3 font-medium">Raporlar</span>
-</Link>
-
-
-
-          <Link to="/dashboard" className={`flex items-center px-4 py-3 rounded-xl hover:bg-opacity-10 ${darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}><LayoutDashboard size={22} /><span className="ml-3 font-medium">Genel Bakış</span></Link>
-          <Link to="/projects" className={`flex items-center px-4 py-3 rounded-xl hover:bg-opacity-10 ${darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}><CheckSquare size={22} /><span className="ml-3 font-medium">Projelerim</span></Link>
-          <Link to="/team" className="flex items-center px-4 py-3 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-200"><Users size={22} /><span className="ml-3 font-medium">Ekip Arkadaşları</span></Link>
-          <Link to="/settings" className={`flex items-center px-4 py-3 rounded-xl hover:bg-opacity-10 ${darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}><Settings size={22} /><span className="ml-3 font-medium">Ayarlar</span></Link>
-        </nav>
-        <div className={`p-6 border-t ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
-          <button onClick={handleLogout} className={`flex items-center justify-center w-full px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${darkMode ? 'text-red-400 bg-red-900/20 hover:bg-red-900/30' : 'text-red-600 bg-red-50 hover:bg-red-100'}`}>
-            <LogOut size={18} className="mr-2" /> Çıkış Yap
-          </button>
-        </div>
-      </aside>
+      
 
       {/* İÇERİK */}
       <main className="flex-1 p-8 overflow-y-auto">

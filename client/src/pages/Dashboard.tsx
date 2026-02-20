@@ -170,24 +170,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* SIDEBAR */}
-      <aside className={`hidden w-80 flex-col border-r shadow-sm md:flex ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-        <div className="h-28 flex items-center px-10">
-          <div className="h-10 w-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl mr-3 shadow-blue-500/30 shadow-lg">T</div>
-          <span className="text-xl font-bold tracking-tight">TaskiFlow</span>
-        </div>
-        <nav className="flex-1 px-6 space-y-1">
-          <NavItem to="/dashboard" icon={<LayoutDashboard size={20}/>} label="Genel Bakış" active darkMode={darkMode} />
-          <NavItem to="/projects" icon={<FolderKanban size={20}/>} label="Projelerim" darkMode={darkMode} />
-          <NavItem to="/team" icon={<Users size={20}/>} label="Ekip Yönetimi" darkMode={darkMode} />
-          <NavItem to="/settings" icon={<Settings size={20}/>} label="Sistem Ayarları" darkMode={darkMode} />
-        </nav>
-        <div className="p-8 border-t dark:border-slate-800">
-          <button onClick={handleLogout} className="flex items-center gap-3 w-full px-5 py-4 text-red-500 font-bold hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl transition-all">
-            <LogOut size={20} /> Oturumu Kapat
-          </button>
-        </div>
-      </aside>
+     
 
       {/* MAIN */}
       <main className="flex-1 flex flex-col overflow-hidden">
