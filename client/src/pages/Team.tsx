@@ -14,6 +14,7 @@ const Team = () => {
   const [newMember, setNewMember] = useState({ name: "", email: "" });
   const [isSending, setIsSending] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [isDelete, setIsDelete] = useState(false);
 
   // Sayfa Yüklendiğinde Çalışacak
   useEffect(() => {
@@ -121,6 +122,42 @@ const Team = () => {
     }
   }
 
+  const handleDeleteMember = async (memberId: string) => {
+    const confirmDelete = window.confirm("Bu üyeyi ekipten çıkarmak istediğinize emin misiniz?");
+    if (!confirmDelete) return;
+
+    setIsDelete(true);
+    const token = localStorage.getItem("token");
+
+    try {
+      const res = await fetch("http://localhost:5000/api/organizations/delete", {
+        method: "POST",
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json" 
+        },
+        body: JSON.stringify({ memberId }) 
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Üye silme işlemi başarısız");
+        return;
+      }
+
+      alert("Üye başarıyla ekipten çıkarıldı.");
+      
+
+      setUsers(prev => prev.filter(user => user.id !== memberId));
+
+    } catch (error) {
+      alert("Sunucuyla bağlantı kurulamadı.");
+    } finally {
+      setIsDelete(false);
+    }
+  };
+
   // 2. Çıkış Yap
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -128,13 +165,7 @@ const Team = () => {
     navigate("/login");
   };
 
-  // 3. (Opsiyonel) Silme İşlemi - Şimdilik alert veriyor
-  const handleDelete = (id: number) => {
-    if(confirm("Bu kullanıcıyı silmek istediğinize emin misiniz?")) {
-        // İleride buraya DELETE isteği eklenecek
-        alert("Silme fonksiyonu henüz backend'de aktif değil.");
-    }
-  };
+
 
   return (
     <div className={`flex h-screen font-sans transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-[#F3F4F6] text-gray-800'}`}>
@@ -216,7 +247,7 @@ const Team = () => {
                 <div key={user.id} className={`p-6 rounded-3xl border shadow-sm flex items-center gap-4 relative group transition-colors 
                   ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
                   
-                  <button onClick={() => handleDelete(user.id)} className="absolute top-4 right-4 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100" title="Kullanıcıyı Sil">
+                  <button onClick={() => handleDeleteMember(user.id)} className="absolute top-4 right-4 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100" title="Kullanıcıyı Sil">
                     <Trash2 size={18} />
                   </button>
     

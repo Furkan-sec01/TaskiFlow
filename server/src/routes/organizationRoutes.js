@@ -9,5 +9,6 @@ router.use(authenticateToken);
 router.get("/members",orgController.getMembers);
 router.post("/invite",orgController.inviteMember);
 router.post("/leave",orgController.leaveOrganization);
+router.post("/delete",orgController.deleteMember);
 
 module.exports = router;

@@ -46,6 +46,32 @@ exports.respondToInvıte = async (req, res) => {
         let newToken = null;
 
         if (action === "ACCEPT") {
+
+
+            const [organization, memberCount] = await Promise.all([
+                prisma.organization.findUnique({ where: { id: currentOrgId } }),
+                prisma.user.count({ where: { organizationId: currentOrgId } })
+            ]);
+
+            
+            if(!organization){
+                res.status(404).json({
+                    error: "Organizasyon bulunamadı"
+                });
+
+                return;
+            }
+
+            if(currentUserId === organization.ownerId && memberCount >=2){
+                res.status(400).json({
+                    error: "Kurduğunuz ekip'te başka üyeler varkan farklı ekibe katılamazsınız"
+                });
+
+                return;
+            }
+
+            
+
             const updateUser = await prisma.user.update({
                 where: { id: currentUserId }, 
                 data: {

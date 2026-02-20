@@ -110,6 +110,72 @@ exports.leaveOrganization = async (req, res) => {
     }
 }
 
+exports.deleteMember = async (req, res) => {
+    const {memberId} = req.body;
+    const currentUserId = req.user.userId || req.user.id;
+    const orgId = req.user.organizationId;
+
+
+    try{
+
+        const organization = await prisma.organization.findUnique({
+            where: {id: orgId}
+        });
+
+        if(!organization || organization.ownerId !== currentUserId){
+                res.status(403).json({
+                    error: "Bu işlem için yetkiniz yok"
+                });
+
+                return;
+        }
+
+        const member= await prisma.user.findUnique({
+                where: {id: memberId}
+        });
+
+        if(!member || member.organizationId !== organization.id){
+                res.status(404).json({
+                    error: "Üye bu ekipte bulunamadı."
+                });
+
+                return;
+        }
+
+        if(memberId === organization.ownerId){
+                res.status(403).json({
+                    error: "Lider kendi kendini çıkaramaz."
+                });
+
+                return;
+        }
+
+        const newOrg = await prisma.organization.create({
+                data: {
+                    name: `${member.name || 'User'}'s Workspace`,
+                    ownerId: memberId
+                }
+        });
+
+        await prisma.user.update({
+                where: {id: memberId},
+                data: {organizationId: newOrg.id}
+        });
+
+
+            return res.json({
+                message: "Üye Başarıyla ekipten çıkarıldı",
+            });
+
+    }catch(error){
+        console.log("Hata: ", error);
+        res.status(500).json({
+            error: "Üye silme işleminde hata oluştu"
+        });
+    }
+   
+}
+
 exports.getMembers = async (req, res) => {
     
     try{
