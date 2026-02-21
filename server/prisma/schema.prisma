@@ -8,102 +8,99 @@ datasource db {
 }
 
 model Organization {
-  id            String         @id @default(uuid())
+  id            String                @id @default(uuid())
   name          String
   ownerId       String
-  users         User[]         
+  members       User_Organization[]        
+  projects      Project[] 
   notifications Notification[] 
-  createdAt     DateTime       @default(now())
+  createdAt     DateTime              @default(now())
 }
 
 model User {
-  id                String   @id @default(uuid())
-  email             String   @unique
+  id                String                    @id @default(uuid())
+  email             String                    @unique
   name              String?
   password          String?
-  status            String   @default("active")
-  verificationToken String?  @unique
-  
-  organizationId    String?  
-  organization      Organization? @relation(fields: [organizationId], references: [id])
-  
-  ownedProjects     Project[]      @relation("ProjectOwner")
+  status            String                    @default("active")
+  verificationToken String?                   @unique
+  organizations     User_Organization[]
+  ownedProjects     Project[]                 @relation("ProjectOwner")
   memberProjects    User_Project[] 
-  assignedTasks     Task[]         @relation("TaskAssignee") 
+  assignedTasks     Task[]                    @relation("TaskAssignee") 
   notifications     Notification[] 
+  createdAt         DateTime                  @default(now())
+}
 
-  createdAt         DateTime @default(now())
+model User_Organization{
+  userId              String
+  organizationId      String
+  role                String            @default("MEMBER")  //OWNER - MEMBER
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization        Organization      @relation(fields:  [organizationId], references: [id], onDelete: Cascade)
+  joinedAt            DateTime          @default(now())
+  @@id([userId,organizationId])
 }
 
 model Project {
-  id          String   @id @default(uuid())
+  id          String                      @id @default(uuid())
   title       String
   description String?
-  
+  orgId       String
+  organization  Organization              @relation(fields: [orgId], references: [id], onDelete: Cascade)
   ownerId     String 
-  owner       User     @relation("ProjectOwner", fields: [ownerId], references: [id])
-  
+  owner       User                        @relation("ProjectOwner", fields: [ownerId], references: [id])
   members     User_Project[]
+  tasks       Task[]
   columns     Column[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime                    @default(now())
+  updatedAt   DateTime                    @updatedAt
 }
 
 model User_Project {
   userId    String 
   projectId String 
-
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
+  user      User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project                       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   @@id([userId, projectId])
 }
 
 model Column {
-  id        String   @id @default(uuid())
-  title     String
-  order     Int
-  
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
+  id        String                        @id @default(uuid())
+  title     String                      
+  order     Int                     
+  projectId String                      
+  project   Project                       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks     Task[]
 }
 
 model Task {
-  id          String   @id @default(uuid())
+  id          String                      @id @default(uuid())
   title       String
   description String?
-  priority    String   @default("MEDIUM")
+  priority    String                      @default("MEDIUM")
   dueDate     DateTime?
-  order       Int      @default(0) 
-
+  order       Int                         @default(0) 
   columnId    String
-  column      Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
-
+  column      Column                      @relation(fields: [columnId], references: [id], onDelete: Cascade)
   projectId   String  
-
+  project      Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   assigneeId  String?
-  assignee    User?    @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  assignee    User?                       @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdAt   DateTime                    @default(now())
+  updatedAt   DateTime                    @updatedAt
 }
 
 
 model Notification {
-  id             String   @id @default(uuid())
+  id             String                   @id @default(uuid())
   title          String
   message        String
   type           String
-  isRead         Boolean  @default(false)
-  
+  isRead         Boolean                  @default(false)
   userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   organizationId String?
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-
-  createdAt      DateTime @default(now())
+  organization   Organization?            @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime                 @default(now())
 }

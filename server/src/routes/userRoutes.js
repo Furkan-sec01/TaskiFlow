@@ -7,6 +7,7 @@ router.use(authenticateToken);
 
 // GET /api/users/me
 router.get("/me", userController.getMe);
-router.put("/profile",userController.updateProfile);
+router.put("/profile", userController.updateProfile);
+
 
 module.exports = router;

@@ -2,12 +2,22 @@ const {PrismaClient} = require("@prisma/client");
 const prisma = new PrismaClient();
 const jwt = require("jsonwebtoken");
 
-exports.getMyNotifications = async (req, res) =>{
+exports.getNotifications = async (req, res) =>{
+    const userId = req.user.id || req.user.userId;
+
     try{
 
         const notifications = await prisma.notification.findMany({
             where: {
-                userId: req.user.id || req.user.userId
+                userId,
+                isRead: false
+            },
+            include: {
+                organization: {
+                    select: {
+                        name: true
+                    }
+                }
             },
             orderBy: {
                 createdAt: 'desc'
@@ -24,90 +34,57 @@ exports.getMyNotifications = async (req, res) =>{
 }
 
 exports.respondToInvıte = async (req, res) => {
-    const { notificationId, action } = req.body;
+    const {notificationId, action} = req.body;
     const currentUserId = req.user.id || req.user.userId;
-    const currentOrgId = req.user.organizationId
-    
 
-    if (!currentUserId) {
-        return res.status(401).json({ error: "Kullanıcı kimliği bulunamadı." });
-    }
-
-    try {
-        
+    try{
         const invitation = await prisma.notification.findUnique({
-            where: { id: notificationId },
+            where: {id: notificationId},
         });
 
-        if (!invitation) {
-            return res.status(404).json({ message: "Davet kaydı bulunamadı." });
+        if(!invitation || invitation.type !== "INVITE"){
+            return res.status(404).json({ error: "Geçerli bir davet kaydı bulunamadı." });
         }
 
-        let newToken = null;
-
-        if (action === "ACCEPT") {
-
-
-            const [organization, memberCount] = await Promise.all([
-                prisma.organization.findUnique({ where: { id: currentOrgId } }),
-                prisma.user.count({ where: { organizationId: currentOrgId } })
-            ]);
-
-            
-            if(!organization){
-                res.status(404).json({
-                    error: "Organizasyon bulunamadı"
+        if(action === "ACCEPT"){
+            await prisma.$transaction(async (tx) => {
+                const isAlreadyMember = await tx.user_Organization.findUnique({
+                    where: {
+                        userId_organizationId:{
+                            userId: currentUserId,
+                            organizationId: invitation.organizationId
+                        }
+                    }
                 });
 
-                return;
-            }
-
-            if(currentUserId === organization.ownerId && memberCount >=2){
-                res.status(400).json({
-                    error: "Kurduğunuz ekip'te başka üyeler varkan farklı ekibe katılamazsınız"
-                });
-
-                return;
-            }
-
-            
-
-            const updateUser = await prisma.user.update({
-                where: { id: currentUserId }, 
-                data: {
-                    organizationId: invitation.organizationId 
+                if(!isAlreadyMember){
+                    await tx.user_Organization.create({
+                        data: {
+                            userId: currentUserId,
+                            organizationId: invitation.organizationId,
+                            role: "MEMBER"
+                        }
+                    });
                 }
+
+                await tx.notification.delete({
+                    where: { id: notificationId }
+                });
             });
 
-            newToken = jwt.sign(
-                {
-                    userId: updateUser.id,
-                    email: updateUser.email,
-                    organizationId: updateUser.organizationId
-                },
-                process.env.JWT_SECRET,
-                {
-                    expiresIn: '24h'
-                }
-            );
-
-            await prisma.organization.delete({
-                where: {id: currentOrgId}
+        }else if (action === "REJECT"){
+            await prisma.notification.delete({
+                where: { id: notificationId }
             });
         }
 
-        await prisma.notification.delete({
-            where: { id: notificationId }
-        });
 
         return res.json({
             message: action === "ACCEPT" ? "Başarıyla ekibe katıldınız!" : "Davet reddedildi.",
-            token: newToken
         });
-
-    } catch (error) {
-        console.error("Hata Detayı:", error);
-        res.status(500).json({ error: "Sunucu hatası oluştu." });
+    }catch(error){
+        console.error("respondToInvıte", error);
+        res.status(500).json({ error: "Davet yanıtlanırken bir sunucu hatası oluştu." });
     }
 };
 

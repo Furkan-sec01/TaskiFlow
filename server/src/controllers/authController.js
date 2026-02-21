@@ -10,13 +10,24 @@ exports.register = async (req, res) => {
   const { email, password, name } = req.body;
 
   try {
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) return res.status(400).json({ error: "E-posta Kullanımda." });
+    const user = await prisma.user.findUnique({
+      where: {email}
+    });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await prisma.$transaction(async (tx) => {
-      
-      const user = await tx.user.create({
+    if(user){
+      res.status(400).json({
+        error: "Mail adresi kullanımda."
+      });
+
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(password,10);
+    
+    const result = await prisma.$transaction(async  (tx) => {
+
+      //kullanıcı
+      const newUser = await tx.user.create({
         data: {
           email,
           password: hashedPassword,
@@ -25,31 +36,40 @@ exports.register = async (req, res) => {
         }
       });
 
-      const org = await tx.organization.create({
+      //kullanıcı org
+      const newOrg = await tx.organization.create({
         data: {
           name: `${name}'s Workspace`,
-          ownerId: user.id
+          ownerId: newUser.id
         }
       });
 
-  
-      return await tx.user.update({
-        where: { id: user.id },
-        data: { organizationId: org.id }
+      //ara tabloya yaz
+      await tx.user_Organization.create({
+        data: {
+          userId: newUser.id,
+          organizationId: newOrg.id,
+          role: "OWNER"
+        }
       });
+
+      return {
+        user: newUser,
+        organization: newOrg
+      };
     });
 
     const token = jwt.sign(
       {
-        userId: newUser.id,
-        email: newUser.email,
-        organizationId: newUser.organizationId
+        userId: result.user.id,
+        email: result.user.email,
+        organizationId: result.organization.id
       },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      {expiresIn: '24h'}
     );
 
-    const { password: _, ...userData } = newUser;
+    const {password: _, ...userData} = result.user;
     res.status(201).json({ message: "Kayıt Başarılı", token, user: userData });
 
   } catch (error) {
@@ -64,24 +84,41 @@ exports.login = async (req,res) => {
   const {email, password} = req.body;
 
   try{
-    const user= await prisma.user.findUnique({where: {email}});
+    const user= await prisma.user.findUnique({
+      where: {email},
+      include:  {
+        organizations: {
+          select: {
+            organizationId: true,
+            organization: true,
+            role: true
+          }
+        }
+      }
+    });
+
+
     if(!user) return await res.status(404).json({error: "Kullanıcı Yok."});
 
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) return res.status(401).json({ error: "Şifre yanlış." });
 
+    const activeOrgId = user.organizations.length > 0 ? user.organizations[0].organizationId : null;
+
+
     const token = jwt.sign(
       {
         userId:user.id,
         email: user.email,
-        organizationId: user.organizationId
+        organizationId: activeOrgId
       },
       JWT_SECRET,
       {expiresIn: '24h'}
     );
 
     const {password: _, ...userData} = user;
-    res.json({ message: "Giriş Başarılı", token, user: userData });
+    res.json({ message: "Giriş Başarılı", token, user: userData, userOrganizations: user.organizations });
+
   }catch (error) {
     console.error("Login Error:", error);
     res.status(500).json({ error: "Sunucu hatası" });

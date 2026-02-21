@@ -15,6 +15,7 @@ import Privacy from "./pages/Privacy";
 import Payment from "./pages/Payment";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import NotFound from "./pages/NotFound";
+import OrganizationDetail from "./pages/OrganizationDetail"; 
 
 // Auth (Giriş/Kayıt) Sayfaları
 import Login from "./pages/Login";
@@ -74,6 +75,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/team" element={<Team />} />
+            <Route path="/organization/:orgId" element={<OrganizationDetail />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/settings" element={<Settings />} />

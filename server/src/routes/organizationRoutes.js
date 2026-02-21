@@ -6,9 +6,11 @@ const authenticateToken = require("../middleware/authMiddleware");
 
 router.use(authenticateToken);
 
-router.get("/members",orgController.getMembers);
+//yeni route lar gelicek
+router.get("/:orgId/members", orgController.getMembers);
+router.post("/create",orgController.createOrg);
 router.post("/invite",orgController.inviteMember);
-router.post("/leave",orgController.leaveOrganization);
-router.post("/delete",orgController.deleteMember);
-
+router.post("/:orgId/delete-member", orgController.deleteMember);
+router.post("/:orgId/leave", orgController.leaveOrganization);
+router.get("/", orgController.getUserOrganizations);
 module.exports = router;

@@ -8,6 +8,7 @@ router.use(authenticateToken);
 
 
 router.get("/", projectController.getProjects); 
+router.get("/org/:orgId", projectController.getProjectByOrg);
 router.post("/", projectController.createProject); 
 
 module.exports = router;

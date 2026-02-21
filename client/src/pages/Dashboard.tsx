@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import {
-  LayoutDashboard, FolderKanban, Users, Settings, LogOut, Bell, Search, Plus, X, 
-  Folder, Calendar, ChevronRight, AlertCircle, Activity, Layout as LayoutIcon
+  LayoutDashboard, FolderKanban, Settings, LogOut, Bell, Search, Plus, X, 
+  Folder, Calendar, ChevronRight, AlertCircle, Activity, Layout as LayoutIcon, Building2
 } from "lucide-react";
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
@@ -19,13 +19,10 @@ const Dashboard = () => {
   const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [projectCount, setProjectCount] = useState(0);
 
-  const[memberCount, setMemberCount] = useState(0);
-  const[projectCount, setProjectCount] = useState(0);
-
-  
-  
-  const [newProject, setNewProject] = useState({ title: "", description: "" });
+  const [userOrgs, setUserOrgs] = useState<any[]>([]);
+  const [newProject, setNewProject] = useState({ title: "", description: "", organizationId: "" });
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -38,34 +35,27 @@ const Dashboard = () => {
       const user = JSON.parse(storedUser);
       setCurrentUser(user);
       fetchProjects();
+      fetchUserOrgs();
     }
   }, []);
-  
-  useEffect(()=>{
 
-    const fetchMemberCount = async () =>{
-
-      const token = localStorage.getItem("token");
-      if(!token) return;
-
-      try{
-        const res =await fetch("http://localhost:5000/api/organizations/members", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        const data = await res.json();
-
-        if(Array.isArray(data)){
-          setMemberCount(data.length);
+  const fetchUserOrgs = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch("http://localhost:5000/api/organizations", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUserOrgs(data);
+        if (data.length > 0) {
+          setNewProject(prev => ({ ...prev, organizationId: data[0].id }));
         }
-      }catch(error){
-        console.log("Mevcut Çekme Hatası: ",error);
       }
-    };
-
-    fetchMemberCount();
-    
-  },[]);
+    } catch (error) {
+      console.error("Organizasyonlar çekilemedi:", error);
+    }
+  };
 
   const calculateChartData = (projectList: any[]) => {
     const daysMap: any = { "Pzt": 0, "Sal": 0, "Çar": 0, "Per": 0, "Cum": 0, "Cmt": 0, "Paz": 0 };
@@ -77,15 +67,10 @@ const Dashboard = () => {
       if (daysMap[dayName] !== undefined) daysMap[dayName]++;
     });
 
-    const formattedData = [
-      { name: "Pzt", projects: daysMap["Pzt"] },
-      { name: "Sal", projects: daysMap["Sal"] },
-      { name: "Çar", projects: daysMap["Çar"] },
-      { name: "Per", projects: daysMap["Per"] },
-      { name: "Cum", projects: daysMap["Cum"] },
-      { name: "Cmt", projects: daysMap["Cmt"] },
-      { name: "Paz", projects: daysMap["Paz"] },
-    ];
+    const formattedData = Object.keys(daysMap).map(key => ({
+      name: key,
+      projects: daysMap[key]
+    }));
     setChartData(formattedData);
   };
 
@@ -112,7 +97,11 @@ const Dashboard = () => {
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProject.title) return;
+    if (!newProject.title || !newProject.organizationId) {
+      alert("Lütfen tüm alanları doldurun ve bir çalışma alanı seçin.");
+      return;
+    }
+    
     setIsLoading(true);
     const token = localStorage.getItem("token");
     try {
@@ -126,20 +115,17 @@ const Dashboard = () => {
       });
       if (res.ok) {
         setIsModalOpen(false); 
-        setNewProject({ title: "", description: "" }); 
+        setNewProject({ title: "", description: "", organizationId: userOrgs[0]?.id || "" }); 
         fetchProjects(); 
+      } else {
+        const data = await res.json();
+        alert(data.error || "Proje oluşturulamadı.");
       }
     } catch (error) {
       alert("İşlem sırasında bir hata oluştu.");
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    navigate("/login");
   };
 
   return (
@@ -153,24 +139,42 @@ const Dashboard = () => {
               <h2 className="text-2xl font-bold tracking-tight">Yeni Proje Kaydı</h2>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-all"><X size={20}/></button>
             </div>
-            <form onSubmit={handleCreateProject} className="space-y-6">
+            <form onSubmit={handleCreateProject} className="space-y-5">
+              
+              <div>
+                <label className="block text-sm font-semibold mb-2 opacity-70 flex items-center gap-2">
+                  <Building2 size={14}/> ÇALIŞMA ALANI SEÇİN
+                </label>
+                <select 
+                  required
+                  value={newProject.organizationId} 
+                  onChange={(e) => setNewProject({...newProject, organizationId: e.target.value})}
+                  className={`w-full px-6 py-4 rounded-xl border-2 outline-none focus:border-blue-500 transition-all font-medium appearance-none ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}
+                >
+                  {userOrgs.length === 0 && <option value="">Önce bir ekip kurmalısınız</option>}
+                  {userOrgs.map((org) => (
+                    <option key={org.id} value={org.id}>{org.name}</option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold mb-2 opacity-70">PROJE ADI</label>
                 <input type="text" required value={newProject.title} onChange={(e) => setNewProject({...newProject, title: e.target.value})} className={`w-full px-6 py-4 rounded-xl border-2 outline-none focus:border-blue-500 transition-all font-medium ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`} placeholder="E-Ticaret Web Sitesi..." />
               </div>
+
               <div>
                 <label className="block text-sm font-semibold mb-2 opacity-70">AÇIKLAMA</label>
                 <textarea rows={3} value={newProject.description} onChange={(e) => setNewProject({...newProject, description: e.target.value})} className={`w-full px-6 py-4 rounded-xl border-2 outline-none focus:border-blue-500 transition-all font-medium ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`} placeholder="Projenin temel hedefleri..." />
               </div>
-              <button type="submit" disabled={isLoading} className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98]">
+
+              <button type="submit" disabled={isLoading || userOrgs.length === 0} className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] disabled:opacity-50">
                 {isLoading ? "İşleniyor..." : "Projeyi Onayla"}
               </button>
             </form>
           </div>
         </div>
       )}
-
-     
 
       {/* MAIN */}
       <main className="flex-1 flex flex-col overflow-hidden">
@@ -217,7 +221,7 @@ const Dashboard = () => {
           <section className="grid grid-cols-1 lg:grid-cols-4 gap-10 pb-12">
             <div className="lg:col-span-1 space-y-6">
               <StatBox title="Toplam Proje" value={projectCount} icon={<Folder size={22}/>} accentColor="blue" darkMode={darkMode} />
-              <StatBox title="Ekip Mevcudu" value={memberCount} icon={<Users size={22}/>} accentColor="purple" darkMode={darkMode} />
+              {/* Ekip Mevcudu StatBox'ı buradan kaldırıldı */}
             </div>
 
             <div className={`lg:col-span-3 p-10 rounded-[2.5rem] border shadow-sm ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
@@ -251,13 +255,6 @@ const Dashboard = () => {
     </div>
   );
 };
-
-// YARDIMCI BİLEŞENLER
-const NavItem = ({ to, icon, label, active = false, darkMode }: any) => (
-  <Link to={to} className={`flex items-center gap-4 px-6 py-4 rounded-xl font-bold transition-all ${active ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-slate-800'}`}>
-    {icon} <span className="text-sm">{label}</span>
-  </Link>
-);
 
 const StatBox = ({ title, value, icon, accentColor, darkMode }: any) => {
   const accentClasses: any = {

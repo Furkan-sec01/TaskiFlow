@@ -12,7 +12,18 @@ exports.getMe = async (req, res) => {
         id: true,
         name: true,
         email: true,
-        createdAt: true
+        createdAt: true,
+        organizations: {
+          select: {
+            role: true,
+            organization:{
+              select: {
+                id:true,
+                name: true
+              }
+            }
+          }
+        }
       },
     });
 
@@ -20,7 +31,17 @@ exports.getMe = async (req, res) => {
       return res.status(404).json({ error: "Kullanıcı bulunamadı." });
     }
 
-    res.json(user);
+    const formattedUser = {
+      ...user,
+      myOrganizations: user.organizations.map(item => ({
+        id: item.organization.id,
+        name: item.organization.name,
+        role: item.role
+      }))
+    };
+
+    res.json(formattedUser);
+    
   } catch (error) {
     console.error("GetMe Hatası:", error);
     res.status(500).json({ error: "Kullanıcı bilgileri alınırken hata oluştu." });
@@ -31,23 +52,43 @@ exports.getMe = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
-    const { name } = req.body; 
+    const { name } = req.body;
 
+    // 1. Validasyon: İsim boş gönderilmemeli
+    if (!name || name.trim().length < 2) {
+      return res.status(400).json({ error: "İsim en az 2 karakter olmalıdır." });
+    }
+
+    // 2. Güncelleme işlemi
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
-        name: name 
+        name: name.trim() 
       },
+      // Frontend'e lazım olacak alanları seçiyoruz
       select: {
         id: true,
         name: true,
-        email: true
+        email: true,
+        status: true,
+        createdAt: true
       }
     });
 
-    res.json({ message: "Profil güncellendi", user: updatedUser });
+    // 3. Yanıt: Frontend bu 'user' objesini direkt localStorage'a yazabilir
+    res.json({ 
+      message: "Profiliniz başarıyla güncellendi.", 
+      user: updatedUser 
+    });
+
   } catch (error) {
     console.error("UpdateProfile Hatası:", error);
-    res.status(500).json({ error: "Profil güncellenirken bir hata oluştu." });
+    
+    // P2025: Prisma "Kaydı bulamadım" hatası
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: "Kullanıcı bulunamadı." });
+    }
+    
+    res.status(500).json({ error: "Sunucu hatası. Lütfen daha sonra tekrar deneyin." });
   }
 };

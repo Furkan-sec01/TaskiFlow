@@ -5,7 +5,7 @@ const authenticateToken = require("../middleware/authMiddleware");
 
 router.use(authenticateToken);
 
-router.get("/", notificController.getMyNotifications);
+router.get("/", notificController.getNotifications);
 router.post("/respond-invite", notificController.respondToInvıte);
 router.patch("/:id/read", notificController.markAsRead);
 
