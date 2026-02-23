@@ -17,6 +17,7 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import NotFound from "./pages/NotFound";
 import OrganizationDetail from "./pages/OrganizationDetail"; 
 
+
 // Auth (Giriş/Kayıt) Sayfaları
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -30,6 +31,8 @@ import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import Reports from "./pages/Reports";
 import Roadmap from "./pages/Roadmap";
+import Proje from './pages/Proje'
+
 
 // Components
 import Footer from "./components/Footer";
@@ -70,10 +73,11 @@ const App = () => (
           <Route path="/register" element={<Register />} />
           <Route path="/verify" element={<Verify />} />
 
+
           {/* 📊 Yönetim Paneli — Sidebar VAR (Layout içine alındı) ← YENİ (2 ve 3) */}
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/tasks" element={<Proje />} />
             <Route path="/team" element={<Team />} />
             <Route path="/organization/:orgId" element={<OrganizationDetail />} />
             <Route path="/reports" element={<Reports />} />
@@ -82,10 +86,14 @@ const App = () => (
             <Route path="/roadmap" element={<Roadmap />} />
           </Route>
 
-          {/* 🚫 404 - Sayfa Bulunamadı */}
-          <Route path="*" element={<NotFound />} />
 
         </Routes>
+
+              
+            
+
+        
+
       </BrowserRouter>
     </ThemeProvider>
   </QueryClientProvider>
