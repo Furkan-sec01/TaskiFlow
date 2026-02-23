@@ -13,4 +13,5 @@ router.post("/invite",orgController.inviteMember);
 router.post("/:orgId/delete-member", orgController.deleteMember);
 router.post("/:orgId/leave", orgController.leaveOrganization);
 router.get("/", orgController.getUserOrganizations);
+router.delete("/:orgId",orgController.deleteOrg);
 module.exports = router;

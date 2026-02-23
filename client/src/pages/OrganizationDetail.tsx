@@ -11,7 +11,9 @@ import {
   X,
   UserMinus,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Trash2,
+  LucideTrash2
 } from "lucide-react";
 
 const OrganizationDetail = () => {
@@ -156,6 +158,46 @@ const OrganizationDetail = () => {
     }
   };
 
+  const handleDeleteProject = async (projectId: string) => {
+    const token = localStorage.getItem("token");
+    const res = await fetch(`http://localhost:5000/api/project/${projectId}`,{
+      method: "DELETE",
+      headers: {
+      "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (res.ok) {
+      alert("Proje başarıyla silindi!");
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+    } else {
+      const data = await res.json();
+      alert(data.error || "Silme işlemi başarısız.");
+    }
+  }
+
+  const handleDeleteTeam = async () => {
+    const confirmLeave = window.confirm("Bu ekipten kapatmak istediğinize eminmisiniz?");
+    if(!confirmLeave) return;
+
+    const token = localStorage.getItem("token");
+    const res = await fetch(`http://localhost:5000/api/organizations/${orgId}`,{
+      method: "DELETE",
+      headers:{
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if(res.ok){
+      alert("Ekip kapatıldı.");
+      navigate("/team");
+    }
+    else{
+      const data = await res.json();
+      alert(data.error || "Silme işlemi başarısız.");
+    }
+  }
+
   return (
     <div className={`min-h-screen p-8 transition-colors ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       
@@ -196,6 +238,11 @@ const OrganizationDetail = () => {
           <button onClick={handleLeaveTeam} className="bg-red-500/10 text-red-500 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-red-500 hover:text-white transition-all">
             <LogOut size={18} /> Ekipten Ayrıl
           </button>
+
+          <button onClick={handleDeleteTeam} className="bg-red-500/10 text-red-500 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-red-500 hover:text-white transition-all">
+            <Trash2 size={18} /> Ekibi Kapat
+          </button>
+
           <button onClick={() => setIsInviteModalOpen(true)} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20">
             <UserPlus size={18} /> Üye Davet Et
           </button>
@@ -260,12 +307,23 @@ const OrganizationDetail = () => {
                   <div className="flex justify-between items-start mb-8">
                     <div className={`h-14 w-14 rounded-2xl flex items-center justify-center transition-colors ${darkMode ? 'bg-gray-700 group-hover:bg-blue-600' : 'bg-blue-50 group-hover:bg-blue-600 group-hover:text-white'}`}>
                       <FolderKanban size={24} className={darkMode ? 'text-blue-400 group-hover:text-white' : 'text-blue-600 group-hover:text-white'} />
+                      
                     </div>
+
                     <div className="flex flex-col items-end">
                       <span className="text-[10px] font-black tracking-widest text-blue-500 bg-blue-500/10 px-3 py-1 rounded-full uppercase">{project._count?.tasks || 0} Görev</span>
                       <span className="text-[10px] font-bold opacity-40 mt-1 uppercase tracking-tighter">{project._count?.columns || 0} Sütun</span>
                     </div>
                   </div>
+
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.id); }}
+                      className="absolute top-6 right-6 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                      title="Organizasyonu Sil"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+
                   <h4 className="text-xl font-black mb-3 group-hover:text-blue-500 transition-colors">{project.title}</h4>
                   <p className="text-sm opacity-60 font-medium line-clamp-2 h-10 mb-8 leading-relaxed">{project.description || "Bu proje için henüz bir açıklama girilmemiş."}</p>
                   <div className="flex items-center justify-between pt-6 border-t border-gray-700/10">

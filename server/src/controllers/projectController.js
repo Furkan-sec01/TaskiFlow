@@ -36,6 +36,8 @@ exports.createProject = async (req, res) => {
         res.status(400).json({
             error: "Başlık ve Açıklama doldurulmalı."
         });
+
+        return;
     }
 
     try{
@@ -52,16 +54,32 @@ exports.createProject = async (req, res) => {
             return res.status(403).json({ error: "Bu organizasyonda proje oluşturma yetkiniz yok." });
         }
 
-        const newProject = await prisma.project.create({
-            data: {
-                title,
-                description,
-                orgId: organizationId,
-                ownerId: userId
-            }
+        const newProject = await prisma.$transaction(async (tx) => {
+            const project =await tx.project.create({
+                data: {
+                    title: title,
+                    description: description,
+                    orgId: organizationId,
+                    ownerId: userId
+                }
+            });
+
+            await tx.user_Project.create({
+                data: {
+                    userId: userId,
+                    projectId: project.id
+                }
+            });
+
+            return project;
         });
 
-        res.status(201).json(newProject);
+        res.status(201).json({
+            message: "Proje başarıyla oluşturuldu.",
+            project: newProject
+        });
+
+
     }catch(error){
         res.status(500).json({ error: "Proje oluşturulurken bir hata oluştu." });
     }
@@ -108,5 +126,49 @@ exports.getProjectByOrg = async (req, res) => {
     }catch(error){
         console.error("getProjectByOrg Hatası:", error);
         res.status(500).json({ error: "Projeler yüklenirken bir hata oluştu." });
+    }
+}
+
+exports.deleteProject = async (req, res) => {
+    const userId = req.user.id || req.user.userId;
+    const {projectId} = req.params;
+
+    try{
+        const project = await prisma.project.findUnique({
+            where:{
+                id: projectId
+            }
+        });
+
+        if(!project){
+            res.status(404).json({
+                error: "Proje Bulunmadı."
+            });
+            console.log("Proje bulunamadı.");
+            return;
+        }
+
+        if(userId !== project.ownerId){
+            res.status(403).json({
+                error: "Proje silme yetkini yok."
+            });
+
+            return;
+        }
+
+        await prisma.project.delete({
+            where: {
+                id: projectId
+            }
+        });
+
+        res.status(200).json({
+            message: "Proje başarıyla silindi."
+        });
+
+
+
+    }catch(error){
+        console.log("deleteProject Hatası: ",error);
     }
 }
