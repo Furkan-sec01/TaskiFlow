@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id            String         @id @default(uuid())
+  name          String
+  ownerId       String
+  users         User[]         
+  notifications Notification[] 
+  createdAt     DateTime       @default(now())
+}
+
+model User {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  name              String?
+  password          String?
+  status            String   @default("active")
+  verificationToken String?  @unique
+  
+  organizationId    String?  
+  organization      Organization? @relation(fields: [organizationId], references: [id])
+  
+  ownedProjects     Project[]      @relation("ProjectOwner")
+  memberProjects    User_Project[] 
+  assignedTasks     Task[]         @relation("TaskAssignee") 
+  notifications     Notification[] 
+
+  createdAt         DateTime @default(now())
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  
+  ownerId     String 
+  owner       User     @relation("ProjectOwner", fields: [ownerId], references: [id])
+  
+  members     User_Project[]
+  columns     Column[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User_Project {
+  userId    String 
+  projectId String 
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([userId, projectId])
+}
+
+model Column {
+  id        String   @id @default(uuid())
+  title     String
+  order     Int
+  
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  tasks     Task[]
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  priority    String   @default("MEDIUM")
+  dueDate     DateTime?
+  order       Int      @default(0) 
+
+  columnId    String
+  column      Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  projectId   String  
+
+  assigneeId  String?
+  assignee    User?    @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+
+model Notification {
+  id             String   @id @default(uuid())
+  title          String
+  message        String
+  type           String
+  isRead         Boolean  @default(false)
+  
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  createdAt      DateTime @default(now())
+}
