@@ -9,15 +9,29 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Keyboard,
+  Alert,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 
-export default function RegisterScreen() {
-  const navigation = useNavigation();
+export default function Register() {
+  const router = useRouter();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const handleRegister = () => {
+    Keyboard.dismiss();
+
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      Alert.alert("Uyarı", "Lütfen tüm alanları doldur.");
+      return;
+    }
+
+    // Şimdilik başarılı varsay → Projelerim ekranına
+    router.replace("/(tabs)/projects");
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -40,7 +54,7 @@ export default function RegisterScreen() {
             <Text style={styles.subtitle}>Yeni bir hesap oluştur</Text>
           </View>
 
-          {/* FORM CARD */}
+          {/* FORM */}
           <View style={styles.card}>
             <Text style={styles.label}>Ad Soyad</Text>
             <TextInput
@@ -49,6 +63,8 @@ export default function RegisterScreen() {
               onChangeText={setName}
               placeholder="Ad Soyad"
               placeholderTextColor="#9CA3AF"
+              autoCorrect={false}
+              returnKeyType="next"
             />
 
             <Text style={[styles.label, { marginTop: 12 }]}>E-posta</Text>
@@ -60,6 +76,10 @@ export default function RegisterScreen() {
               placeholderTextColor="#9CA3AF"
               autoCapitalize="none"
               keyboardType="email-address"
+              autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
+              returnKeyType="next"
             />
 
             <Text style={[styles.label, { marginTop: 12 }]}>Şifre</Text>
@@ -70,25 +90,41 @@ export default function RegisterScreen() {
               placeholder="******"
               placeholderTextColor="#9CA3AF"
               secureTextEntry
+              autoCorrect={false}
+              autoComplete="password"
+              textContentType="newPassword"
+              returnKeyType="done"
             />
 
-            <Pressable style={styles.button} onPress={() => {}}>
+            <Pressable style={styles.button} onPress={handleRegister}>
               <Text style={styles.buttonText}>Kayıt Ol</Text>
             </Pressable>
 
-            {/* LOGIN LINK */}
-            <View style={styles.loginRow}>
-              <Text style={styles.loginText}>
-                Zaten bir hesabınız var mı?
-              </Text>
+            <View style={styles.row}>
+              <Text style={styles.gray}>Zaten hesabın var mı?</Text>
+              <Pressable
+                onPress={() => {
+                  Keyboard.dismiss();
+                  router.push("/login");
+                }}
+              >
+                <Text style={styles.link}> Giriş Yap</Text>
+              </Pressable>
+            </View>
 
-              <Pressable onPress={() => navigation.navigate("Login")}>
-                <Text style={styles.loginLink}> Giriş Yap</Text>
+            <View style={styles.row2}>
+              <Pressable
+                onPress={() => {
+                  Keyboard.dismiss();
+                  router.replace("/");
+                }}
+              >
+                <Text style={styles.backHome}>← Karşılama</Text>
               </Pressable>
             </View>
           </View>
 
-          <View style={{ height: 24 }} />
+          <View style={{ height: 22 }} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -97,19 +133,14 @@ export default function RegisterScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#fff" },
-
   scrollContent: {
     flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 24,
+    paddingVertical: 24,
   },
 
-  header: {
-    alignItems: "center",
-    marginBottom: 18,
-  },
+  header: { alignItems: "center", marginBottom: 18 },
 
   logoBox: {
     width: 56,
@@ -120,10 +151,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
   },
+  logoText: { color: "#fff", fontSize: 26, fontWeight: "900" },
 
-  logoText: { color: "#fff", fontSize: 26, fontWeight: "800" },
-
-  title: { fontSize: 28, fontWeight: "800", color: "#111827" },
+  title: { fontSize: 28, fontWeight: "900", color: "#111827" },
   subtitle: { marginTop: 6, fontSize: 14, color: "#6B7280" },
 
   card: {
@@ -134,12 +164,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
 
-  label: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#374151",
-    marginBottom: 8,
-  },
+  label: { fontSize: 13, fontWeight: "800", color: "#374151", marginBottom: 8 },
 
   input: {
     height: 48,
@@ -159,23 +184,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "900" },
 
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  row: { flexDirection: "row", justifyContent: "center", marginTop: 18 },
+  row2: { marginTop: 14, alignItems: "center" },
 
-  loginRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 18,
-  },
-
-  loginText: {
-    color: "#6B7280",
-    fontSize: 14,
-  },
-
-  loginLink: {
-    color: "#2563EB",
-    fontWeight: "700",
-    fontSize: 14,
-  },
+  gray: { color: "#6B7280" },
+  link: { color: "#2563EB", fontWeight: "900" },
+  backHome: { color: "#6B7280", fontWeight: "800" },
 });
