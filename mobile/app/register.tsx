@@ -1,274 +1,280 @@
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Keyboard,
-  Alert,
+    View,
+    Text,
+    TextInput,
+    Pressable,
+    StyleSheet,
+    SafeAreaView,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Alert,
+    ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { MaterialIcons } from "@expo/vector-icons";
 
-export default function Register() {
-  const router = useRouter();
+const API_URL = "http://192.168.100.18:5000/api";
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function RegisterScreen() {
+    const router = useRouter();
 
-  // ✅ Kayıt için onay
-  const [accepted, setAccepted] = useState(false);
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [agreeTerms, setAgreeTerms] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
-    Keyboard.dismiss();
+    const handleRegister = async () => {
+        if (!name.trim() || !email.trim() || !password.trim()) {
+            Alert.alert("Hata", "Lütfen tüm alanları doldurun.");
+            return;
+        }
 
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      Alert.alert("Uyarı", "Lütfen tüm alanları doldur.");
-      return;
-    }
+        if (!agreeTerms) {
+            Alert.alert("Hata", "Lütfen kullanım şartlarını kabul edin.");
+            return;
+        }
 
-    // ✅ şartlar kabul edilmeden kayıt olmaz
-    if (!accepted) {
-      Alert.alert(
-        "Onay gerekli",
-        "Kayıt olmak için Kullanım Şartları ve Gizlilik Politikası'nı kabul etmelisin."
-      );
-      return;
-    }
+        setLoading(true);
+        try {
+            const response = await fetch(`${API_URL}/auth/register`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
+            });
 
-    // Şimdilik başarılı varsay → Projelerim ekranına
-    router.replace("/(tabs)/projects");
-  };
+            const data = await response.json();
 
-  return (
-    <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={styles.safe}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* HEADER */}
-          <View style={styles.header}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoText}>T</Text>
-            </View>
+            if (!response.ok) {
+                Alert.alert("Hata", data.error || "Kayıt başarısız.");
+                return;
+            }
 
-            <Text style={styles.title}>TaskiFlow</Text>
-            <Text style={styles.subtitle}>Yeni bir hesap oluştur</Text>
-          </View>
+            Alert.alert("Başarılı ✅", `Hoş geldin ${data.user?.name || name}! Hesabın oluşturuldu.`);
+            setName("");
+            setEmail("");
+            setPassword("");
+            router.replace("/login");
+        } catch (error) {
+            Alert.alert("Bağlantı Hatası", "Sunucuya bağlanılamadı. Lütfen tekrar deneyin.");
+            console.error("Register error:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-          {/* FORM */}
-          <View style={styles.card}>
-            <Text style={styles.label}>Ad Soyad</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Ad Soyad"
-              placeholderTextColor="#9CA3AF"
-              autoCorrect={false}
-              returnKeyType="next"
-            />
-
-            <Text style={[styles.label, { marginTop: 12 }]}>E-posta</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="ornek@email.com"
-              placeholderTextColor="#9CA3AF"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoCorrect={false}
-              autoComplete="email"
-              textContentType="emailAddress"
-              returnKeyType="next"
-            />
-
-            <Text style={[styles.label, { marginTop: 12 }]}>Şifre</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="******"
-              placeholderTextColor="#9CA3AF"
-              secureTextEntry
-              autoCorrect={false}
-              autoComplete="password"
-              textContentType="newPassword"
-              returnKeyType="done"
-            />
-
-            {/* ✅ ŞARTLAR + GİZLİLİK ONAYI */}
-            <View style={styles.termsRow}>
-              <Pressable
-                style={styles.checkbox}
-                onPress={() => setAccepted((p) => !p)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: accepted }}
-              >
-                {accepted && <View style={styles.checkboxInner} />}
-              </Pressable>
-
-              <View style={{ flex: 1 }}>
-                <Text style={styles.termsText}>
-                  <Text
-                    style={styles.linkInline}
-                    onPress={() => router.push("/terms")}
-                  >
-                    Kullanım Şartları
-                  </Text>
-                  <Text> ve </Text>
-                  <Text
-                    style={styles.linkInline}
-                    onPress={() => router.push("/privacy")}
-                  >
-                    Gizlilik Politikası
-                  </Text>
-                  <Text>'nı okudum ve kabul ediyorum.</Text>
-                </Text>
-              </View>
-            </View>
-
-            <Pressable
-              style={[styles.button, !accepted && { opacity: 0.6 }]}
-              onPress={handleRegister}
+    return (
+        <SafeAreaView style={styles.safe}>
+            <KeyboardAvoidingView
+                style={styles.safe}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
             >
-              <Text style={styles.buttonText}>Kayıt Ol</Text>
-            </Pressable>
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* HEADER */}
+                    <View style={styles.header}>
+                        <View style={styles.logoBox}>
+                            <Text style={styles.logoText}>T</Text>
+                        </View>
 
-            <View style={styles.row}>
-              <Text style={styles.gray}>Zaten hesabın var mı?</Text>
-              <Pressable
-                onPress={() => {
-                  Keyboard.dismiss();
-                  router.push("/login");
-                }}
-              >
-                <Text style={styles.link}> Giriş Yap</Text>
-              </Pressable>
-            </View>
+                        <Text style={styles.title}>TaskiFlow</Text>
+                        <Text style={styles.subtitle}>Yeni bir hesap oluştur</Text>
+                    </View>
 
-            <View style={styles.row2}>
-              <Pressable
-                onPress={() => {
-                  Keyboard.dismiss();
-                  router.replace("/");
-                }}
-              >
-                <Text style={styles.backHome}>← Karşılama</Text>
-              </Pressable>
-            </View>
-          </View>
+                    {/* FORM CARD */}
+                    <View style={styles.card}>
+                        <Text style={styles.label}>Ad Soyad</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={name}
+                            onChangeText={setName}
+                            placeholder="Ad Soyad"
+                            placeholderTextColor="#9CA3AF"
+                        />
 
-          <View style={{ height: 22 }} />
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
+                        <Text style={[styles.label, { marginTop: 12 }]}>E-posta</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={email}
+                            onChangeText={setEmail}
+                            placeholder="ornek@email.com"
+                            placeholderTextColor="#9CA3AF"
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                        />
+
+                        <Text style={[styles.label, { marginTop: 12 }]}>Şifre</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={password}
+                            onChangeText={setPassword}
+                            placeholder="******"
+                            placeholderTextColor="#9CA3AF"
+                            secureTextEntry
+                        />
+
+                        {/* CHECKBOX SECTION */}
+                        <Pressable
+                            style={styles.checkboxContainer}
+                            onPress={() => setAgreeTerms(!agreeTerms)}
+                        >
+                            <MaterialIcons
+                                name={agreeTerms ? "check-box" : "check-box-outline-blank"}
+                                size={22}
+                                color={agreeTerms ? "#2563EB" : "#9CA3AF"}
+                            />
+                            <Text style={styles.checkboxText}>
+                                Şartları ve koşulları kabul ediyorum
+                            </Text>
+                        </Pressable>
+
+                        <Pressable
+                            style={[styles.button, loading && { opacity: 0.7 }]}
+                            onPress={handleRegister}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.buttonText}>Kayıt Ol</Text>
+                            )}
+                        </Pressable>
+
+                        {/* LOGIN LINK */}
+                        <View style={styles.loginRow}>
+                            <Text style={styles.loginText}>
+                                Zaten hesabın var mı?
+                            </Text>
+                            <Pressable onPress={() => router.push("/login")}>
+                                <Text style={styles.loginLink}> Giriş Yap</Text>
+                            </Pressable>
+                        </View>
+
+                        {/* BACK TO WELCOME */}
+                        <Pressable
+                            style={styles.backRow}
+                            onPress={() => router.replace("/welcome")}
+                        >
+                            <Text style={styles.backText}>← Karşılama</Text>
+                        </Pressable>
+                    </View>
+
+                    <View style={{ height: 24 }} />
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
+    );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#fff" },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 24,
-  },
+    safe: { flex: 1, backgroundColor: "#fff" },
 
-  header: { alignItems: "center", marginBottom: 18 },
+    scrollContent: {
+        flexGrow: 1,
+        justifyContent: "center",
+        paddingHorizontal: 16,
+        paddingTop: 24,
+        paddingBottom: 24,
+    },
 
-  logoBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
-    backgroundColor: "#2563EB",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  logoText: { color: "#fff", fontSize: 26, fontWeight: "900" },
+    header: {
+        alignItems: "center",
+        marginBottom: 18,
+    },
 
-  title: { fontSize: 28, fontWeight: "900", color: "#111827" },
-  subtitle: { marginTop: 6, fontSize: 14, color: "#6B7280" },
+    logoBox: {
+        width: 56,
+        height: 56,
+        borderRadius: 14,
+        backgroundColor: "#2563EB",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 12,
+    },
 
-  card: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 16,
-    padding: 16,
-  },
+    logoText: { color: "#fff", fontSize: 26, fontWeight: "800" },
 
-  label: { fontSize: 13, fontWeight: "800", color: "#374151", marginBottom: 8 },
+    title: { fontSize: 28, fontWeight: "800", color: "#111827" },
+    subtitle: { marginTop: 6, fontSize: 14, color: "#6B7280" },
 
-  input: {
-    height: 48,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    paddingHorizontal: 12,
-    backgroundColor: "#F9FAFB",
-    color: "#111827",
-  },
+    card: {
+        width: "100%",
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
+        borderRadius: 16,
+        padding: 16,
+    },
 
-  /* ✅ terms area */
-  termsRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginTop: 14,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 2,
-    borderColor: "#2563EB",
-    borderRadius: 4,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-    marginTop: 2,
-  },
-  checkboxInner: {
-    width: 10,
-    height: 10,
-    backgroundColor: "#2563EB",
-    borderRadius: 2,
-  },
-  termsText: {
-    fontSize: 12,
-    color: "#6B7280",
-    lineHeight: 18,
-  },
-  linkInline: {
-    color: "#2563EB",
-    fontWeight: "900",
-  },
+    label: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: "#374151",
+        marginBottom: 8,
+    },
 
-  button: {
-    marginTop: 16,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: "#2563EB",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "900" },
+    input: {
+        height: 48,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
+        paddingHorizontal: 12,
+        backgroundColor: "#F9FAFB",
+        color: "#111827",
+    },
 
-  row: { flexDirection: "row", justifyContent: "center", marginTop: 18 },
-  row2: { marginTop: 14, alignItems: "center" },
+    button: {
+        marginTop: 16,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: "#2563EB",
+        alignItems: "center",
+        justifyContent: "center",
+    },
 
-  gray: { color: "#6B7280" },
-  link: { color: "#2563EB", fontWeight: "900" },
-  backHome: { color: "#6B7280", fontWeight: "800" },
+    buttonText: { color: "#fff", fontSize: 16, fontWeight: "800" },
+
+    loginRow: {
+        flexDirection: "row",
+        justifyContent: "center",
+        marginTop: 18,
+    },
+
+    loginText: {
+        color: "#6B7280",
+        fontSize: 14,
+    },
+
+    loginLink: {
+        color: "#2563EB",
+        fontWeight: "700",
+        fontSize: 14,
+    },
+
+    backRow: {
+        alignItems: "center",
+        marginTop: 14,
+    },
+
+    backText: {
+        color: "#6B7280",
+        fontSize: 14,
+        fontWeight: "600",
+    },
+
+    checkboxContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 16,
+    },
+
+    checkboxText: {
+        marginLeft: 8,
+        fontSize: 13,
+        color: "#374151",
+    },
 });
