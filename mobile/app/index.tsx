@@ -36,9 +36,17 @@ export default function Index() {
             style={[styles.button, styles.secondary]}
             onPress={() => router.push("/login")}
           >
-            <Text style={[styles.buttonText, styles.secondaryText]}>Giriş Yap</Text>
+            <Text style={[styles.buttonText, styles.secondaryText]}>
+              Giriş Yap
+            </Text>
           </Pressable>
 
+          {/* ✅ Planları Gör (eklenen tek kısım) */}
+          <Pressable onPress={() => router.push("/plans")} style={styles.plansBtn}>
+            <Text style={styles.plansText}>Planları Gör →</Text>
+          </Pressable>
+
+          {/* ❗️Aynen bırakıldı */}
           <Text style={styles.grayHint}>
             Devam ederek kullanım koşullarını kabul etmiş olursun.
           </Text>
@@ -72,7 +80,6 @@ const styles = StyleSheet.create({
 
   title: { fontSize: 30, fontWeight: "900", color: "#111827" },
 
-  /* ✅ GÖSTERİŞLİ SLOGAN STİLİ */
   subtitle: {
     marginTop: 12,
     fontSize: 18,
@@ -106,6 +113,19 @@ const styles = StyleSheet.create({
   buttonText: { fontSize: 16, fontWeight: "900" },
   primaryText: { color: "#fff" },
   secondaryText: { color: "#111827" },
+
+  plansBtn: {
+    marginTop: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  plansText: {
+    color: "#2563EB",
+    fontWeight: "900",
+    fontSize: 14,
+  },
 
   grayHint: {
     marginTop: 14,
