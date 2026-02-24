@@ -172,3 +172,76 @@ exports.deleteProject = async (req, res) => {
         console.log("deleteProject Hatası: ",error);
     }
 }
+
+
+exports.getProjectBoard = async (req, res) => {
+    const { projectId } = req.params;
+    const userId = req.user.id || req.user.userId;
+
+    try {
+        const project = await prisma.project.findUnique({
+            where: { id: projectId },
+            select: { 
+                ownerId: true, 
+                orgId: true 
+            }
+        });
+
+        if (!project) return res.status(404).json({ error: "Proje bulunamadı." });
+
+        
+        const isProjectMember = await prisma.user_Project.findUnique({
+            where: { userId_projectId: { userId, projectId } }
+        });
+
+        const isOrgMember = await prisma.user_Organization.findUnique({
+            where: { userId_organizationId: { userId, organizationId: project.orgId } }
+        });
+
+        if (project.ownerId !== userId && !isProjectMember && !isOrgMember) {
+            return res.status(403).json({ error: "Bu projenin panosuna erişim yetkiniz yok." });
+        }
+
+       
+        const projectBoard = await prisma.project.findUnique({
+            where: { id: projectId },
+            include: {
+                columns: {
+                    orderBy: { order: 'asc' },
+                    include: {
+                        tasks: {
+                            orderBy: { order: 'asc' },
+                            include: { assignee: { select: { name: true, email: true } } }
+                        }
+                    }
+                }
+            }
+        });
+
+        res.json(projectBoard);
+    } catch (error) {
+        res.status(500).json({ error: "Sunucu hatası oluştu." });
+    }
+};
+
+exports.updateTaskPosition = async (req, res) => {
+    const { taskId } = req.params; 
+    const { columnId } = req.body; 
+
+    try {
+        const updatedTask = await prisma.task.update({
+            where: { id: taskId },
+            data: {
+                columnId: columnId
+            }
+        });
+
+        res.status(200).json({
+            message: "Görev başarıyla taşındı.",
+            task: updatedTask
+        });
+    } catch (error) {
+        console.error("updateTaskPosition Hatası:", error);
+        res.status(500).json({ error: "Görev taşınırken bir hata oluştu." });
+    }
+};

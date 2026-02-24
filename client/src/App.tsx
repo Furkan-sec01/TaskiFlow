@@ -74,10 +74,14 @@ const App = () => (
           <Route path="/verify" element={<Verify />} />
 
 
-          {/* 📊 Yönetim Paneli — Sidebar VAR (Layout içine alındı) ← YENİ (2 ve 3) */}
+          {/* 📊 Yönetim Paneli — Sidebar VAR */}
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/tasks" element={<Proje />} />
+            <Route path="/tasks" element={<Tasks />} /> {/* Eğer genel görevler sayfan varsa burası kalsın */}
+            
+            {/* 🚀 YENİ EKLENEN ROTA: Proje Detay / Kanban Sayfası */}
+            <Route path="/projects/:projectId" element={<Proje />} />
+            
             <Route path="/team" element={<Team />} />
             <Route path="/organization/:orgId" element={<OrganizationDetail />} />
             <Route path="/reports" element={<Reports />} />
@@ -85,7 +89,6 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/roadmap" element={<Roadmap />} />
           </Route>
-
 
         </Routes>
 
