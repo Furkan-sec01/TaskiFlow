@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  SafeAreaView,
-} from "react-native";
+import { View, Text, Pressable, StyleSheet, SafeAreaView } from "react-native";
 import { useRouter } from "expo-router";
 
 export default function Index() {
@@ -21,8 +15,11 @@ export default function Index() {
           </View>
 
           <Text style={styles.title}>TaskiFlow</Text>
+
+          {/* ✅ GÖSTERİŞLİ SLOGAN */}
           <Text style={styles.subtitle}>
-            Projelerini ve görevlerini kolayca yönet.
+            İşlerinizi <Text style={styles.highlight}>TaskiFlow</Text> ile düzene
+            sokun.
           </Text>
         </View>
 
@@ -74,7 +71,20 @@ const styles = StyleSheet.create({
   logoText: { color: "#fff", fontSize: 26, fontWeight: "900" },
 
   title: { fontSize: 30, fontWeight: "900", color: "#111827" },
-  subtitle: { marginTop: 8, fontSize: 14, color: "#6B7280", textAlign: "center" },
+
+  /* ✅ GÖSTERİŞLİ SLOGAN STİLİ */
+  subtitle: {
+    marginTop: 12,
+    fontSize: 18,
+    textAlign: "center",
+    color: "#374151",
+    lineHeight: 26,
+    fontWeight: "600",
+  },
+  highlight: {
+    color: "#2563EB",
+    fontWeight: "900",
+  },
 
   card: {
     width: "100%",

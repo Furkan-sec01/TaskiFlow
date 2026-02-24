@@ -21,11 +21,23 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // ✅ Kayıt için onay
+  const [accepted, setAccepted] = useState(false);
+
   const handleRegister = () => {
     Keyboard.dismiss();
 
     if (!name.trim() || !email.trim() || !password.trim()) {
       Alert.alert("Uyarı", "Lütfen tüm alanları doldur.");
+      return;
+    }
+
+    // ✅ şartlar kabul edilmeden kayıt olmaz
+    if (!accepted) {
+      Alert.alert(
+        "Onay gerekli",
+        "Kayıt olmak için Kullanım Şartları ve Gizlilik Politikası'nı kabul etmelisin."
+      );
       return;
     }
 
@@ -96,7 +108,41 @@ export default function Register() {
               returnKeyType="done"
             />
 
-            <Pressable style={styles.button} onPress={handleRegister}>
+            {/* ✅ ŞARTLAR + GİZLİLİK ONAYI */}
+            <View style={styles.termsRow}>
+              <Pressable
+                style={styles.checkbox}
+                onPress={() => setAccepted((p) => !p)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: accepted }}
+              >
+                {accepted && <View style={styles.checkboxInner} />}
+              </Pressable>
+
+              <View style={{ flex: 1 }}>
+                <Text style={styles.termsText}>
+                  <Text
+                    style={styles.linkInline}
+                    onPress={() => router.push("/terms")}
+                  >
+                    Kullanım Şartları
+                  </Text>
+                  <Text> ve </Text>
+                  <Text
+                    style={styles.linkInline}
+                    onPress={() => router.push("/privacy")}
+                  >
+                    Gizlilik Politikası
+                  </Text>
+                  <Text>'nı okudum ve kabul ediyorum.</Text>
+                </Text>
+              </View>
+            </View>
+
+            <Pressable
+              style={[styles.button, !accepted && { opacity: 0.6 }]}
+              onPress={handleRegister}
+            >
               <Text style={styles.buttonText}>Kayıt Ol</Text>
             </Pressable>
 
@@ -174,6 +220,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: "#F9FAFB",
     color: "#111827",
+  },
+
+  /* ✅ terms area */
+  termsRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginTop: 14,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: "#2563EB",
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+    marginTop: 2,
+  },
+  checkboxInner: {
+    width: 10,
+    height: 10,
+    backgroundColor: "#2563EB",
+    borderRadius: 2,
+  },
+  termsText: {
+    fontSize: 12,
+    color: "#6B7280",
+    lineHeight: 18,
+  },
+  linkInline: {
+    color: "#2563EB",
+    fontWeight: "900",
   },
 
   button: {
