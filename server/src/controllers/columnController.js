@@ -5,13 +5,28 @@ const prisma = new PrismaClient();
 exports.createColumn = async (req, res) => {
     const { title } = req.body;
     const { projectId } = req.params; 
+    const userId = req.user.id || req.user.userId;
 
     if (!title) {
         return res.status(400).json({ error: "Sütun adı boş bırakılamaz." });
     }
 
     try {
-       
+
+        const project = await prisma.project.findUnique({
+            where: {
+                id: projectId
+            }
+        });
+
+        if(!project){
+            return res.status(404).json({error: "Proje Bulunamadı."});
+        }
+
+        if(userId !== project.ownerId){
+            return res.status(400).json({error: "Sütun ekleme yetkiniz yok."});
+        }
+
         const columnCount = await prisma.column.count({
             where: { projectId: projectId }
         });

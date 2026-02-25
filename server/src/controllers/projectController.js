@@ -110,6 +110,7 @@ exports.getProjectByOrg = async (req, res) => {
                 orgId: orgId
             },
             include:{
+                members: true,
                 _count:{
                     select:{
                         tasks:true,
@@ -245,3 +246,116 @@ exports.updateTaskPosition = async (req, res) => {
         res.status(500).json({ error: "Görev taşınırken bir hata oluştu." });
     }
 };
+exports.inviteMember = async (req, res) => {
+    const userId = req.user.id || req.user.userId;
+    const {projectId} = req.params;
+    const {assigneeId} = req.body;
+
+    try{
+        const project = await prisma.project.findUnique({
+            where:{
+                id: projectId
+            },
+            include: {
+                organization: true
+            }
+        });
+
+        if(!project){
+            return res.status(404).json({ error: "Proje bulunamadı." });
+        }
+
+        const user = await prisma.user.findUnique({
+            where: {
+                id: userId
+            }
+        });
+
+        if(!user) {
+            res.status(404).json({
+                error: "Giriş yapmalısınız."
+            });
+
+            return;
+        }
+
+        if(userId !== project.ownerId){
+            res.status(403).json({
+                error: "Projeye üye ekleme yetkiniz yok."
+            });
+
+            return;
+        }
+
+        if(userId === assigneeId){
+            res.status(400).json({
+                error: "Kendinizi davet edemezsiniz."
+            });
+
+            return;
+        }
+
+        const organizationMember = await prisma.user_Organization.findUnique({
+            where: {
+                userId_organizationId:{
+                    userId: assigneeId,
+                    organizationId: project.organization.id
+                }
+            }
+        });
+
+        if(!organizationMember){
+            res.status(403).json({
+                error: "Üyeyi projeye dahil etmek için önce ekibe almalısınız."
+            });
+
+            return;
+        }
+
+        const projectMember = await prisma.user_Project.findUnique({
+            where: {
+                userId_projectId:{
+                    userId: assigneeId,
+                    projectId: project.id
+                }
+            }
+        });
+
+        if(projectMember){
+            res.status(403).json({
+                error: "Üye zaten bu projeye dahil."
+            });
+
+            return;
+        }
+
+        const newMember = await prisma.user_Project.create({
+            data: {
+                userId: assigneeId,
+                projectId: project.id
+            }
+        });
+
+        const notific = await prisma.notification.create({
+            data: {
+                userId: assigneeId,
+                organizationId: project.organization.id,
+                title: "Proje Eklemesi",
+                message: `${user.name} sizi ${project.title} projesine ekledi.`,
+                type: "PROJECT"
+            }
+        })
+
+        return res.status(200).json({
+            message: "Üye başarıyla projeye eklendi.",
+            member: newMember,
+            notification: notific
+        });
+
+    }catch (error) {
+        console.error("inviteMember hatası:", error);
+        return res.status(500).json({ 
+            error: "Üye eklenirken sunucu hatası oluştu." 
+        });
+    }
+}

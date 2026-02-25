@@ -44,15 +44,33 @@ exports.createTask = async (req, res) => {
             return;
         }
 
+        const project = await prisma.project.findUnique({
+            where: {
+                id: projectId
+            }
+        });
+
+        if(!project){
+            return res.status(404).json({error: "Proje Bulunamadı."});
+        }
+
+        if(userId !== project.ownerId){
+            return res.status(400).json({error: "Görev ekleme yetkiniz yok."});
+        }
+
         await prisma.task.create({
             data: {
                 title: title,
+                ownerId: user.id,
                 assigneeId: assignee.id,
                 priority: priority,
                 dueDate: new Date(date),
                 description: description,
                 columnId: columnId,
-                projectId: projectId
+                projectId: projectId,
+                totalTime: 0,
+                isTracking: false,
+                lastStartedAt: null
             }
         });
 
@@ -123,3 +141,117 @@ exports.deleteTask = async (req, res) => {
         res.status(500).json({ error: "Görev silinirken bir sunucu hatası oluştu." });
     }
 }
+
+exports.toggleTimer = async (req, res)=>{
+    const {taskId} = req.params;
+    const {action} =req.body;
+    const userId = req.user.id || req.user.userId;
+
+    try{
+
+        const task = await prisma.task.findUnique({
+            where: {
+                id: taskId
+            }
+        });
+
+        if (!task) {
+            return res.status(404).json({ error: "Görev bulunamadı." });
+        }
+
+        if(userId !== task.assigneeId){
+            res.status(403).json({
+                error: "Sadece kendi görevinizin süresini başlatıp durdurabilirsiniz."
+            });
+
+            return;
+        }
+
+        if(action == "START"){
+            if (task.isTracking) return res.status(400).json({ error: "Sayaç zaten çalışıyor." });
+
+            const updatedTask = await prisma.task.update({
+                where: { id: taskId },
+                data: {
+                    isTracking: true,
+                    lastStartedAt: new Date() // Başlangıç zamanını şu an yap
+                }
+            });
+
+            return res.status(200).json({ message: "Sayaç başlatıldı.", task: updatedTask });
+        } 
+
+        else if(action == "STOP"){
+            if (!task.isTracking || !task.lastStartedAt) {
+                return res.status(400).json({ error: "Çalışmayan bir sayaç durdurulamaz." });
+            }
+
+            const now = new Date();
+            const start = new Date(task.lastStartedAt);
+            const secondsPassed = Math.floor((now - start) / 1000); 
+
+            const updatedTask = await prisma.task.update({
+                where: { id: taskId },
+                data: {
+                    isTracking: false,
+                    lastStartedAt: null, 
+                    totalTime: {
+                        increment: secondsPassed 
+                    }
+                }
+            });
+
+            return res.status(200).json({ message: "Sayaç durduruldu.", task: updatedTask });
+        }
+        else{
+            return res.status(400).json({ error: "Geçersiz işlem." });
+        }
+
+
+    }catch(error){
+        console.error("toggleTimer Hatası:", error);
+        res.status(500).json({ error: "Zaman güncellenirken bir hata oluştu." });
+    }
+}
+
+exports.completeTask = async (req, res) => {
+    const { taskId } = req.params;
+    const { action } = req.body; // "COMPLETED" veya "NONE"
+    const userId = req.user.id || req.user.userId;
+
+    try {
+        const task = await prisma.task.findUnique({
+            where: { id: taskId }
+        });
+
+        if (!task) {
+            return res.status(404).json({ error: "Görev bulunamadı." });
+        }
+
+        if (userId !== task.assigneeId && userId !== task.ownerId) {
+            return res.status(403).json({
+                error: "Bu görevin durumunu değiştirme yetkiniz yok."
+            });
+        }
+
+        
+        const isDone = action === "COMPLETED";
+        
+        const updatedTask = await prisma.task.update({
+            where: { id: taskId },
+            data: {
+                isCompleted: isDone,
+                completedAt: isDone ? new Date() : null 
+            }
+        });
+
+        return res.status(200).json({ 
+            message: isDone ? "Görev tamamlandı olarak işaretlendi." : "Görev durumu geri alındı.", 
+            task: updatedTask 
+        });
+
+    } catch (error) {
+        console.error("completeTask hatası:", error);
+        res.status(500).json({ error: "Sunucu hatası oluştu." });
+    }
+};

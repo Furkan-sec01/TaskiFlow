@@ -12,5 +12,6 @@ router.get("/org/:orgId", projectController.getProjectByOrg);
 router.post("/", projectController.createProject); 
 router.delete("/:projectId", projectController.deleteProject);
 router.put("/task/:taskId/move", projectController.updateTaskPosition);
+router.post("/:projectId/invite", projectController.inviteMember);
 
 module.exports = router;
