@@ -42,6 +42,52 @@ exports.createOrg = async (req, res)  => {
 
 }
 
+exports.deleteOrg = async (req, res) => {
+    const userId = req.user.id || req.user.userId;
+    const {orgId} = req.params;
+
+    try{
+        const org = await prisma.organization.findUnique({
+            where: {
+                id: orgId
+            }
+        });
+
+        if(!org){
+            res.status(404).json({
+                error: "Organizasyon Bulunamadı."
+            });
+            return;
+        }
+
+        const owner = org.ownerId;
+        if(userId !== owner){
+            res.status(403).json({
+                error: "Sadece ekip lideri ekibi silebilir."
+            });
+
+            return;
+        }
+
+        await prisma.organization.delete({
+            where: {
+                id: orgId
+            }
+        });
+
+        res.status(200).json({
+            message: "Ekip başarıyla silindi."
+        });
+
+    }catch(error){
+        res.status(500).json({
+            error: "Sunucu Hatası."
+        });
+
+        console.log("deleteOrg Hatası",error);
+    }
+}
+
 
 exports.inviteMember = async (req, res) => {
     const {email, orgId} = req.body;

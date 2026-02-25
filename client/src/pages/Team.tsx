@@ -4,6 +4,7 @@ import { useTheme } from "../context/ThemeContext";
 import { 
   Users, 
   Plus, 
+  Trash2,
   ArrowRightCircle,
   X // Modal kapatma ikonu için
 } from "lucide-react";
@@ -84,6 +85,9 @@ const Team = () => {
     localStorage.setItem("activeOrgId", orgId);
     navigate(`/organization/${orgId}`);
   };
+
+
+  
 
   return (
     <div className={`flex h-screen font-sans transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-[#F3F4F6] text-gray-800'}`}>

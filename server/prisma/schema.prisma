@@ -27,6 +27,7 @@ model User {
   organizations     User_Organization[]
   ownedProjects     Project[]                 @relation("ProjectOwner")
   memberProjects    User_Project[] 
+  ownedTasks        Task[]    @relation("TaskOwner")
   assignedTasks     Task[]                    @relation("TaskAssignee") 
   notifications     Notification[] 
   createdAt         DateTime                  @default(now())
@@ -84,10 +85,17 @@ model Task {
   columnId    String
   column      Column                      @relation(fields: [columnId], references: [id], onDelete: Cascade)
   projectId   String  
-  project      Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project     Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ownerId     String?  
+  owner       User?                        @relation("TaskOwner", fields: [ownerId], references: [id])
   assigneeId  String?
   assignee    User?                       @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  totalTime     Int                       @default(0)  
+  isTracking    Boolean                   @default(false)
+  lastStartedAt DateTime?
+  isCompleted   Boolean                   @default(false)
   createdAt   DateTime                    @default(now())
+  completedAt   DateTime?
   updatedAt   DateTime                    @updatedAt
 }
 
