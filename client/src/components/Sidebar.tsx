@@ -1,11 +1,11 @@
 import { LayoutDashboard, CheckSquare, Map, Users, BarChart2, Bell, Settings, LogOut, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom"; // 🚀 useNavigate eklendi
+import { NavLink, useLocation, useNavigate } from "react-router-dom"; // useNavigate eklendi
 
 const navItems = [
   { icon: LayoutDashboard, label: "Genel Bakış",    to: "/dashboard" },
   { icon: CheckSquare,     label: "Görevlerim",      to: "/tasks" },
-  { icon: Map,             label: "Roadmap",           to: "/roadmap" },
+  //{ icon: Map,             label: "Roadmap",           to: "/roadmap" },
   { icon: Users,           label: "Ekiplerim",               to: "/team" },
   { icon: BarChart2,       label: "Raporlar",          to: "/reports" },
   { icon: Bell,            label: "Bildirimler",       to: "/notifications", badge: 3 },
@@ -107,7 +107,7 @@ export default function Sidebar() {
         <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group">
           <div className="relative flex-shrink-0">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
-              <span className="text-white text-xs font-bold">AK</span>
+              <span className="text-white text-xs font-bold">SY</span>
             </div>
             <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-400 border-2 border-white" />
           </div>
@@ -117,11 +117,11 @@ export default function Sidebar() {
             <p className="text-[11px] text-gray-400 truncate leading-tight">{user ? user.email : "..."}</p>
           </div>
 
-          {/* 🚀 Çıkış butonu artık aktif */}
+          {/*Çıkış butonu artık aktif */}
           <button
             onClick={(e) => { 
               e.stopPropagation(); 
-              handleLogout(); // 🚀 Fonksiyon çağrıldı
+              handleLogout(); // Fonksiyon çağrıldı
             }}
             className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-gray-200 text-gray-400 hover:text-red-500"
             title="Çıkış Yap"
