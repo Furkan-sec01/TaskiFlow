@@ -1,10 +1,12 @@
-import React, { useState, useRef, useMemo, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 
-// Tip Tanımlamaları
+// --- Tipler ---
 type PriorityType = 'HIGH' | 'MEDIUM' | 'LOW'; 
-type ColumnType = { id: string; title: string; color?: string; tasks: TaskType[] };
+type CommentType = { id: string; user: string; text: string; createdAt: string };
+type AttachmentType = { id: string; name: string; date: string; url: string };
+
 type TaskType = { 
   id: string; 
   columnId: string; 
@@ -13,9 +15,12 @@ type TaskType = {
   dueDate: string;
   priority: PriorityType;
   assignee?: { name: string; email: string }; 
-  lastMovedAt?: string; 
+  completed?: boolean; 
+  comments?: CommentType[]; 
+  attachments?: AttachmentType[]; 
 };
 
+type ColumnType = { id: string; title: string; color?: string; tasks: TaskType[] };
 type MemberType = { id: string; name: string; email: string };
 
 const Proje: React.FC = () => {
@@ -23,6 +28,24 @@ const Proje: React.FC = () => {
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const taskAttachmentRef = useRef<HTMLInputElement>(null);
+
+  const [bgImage, setBgImage] = useState<string | null>(null);
+  const [columns, setColumns] = useState<ColumnType[]>([]);
+  const [members, setMembers] = useState<MemberType[]>([]); 
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPriority, setSelectedPriority] = useState<PriorityType | "ALL">("ALL");
+
+  const [selectedTask, setSelectedTask] = useState<TaskType | null>(null); 
+  const [commentText, setCommentText] = useState(""); 
+
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isColModalOpen, setIsColModalOpen] = useState(false); 
+  const [activeColId, setActiveColId] = useState<string | null>(null);
+  const [newTask, setNewTask] = useState({ title: "", description: "", dueDate: "", priority: "MEDIUM" as PriorityType, assigneeMail: "" });
+  const [newColTitle, setNewColTitle] = useState(""); 
+  const [openSettingsId, setOpenSettingsId] = useState<string | null>(null);
 
   const presets = [
     { id: 'p1', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=2000' },
@@ -39,23 +62,6 @@ const Proje: React.FC = () => {
     { name: "Mor", class: "bg-purple-100/95" },
   ];
 
-  const [bgImage, setBgImage] = useState<string | null>(null);
-  const [columns, setColumns] = useState<ColumnType[]>([]);
-  const [members, setMembers] = useState<MemberType[]>([]); 
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPriority, setSelectedPriority] = useState<PriorityType | "ALL">("ALL");
-
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [isColModalOpen, setIsColModalOpen] = useState(false); 
-  const [activeColId, setActiveColId] = useState<string | null>(null);
-  const [newTask, setNewTask] = useState({ 
-    title: "", description: "", dueDate: "", priority: "MEDIUM" as PriorityType, assigneeMail: "" 
-  });
-  const [newColTitle, setNewColTitle] = useState(""); 
-  const [openSettingsId, setOpenSettingsId] = useState<string | null>(null);
-
-  
   const fetchBoard = async () => {
     const token = localStorage.getItem("token");
     try {
@@ -85,6 +91,43 @@ const Proje: React.FC = () => {
 
   useEffect(() => { fetchBoard(); }, [projectId]);
 
+  // --- GÜNCELLENEN VE DÜZELTİLEN TİK FONKSİYONU ---
+  const toggleTaskComplete = async (e: React.MouseEvent, taskId: string) => {
+    e.stopPropagation();
+
+    // 1. ADIM: UI'yı anında güncelle (Optimistic UI)
+    setColumns(prevColumns => 
+      prevColumns.map(col => ({
+        ...col,
+        tasks: col.tasks.map(t => 
+          t.id === taskId ? { ...t, completed: !t.completed } : t
+        )
+      }))
+    );
+
+    // 2. ADIM: Eğer detay modalı (selectedTask) açıksa onu da güncelle
+    if (selectedTask && selectedTask.id === taskId) {
+      setSelectedTask(prev => prev ? { ...prev, completed: !prev.completed } : null);
+    }
+
+    // 3. ADIM: Backend Güncellemesi
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/toggle-complete`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      
+      if (!res.ok) {
+        // Bir hata oluşursa verileri tekrar çekerek state'i geri al
+        fetchBoard();
+      }
+    } catch (error) {
+      console.error("Tik güncellenemedi:", error);
+      fetchBoard();
+    }
+  };
+
   const handleCreateColumn = async () => {
     if (!newColTitle.trim()) return;
     const token = localStorage.getItem("token");
@@ -96,18 +139,6 @@ const Proje: React.FC = () => {
       });
       if (res.ok) { fetchBoard(); setIsColModalOpen(false); setNewColTitle(""); }
     } catch (error) { alert("Sütun eklenemedi."); }
-  };
-
-  const deleteColumn = async (colId: string) => {
-    if (!window.confirm("Sütun ve içindeki görevler silinecek. Onaylıyor musunuz?")) return;
-    const token = localStorage.getItem("token");
-    try {
-      const res = await fetch(`http://localhost:5000/api/column/delete/${projectId}/${colId}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (res.ok) fetchBoard();
-    } catch (error) { alert("Silme hatası."); }
   };
 
   const handleSaveTask = async () => {
@@ -132,6 +163,18 @@ const Proje: React.FC = () => {
     } catch (error) { alert("Görev hatası."); }
   };
 
+  const deleteColumn = async (colId: string) => {
+    if (!window.confirm("Sütun ve içindeki görevler silinecek?")) return;
+    const token = localStorage.getItem("token");
+    try {
+      await fetch(`http://localhost:5000/api/column/delete/${projectId}/${colId}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      fetchBoard();
+    } catch (error) { }
+  };
+
   const deleteTask = async (taskId: string) => {
     if (!window.confirm("Görevi silmek istediğinize emin misiniz?")) return;
     const token = localStorage.getItem("token");
@@ -141,7 +184,7 @@ const Proje: React.FC = () => {
         headers: { "Authorization": `Bearer ${token}` }
       });
       fetchBoard();
-    } catch (error) { console.error(error); }
+    } catch (error) { }
   };
 
   const handleDrop = async (e: React.DragEvent, targetColId: string) => {
@@ -155,7 +198,7 @@ const Proje: React.FC = () => {
         body: JSON.stringify({ columnId: targetColId })
       });
       if (res.ok) fetchBoard();
-    } catch (error) { console.error("Taşıma hatası."); }
+    } catch (error) { }
   };
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => e.dataTransfer.setData("taskId", taskId);
@@ -215,7 +258,6 @@ const Proje: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Board */}
       <main className="flex-1 flex gap-6 p-6 overflow-x-auto items-start custom-scrollbar">
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center font-bold opacity-30 tracking-[0.3em]">SENKRONİZE EDİLİYOR...</div>
@@ -250,16 +292,21 @@ const Proje: React.FC = () => {
                     .filter(t => t.title.toLowerCase().includes(searchTerm.toLowerCase()) && (selectedPriority === "ALL" || t.priority === selectedPriority))
                     .map((task) => (
                     <div key={task.id} draggable onDragStart={(e) => handleDragStart(e, task.id)}
+                      onClick={() => setSelectedTask(task)}
                       className="bg-white/90 p-5 rounded-2xl shadow-sm border border-white cursor-grab active:cursor-grabbing hover:shadow-xl transition-all group relative">
                       
                       <div className="flex justify-between items-start mb-3">
+                        <button 
+                          onClick={(e) => toggleTaskComplete(e, task.id)}
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${task.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 text-transparent hover:border-emerald-500'}`}>
+                          <span className="text-[10px]">✓</span>
+                        </button>
                         <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter shadow-sm ${getPriorityColor(task.priority)}`}>
                           {task.priority === 'HIGH' ? 'YÜKSEK' : task.priority === 'MEDIUM' ? 'ORTA' : 'DÜŞÜK'}
                         </span>
-                        <button onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all text-[10px]">✕</button>
                       </div>
 
-                      <h4 className="font-bold text-gray-800 text-sm mb-1">{task.title}</h4>
+                      <h4 className={`font-bold text-sm mb-1 ${task.completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>{task.title}</h4>
                       <p className="text-gray-500 text-[11px] leading-snug line-clamp-2 mb-4">{task.description}</p>
                       
                       <div className="flex items-center justify-between pt-3 border-t border-gray-50">
@@ -271,9 +318,7 @@ const Proje: React.FC = () => {
                             @{task.assignee?.name?.split(' ')[0].toLowerCase() || 'boş'}
                           </span>
                         </div>
-                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-tighter italic">
-                          {new Date(task.dueDate).toLocaleDateString("tr-TR")}
-                        </span>
+                        <button onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all text-[10px]">Sil 🗑</button>
                       </div>
                     </div>
                   ))}
@@ -292,7 +337,94 @@ const Proje: React.FC = () => {
         )}
       </main>
 
-      {/* Sütun Ekleme Modalı */}
+      {/* --- DETAY MODAL (GÖREV TIKLANDIĞINDA AÇILAN) --- */}
+      {selectedTask && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4" onClick={() => setSelectedTask(null)}>
+          <div className="bg-[#F4F5F7] w-full max-w-4xl h-[80vh] rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
+            
+            <div className="h-24 w-full bg-indigo-600 relative">
+                <button onClick={() => setSelectedTask(null)} className="absolute top-6 right-6 w-10 h-10 rounded-full bg-black/10 hover:bg-black/20 flex items-center justify-center text-white text-xl transition-all">✕</button>
+            </div>
+
+            <div className="flex-1 flex overflow-hidden">
+                <div className="flex-[1.2] p-10 overflow-y-auto bg-white custom-scrollbar">
+                    <div className="flex items-center gap-4 mb-8">
+                        <button 
+                            onClick={(e) => toggleTaskComplete(e, selectedTask.id)}
+                            className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${selectedTask.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 text-transparent hover:border-emerald-500'}`}>
+                            ✓
+                        </button>
+                        <h2 className={`text-3xl font-black tracking-tighter ${selectedTask.completed ? 'line-through text-gray-400' : 'text-gray-900'}`}>{selectedTask.title}</h2>
+                    </div>
+
+                    <div className="mb-10">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Açıklama</p>
+                        <p className="text-gray-600 text-sm leading-relaxed bg-gray-50 p-6 rounded-2xl border border-gray-100 italic">
+                            {selectedTask.description || "Henüz açıklama eklenmedi."}
+                        </p>
+                    </div>
+
+                    <div>
+                        <div className="flex justify-between items-center mb-6">
+                            <p className="text-xs font-black text-gray-800 uppercase tracking-widest flex items-center gap-2"><span>📎</span> Eklentiler</p>
+                            <button onClick={() => taskAttachmentRef.current?.click()} className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-100 transition-colors uppercase">Dosya Yükle</button>
+                            <input type="file" ref={taskAttachmentRef} className="hidden" accept="image/*" />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            {selectedTask.attachments?.map(att => (
+                                <div key={att.id} className="border-2 border-gray-50 rounded-2xl p-3 flex items-center gap-4 bg-white hover:border-indigo-100 transition-all cursor-pointer group">
+                                    <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center text-[10px] font-black text-gray-400 group-hover:bg-indigo-50 group-hover:text-indigo-400 transition-colors">IMG</div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-bold text-gray-800 truncate">{att.name}</p>
+                                        <p className="text-[9px] font-black text-gray-400 uppercase mt-1">{att.date}</p>
+                                    </div>
+                                </div>
+                            )) || <div className="col-span-2 py-8 border-2 border-dashed border-gray-100 rounded-2xl text-center text-[10px] font-black text-gray-300 uppercase tracking-widest">Henüz bir görsel yok</div>}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex-1 bg-[#F4F5F7] p-10 border-l border-gray-200 flex flex-col">
+                    <p className="text-xs font-black text-gray-800 mb-6 uppercase tracking-widest flex items-center gap-2"><span>💬</span> Aktivite & Yorumlar</p>
+
+                    <div className="mb-8">
+                        <textarea 
+                            value={commentText}
+                            onChange={(e) => setCommentText(e.target.value)}
+                            placeholder="Bir yorum bırakın..."
+                            className="w-full bg-white border-none rounded-2xl p-5 text-sm font-medium focus:ring-2 focus:ring-indigo-500 resize-none h-28 shadow-sm placeholder:text-gray-300"
+                        />
+                        <div className="flex justify-end mt-3">
+                            <button className="bg-indigo-600 text-white px-6 py-3 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 uppercase tracking-widest">Yorum Yap</button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6 overflow-y-auto pr-2 custom-scrollbar">
+                        {selectedTask.comments?.map(comment => (
+                            <div key={comment.id} className="flex gap-4">
+                                <div className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center text-indigo-600 text-[10px] font-black border border-gray-100 flex-shrink-0">
+                                    {comment.user.charAt(0)}
+                                </div>
+                                <div className="flex-1">
+                                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-50">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <p className="text-[11px] font-black text-gray-900 uppercase tracking-tighter">{comment.user}</p>
+                                            <span className="text-[9px] font-bold text-gray-400 italic">{comment.createdAt}</span>
+                                        </div>
+                                        <p className="text-xs text-gray-600 leading-relaxed font-medium">{comment.text}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- SÜTUN EKLE MODAL --- */}
       {isColModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setIsColModalOpen(false)}>
           <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
@@ -306,7 +438,7 @@ const Proje: React.FC = () => {
         </div>
       )}
 
-      {/* Modals: Görev Ekleme */}
+      {/* --- KART EKLE MODAL --- */}
       {isTaskModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={closeTaskModal}>
           <div className="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
@@ -317,24 +449,14 @@ const Proje: React.FC = () => {
                 <input placeholder="Ne yapılacak?" className="w-full bg-gray-50 border-none rounded-2xl p-4 outline-none focus:ring-2 focus:ring-indigo-500 font-bold" value={newTask.title} onChange={(e) => setNewTask({...newTask, title: e.target.value})} />
               </div>
               
-              {/* 🚀 ÜYE SEÇİM DROPDOWN - GÜNCELLENDİ */}
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-gray-400 uppercase ml-2 tracking-widest">Görevi Atanacak Üye</label>
-                <div className="relative group">
-                   <select 
-                    className="w-full bg-gray-50 border-none rounded-2xl p-4 outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm appearance-none cursor-pointer"
-                    value={newTask.assigneeMail}
-                    onChange={(e) => setNewTask({...newTask, assigneeMail: e.target.value})}
-                  >
-                    <option value="">Üye Seçiniz...</option>
-                    {members.map((member) => (
-                      <option key={member.id} value={member.email}>
-                        {member.name} ({member.email})
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40 text-xs">▼</div>
-                </div>
+                <select className="w-full bg-gray-50 border-none rounded-2xl p-4 outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm appearance-none cursor-pointer" value={newTask.assigneeMail} onChange={(e) => setNewTask({...newTask, assigneeMail: e.target.value})}>
+                  <option value="">Üye Seçiniz...</option>
+                  {members.map((member) => (
+                    <option key={member.id} value={member.email}>{member.name} ({member.email})</option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
