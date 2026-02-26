@@ -32,6 +32,7 @@ import Settings from "./pages/Settings";
 import Reports from "./pages/Reports";
 import Roadmap from "./pages/Roadmap";
 import Proje from './pages/Proje'
+import Members from "./pages/Members";
 
 
 // Components
@@ -79,6 +80,8 @@ const App = () => (
           {/* Yönetim Paneli — Sidebar VAR */}
           <Route element={<Layout />}>
           <Route path="/inbox" element={<Notifications />} /> 
+          <Route path="/members" element={<Members />} />
+          <Route path="/projects" element={<Proje />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/tasks" element={<Tasks />} /> {/* Eğer genel görevler sayfan varsa burası kalsın */}
             

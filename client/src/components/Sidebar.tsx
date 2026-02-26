@@ -34,9 +34,11 @@ const workspaceGroups: Group[] = [
     label: "Workspace", key: "workspace",
     items: [
       { icon: "Grid",     label: "Genel Bakış",  to: "/dashboard" },
-      { icon: "Check",    label: "Görevlerim",   to: "/tasks" },
+      { icon: "Grid", label: "Projeler", to: "/projects" },
+      { icon: "Users", label: "Members", to: "/members" },
       
-      { icon: "Users",    label: "Ekiplerim",    to: "/team" },
+      
+      
       { icon: "BarChart", label: "Raporlar",     to: "/reports" },
       
       { icon: "Tag",      label: "Ayarlar",      to: "/settings" },
