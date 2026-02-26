@@ -56,7 +56,9 @@ const App = () => (
       <BrowserRouter>
         <Routes>
 
-          {/* 🏠 Ana Sayfa ve Landing Sayfaları — Footer var, Sidebar yok */}
+          {/* Ana Sayfa ve Landing Sayfaları — Footer var, Sidebar yok */}
+
+          
           <Route path="/" element={<WithFooter><Index /></WithFooter>} />
           <Route path="/features" element={<WithFooter><Features /></WithFooter>} />
           <Route path="/solutions" element={<WithFooter><Solutions /></WithFooter>} />
@@ -68,18 +70,19 @@ const App = () => (
           <Route path="/payment" element={<WithFooter><Payment /></WithFooter>} />
           <Route path="/payment-success" element={<WithFooter><PaymentSuccess /></WithFooter>} />
 
-          {/* 🔐 Kimlik Doğrulama — Sidebar yok, Footer yok */}
+          {/* Kimlik Doğrulama — Sidebar yok, Footer yok */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify" element={<Verify />} />
 
 
-          {/* 📊 Yönetim Paneli — Sidebar VAR */}
+          {/* Yönetim Paneli — Sidebar VAR */}
           <Route element={<Layout />}>
+          <Route path="/inbox" element={<Notifications />} /> 
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/tasks" element={<Tasks />} /> {/* Eğer genel görevler sayfan varsa burası kalsın */}
             
-            {/* 🚀 YENİ EKLENEN ROTA: Proje Detay / Kanban Sayfası */}
+            {/* YENİ EKLENEN ROTA: Proje Detay / Kanban Sayfası */}
             <Route path="/projects/:projectId" element={<Proje />} />
             
             <Route path="/team" element={<Team />} />
