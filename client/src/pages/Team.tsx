@@ -90,9 +90,9 @@ const Team = () => {
     }
   };
 
- const handleSwitchOrg = (orgId: string) => {
+const handleSwitchOrg = (orgId: string) => {
   localStorage.setItem("activeOrgId", orgId);
-  navigate(`/projects/${orgId}`);
+  navigate(`/teams/${orgId}`); 
 };
 
 
