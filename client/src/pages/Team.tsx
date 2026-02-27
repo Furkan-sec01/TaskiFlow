@@ -14,7 +14,7 @@ const Team = () => {
   const { darkMode } = useTheme();
   const navigate = useNavigate();
   
-  // 🚀 STATE YÖNETİMİ
+  //  STATE YÖNETİMİ
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +27,12 @@ const Team = () => {
   useEffect(() => {
     fetchMyOrganizations();
   }, []);
+
+  useEffect(() => {
+  const handler = () => setIsModalOpen(true);
+  window.addEventListener("open-create-team-modal", handler);
+  return () => window.removeEventListener("open-create-team-modal", handler);
+}, []);
 
   const fetchMyOrganizations = async () => {
     const token = localStorage.getItem("token");
@@ -68,12 +74,15 @@ const Team = () => {
       const data = await res.json();
 
       if (res.ok) {
-        setIsModalOpen(false);
-        setNewOrgName("");
-        fetchMyOrganizations();
-      } else {
-        alert(data.error || "Oluşturma başarısız.");
-      }
+  // Sidebar'ı yenile
+  window.dispatchEvent(new CustomEvent("teams-updated"));
+
+  setIsModalOpen(false);
+  setNewOrgName("");
+  fetchMyOrganizations();
+}
+
+
     } catch (err) {
       alert("Sunucu hatası oluştu.");
     } finally {
@@ -81,10 +90,10 @@ const Team = () => {
     }
   };
 
-  const handleSwitchOrg = (orgId: string) => {
-    localStorage.setItem("activeOrgId", orgId);
-    navigate(`/organization/${orgId}`);
-  };
+ const handleSwitchOrg = (orgId: string) => {
+  localStorage.setItem("activeOrgId", orgId);
+  navigate(`/projects/${orgId}`);
+};
 
 
   
