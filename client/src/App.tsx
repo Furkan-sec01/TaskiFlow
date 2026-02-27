@@ -38,6 +38,7 @@ import Members from "./pages/Members";
 // Components
 import Footer from "./components/Footer";
 import Layout from "./components/Layout"; // ← YENİ (1)
+import Projelerim from "./pages/Projelerim";
 
 // Landing sayfaları için Footer sarmalayıcı
 function WithFooter({ children }: { children: React.ReactNode }) {
@@ -94,6 +95,7 @@ const App = () => (
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/roadmap" element={<Roadmap />} />
+            <Route path="/test-projelerim" element={<Projelerim />} />
           </Route>
 
         </Routes>
