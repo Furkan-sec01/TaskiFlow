@@ -8,9 +8,12 @@ interface Member {
 
 interface Project {
   id: string | number;
-  name: string;
+  title: string;       
   description: string;
-  team: string;
+  organization?: {    
+    id?: string;
+    name: string;     
+  };
   members?: Member[];
 }
 
@@ -32,24 +35,26 @@ const getTeamColor = (teamName: string) => {
 };
 
 const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
-  const displayTeam = project.team || "Genel";
+
+  const displayTeam = project.organization?.name || "Genel Ekip";
   const teamStyle = getTeamColor(displayTeam);
-  
- 
   const projectMembers = project.members || [];
 
   return (
     <div className="group bg-white p-6 rounded-2xl shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 border border-gray-100 flex flex-col h-full relative overflow-hidden">
       
-      <div className="flex justify-between items-center mb-5">
-        <div className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${teamStyle}`}>
-          {displayTeam}
+      <div className="flex flex-col mb-5">
+        <div className="flex items-center gap-2">
+          {/* Ekip İsmi*/}
+          <div className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${teamStyle}`}>
+            {displayTeam}
+          </div>
         </div>
       </div>
       
       <div className="flex-grow">
         <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors duration-300">
-          {project.name || "İsimsiz Proje"}
+          {project.title || "İsimsiz Proje"} 
         </h3>
         <p className="text-gray-500 text-sm leading-relaxed line-clamp-3">
           {project.description || "Detay açıklaması girilmemiş."}
@@ -57,7 +62,6 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
       </div>
 
       <div className="mt-8 pt-5 border-t border-gray-50 flex items-center justify-between">
-      
         <div className="flex -space-x-2 overflow-hidden">
           {projectMembers.length > 0 ? (
             projectMembers.slice(0, 3).map((member, index) => (
@@ -117,8 +121,8 @@ const Projelerim: React.FC = () => {
         if (!response.ok) throw new Error("Veriler alınamadı.");
         const data = await response.json();
         
-     
-        const finalData = Array.isArray(data) ? data : (data.projects || data.data || []);
+       
+        const finalData = data.projects || [];
         setProjects(finalData);
 
       } catch (err: any) {
