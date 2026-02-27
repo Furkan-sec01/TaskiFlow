@@ -359,3 +359,58 @@ exports.inviteMember = async (req, res) => {
         });
     }
 }
+
+
+exports.getProjectByUser = async(req, res) => {
+    const userId = req.user.userId || req.user.id;
+
+    try{
+        const user = await prisma.user.findUnique({
+            where: {
+                id: userId
+            }
+        });
+
+        if(!user) {
+            return res.status(404).json({
+                error: "Kullanıcı Bulunamadı."
+            });
+        }
+
+        const userProjects = await prisma.user_Project.findMany({
+            where: {
+                userId: userId
+            },
+            include: {
+                project: { 
+                    select: {
+                        id: true,
+                        title: true, 
+                        description: true,
+                        organization: {
+                            select: {
+                                id:  true,
+                                name: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        const projects = userProjects.map(up => up.project);
+        
+        return res.status(200).json({
+            message: "Projeler başarıyla getirildi.",
+            projects: projects 
+        });
+
+
+    } catch(error){
+        console.error("getProjectByUser Hatası: ", error);
+        return res.status(500).json({
+            error: "Projeler getirilirken sunucu taraflı bir hata oluştu."
+        });
+    }
+}
+
