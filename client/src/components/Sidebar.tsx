@@ -1,24 +1,148 @@
-import { LayoutDashboard, CheckSquare, Map, Users, BarChart2, Bell, Settings, LogOut, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom"; // 🚀 useNavigate eklendi
-
-const navItems = [
-  { icon: LayoutDashboard, label: "Genel Bakış",    to: "/dashboard" },
-  { icon: CheckSquare,     label: "Görevlerim",      to: "/tasks" },
-  { icon: Map,             label: "Roadmap",           to: "/roadmap" },
-  { icon: Users,           label: "Ekiplerim",               to: "/team" },
-  { icon: BarChart2,       label: "Raporlar",          to: "/reports" },
-  { icon: Bell,            label: "Bildirimler",       to: "/notifications", badge: 3 },
-  { icon: Settings,        label: "Ayarlar",           to: "/settings" },
+import { useState, useEffect } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import {
+  Inbox, Circle, ChevronRight, Search, PenLine, LayoutGrid, Users,
+  Eye, MoreHorizontal, Plus, HelpCircle, Layers, Tag, FileText,
+  Zap, Bot, MessageSquare, Shield, Link, CreditCard, Download,
+  Activity, Cpu, GitBranch, ArrowLeft, LogOut,
+  CheckSquare, Map, BarChart2, Bell, Settings, Trash2, X,
+} from "lucide-react";
+const iconMap: Record<string, React.ElementType> = {
+  Inbox, Circle, ChevronRight, Search, Pen: PenLine, Grid: LayoutGrid,
+  Users, Eye, More: MoreHorizontal, Plus, Help: HelpCircle, Layers,
+  Tag, File: FileText, Zap, Bot, Msg: MessageSquare, Shield, Link,
+  Card: CreditCard, Download, Activity, Cpu, Git: GitBranch,
+  Check: CheckSquare, Map, BarChart: BarChart2, Bell, Settings,
+};
+interface GroupItem {
+  icon: string;
+  label: string;
+  to?: string;
+  badge?: number;
+}
+interface Group {
+  label: string;
+  key: string;
+  items: GroupItem[];
+}
+interface Team {
+  id: string;
+  name: string;
+}
+const workspaceGroups: Group[] = [
+  {
+    label: "Workspace", key: "workspace",
+    items: [
+      { icon: "Grid",     label: "Genel Bakış",  to: "/dashboard" },
+      { icon: "Grid", label: "Projeler", to: "/test-projelerim" },
+      { icon: "Users",    label: "Teams",         to: "/team" },
+      { icon: "Users",    label: "Members",       to: "/members" },
+      { icon: "BarChart", label: "Raporlar",      to: "/reports" },
+      { icon: "Tag",      label: "Ayarlar",       to: "/settings" },
+    ],
+  },
 ];
-
+const tryGroup: Group = {
+  label: "Try", key: "try",
+  items: [
+    { icon: "Activity", label: "Pulse", to: "/pulse" },
+    { icon: "Cpu",      label: "AI",    to: "/ai" },
+  ],
+};
+const settingsGroups: Group[] = [
+  {
+    label: "", key: "account",
+    items: [
+      { icon: "Tag",    label: "Preferences",        to: "/settings/preferences" },
+      { icon: "Users",  label: "Profile",             to: "/settings/profile" },
+      { icon: "Inbox",  label: "Notifications",       to: "/settings/notifications", badge: 3 },
+      { icon: "Shield", label: "Security & access",   to: "/settings/security" },
+      { icon: "Link",   label: "Connected accounts",  to: "/settings/connections" },
+    ],
+  },
+  {
+    label: "Issues", key: "issues_s",
+    items: [
+      { icon: "Tag",  label: "Labels",    to: "/settings/labels" },
+      { icon: "File", label: "Templates", to: "/settings/templates" },
+      { icon: "Zap",  label: "SLAs",      to: "/settings/slas" },
+    ],
+  },
+  {
+    label: "Features", key: "features",
+    items: [
+      { icon: "Layers", label: "Initiatives",      to: "/settings/initiatives" },
+      { icon: "File",   label: "Documents",         to: "/settings/documents" },
+      { icon: "Msg",    label: "Customer requests", to: "/settings/requests" },
+      { icon: "Zap",    label: "Pulse",             to: "/settings/pulse" },
+      { icon: "Cpu",    label: "AI",                to: "/settings/ai" },
+      { icon: "Bot",    label: "Agents",            to: "/settings/agents" },
+    ],
+  },
+  {
+    label: "Administration", key: "admin",
+    items: [
+      { icon: "Grid",     label: "Workspace",       to: "/settings/workspace" },
+      { icon: "Users",    label: "Teams",           to: "/settings/teams" },
+      { icon: "Users",    label: "Members",         to: "/settings/members" },
+      { icon: "Shield",   label: "Security",        to: "/settings/security-admin" },
+      { icon: "Git",      label: "API",             to: "/settings/api" },
+      { icon: "Link",     label: "Applications",    to: "/settings/applications" },
+      { icon: "Card",     label: "Billing",         to: "/settings/billing" },
+      { icon: "Download", label: "Import / Export", to: "/settings/import" },
+    ],
+  },
+];
+interface NavButtonProps {
+  iconKey: string;
+  label: string;
+  badge?: number;
+  to?: string;
+  indent?: boolean;
+}
+function NavButton({ iconKey, label, badge, to, indent = false }: NavButtonProps) {
+  const Icon = iconMap[iconKey];
+  const baseStyle = `w-full flex items-center gap-2 rounded-md border-none cursor-pointer text-left text-[12.5px] transition-colors duration-100 ${indent ? "pl-5 pr-2 py-1.5" : "px-2 py-1.5"}`;
+  if (to) {
+    return (
+      <NavLink
+        to={to}
+        className={({ isActive }) =>
+          `${baseStyle} ${isActive ? "bg-blue-100 text-blue-700 font-semibold" : "text-slate-500 hover:bg-blue-50 font-normal"}`
+        }
+      >
+        <span className="flex items-center opacity-70">
+          {Icon && <Icon size={15} />}
+        </span>
+        <span className="flex-1">{label}</span>
+        {badge && badge > 0 && (
+          <span className="bg-blue-500 text-white rounded-full px-1.5 py-0 text-[11px] font-semibold">
+            {badge}
+          </span>
+        )}
+      </NavLink>
+    );
+  }
+  return (
+    <button className={`${baseStyle} text-slate-500 hover:bg-blue-50`}>
+      <span className="flex items-center opacity-70">
+        {Icon && <Icon size={15} />}
+      </span>
+      <span className="flex-1">{label}</span>
+    </button>
+  );
+}
 export default function Sidebar() {
-  const location = useLocation();
-  const navigate = useNavigate(); 
-
+  const navigate = useNavigate();
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [mode, setMode] = useState<"main" | "settings">("main");
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
-
-  useEffect(()=> {
+  // Teams state — API'den çek
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [addingTeam, setAddingTeam] = useState(false);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [teamsCollapsed, setTeamsCollapsed] = useState(false);
+  useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
@@ -27,110 +151,271 @@ export default function Sidebar() {
         console.error("Kullanıcı verisi ayrıştırılamadı:", error);
       }
     }
-  },[]);
-
+  }, []);
+  // Teams'i API'den çek
+  useEffect(() => {
+    const fetchTeams = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      try {
+        const res = await fetch("http://localhost:5000/api/users/me", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.myOrganizations) {
+          setTeams(data.myOrganizations.map((org: any) => ({
+            id: org.id,
+            name: org.name,
+          })));
+        }
+      } catch (err) {
+        console.error("Takımlar yüklenemedi:", err);
+      }
+    };
+    fetchTeams();
+    const handler = () => fetchTeams();
+    window.addEventListener("teams-updated", handler);
+    return () => window.removeEventListener("teams-updated", handler);
+  }, []);
   const getInitials = (name: string) => {
     if (!name) return "??";
     const parts = name.split(" ");
-    if (parts.length > 1) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
+    if (parts.length > 1) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     return name[0].toUpperCase();
   };
-
   const handleLogout = () => {
-    // 1. LocalStorage temizliği
     localStorage.removeItem("token");
-    localStorage.removeItem("activeOrgId"); 
+    localStorage.removeItem("activeOrgId");
     navigate("/login");
   };
-
+  const toggle = (key: string) => setCollapsed(p => ({ ...p, [key]: !p[key] }));
+  const groups = mode === "main" ? workspaceGroups : settingsGroups;
+  const handleAddTeam = () => {
+    const trimmed = newTeamName.trim();
+    if (!trimmed) return;
+    const newTeam: Team = { id: Date.now().toString(), name: trimmed };
+    setTeams(prev => [...prev, newTeam]);
+    setNewTeamName("");
+    setAddingTeam(false);
+  };
+  const handleDeleteTeam = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setTeams(prev => prev.filter(t => t.id !== id));
+  };
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") handleAddTeam();
+    if (e.key === "Escape") {
+      setAddingTeam(false);
+      setNewTeamName("");
+    }
+  };
   return (
-    <aside className="w-60 min-h-screen bg-white border-r border-gray-100 flex flex-col py-5 flex-shrink-0">
-
-      {/* ── Logo ── */}
-      <div className="flex items-center gap-2.5 px-5 mb-8">
-        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm shadow-blue-200">
-          <span className="text-white font-bold text-sm tracking-tight">T</span>
+    <div className="w-[220px] min-w-[220px] h-screen bg-[#f1f5fd] border-r border-[#d1deff] flex flex-col overflow-y-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between px-2.5 pt-2.5 pb-1">
+        <button
+          onClick={() => setMode(mode === "main" ? "settings" : "main")}
+          className="flex items-center gap-1.5 px-1.5 py-1 rounded-md border-none bg-transparent cursor-pointer hover:bg-blue-100 transition-colors"
+        >
+          <span className="w-6 h-6 rounded-md bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+            {user ? getInitials(user.name) : "T"}
+          </span>
+          <span className="text-[13px] font-semibold text-slate-800">
+            {user ? user.name.split(" ")[0] : "TaskiFlow"}
+          </span>
+          <ChevronRight size={13} className="text-slate-400" />
+        </button>
+        <div className="flex gap-0.5">
+          {[Search, PenLine].map((Icon, i) => (
+            <button key={i} className="bg-transparent border-none cursor-pointer p-1 rounded-md text-slate-500 hover:bg-blue-100 transition-colors flex items-center">
+              <Icon size={15} />
+            </button>
+          ))}
         </div>
-        <span className="text-[15px] font-semibold text-gray-900 tracking-tight">TaskiFlow</span>
       </div>
-
-      {/* ── Nav ── */}
-      <nav className="flex-1 flex flex-col gap-0.5 px-3">
-        {navItems.map(({ icon: Icon, label, to, badge }) => {
-          const isActive = location.pathname === to;
-          return (
-            <NavLink
-              key={to}
-              to={to}
-              end
-              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-medium transition-all duration-150 group ${
-                isActive
-                  ? "bg-blue-50 text-blue-600"
-                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
-              }`}
-            >
-              {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-blue-600 rounded-r-full" />
-              )}
-
-              <Icon
-                size={16}
-                strokeWidth={isActive ? 2.2 : 1.8}
-                className={isActive ? "text-blue-600" : "text-gray-400 group-hover:text-gray-600"}
-              />
-
-              <span className="flex-1">{label}</span>
-
-              {badge && !isActive && (
-                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-                  {badge}
-                </span>
-              )}
-
-              {!isActive && (
+      {/* Back to app */}
+      {mode === "settings" && (
+        <button
+          onClick={() => setMode("main")}
+          className="flex items-center gap-1.5 px-3.5 py-2 border-none bg-transparent cursor-pointer text-blue-600 text-xs border-b border-[#d1deff] hover:bg-blue-50 transition-colors"
+        >
+          <ArrowLeft size={13} />
+          Back to app
+        </button>
+      )}
+      {/* Main shortcuts */}
+      {mode === "main" && (
+        <div className="px-2.5 pt-1.5 pb-0.5">
+          <NavButton iconKey="Inbox" label="Inbox" badge={3} to="/inbox" />
+          <NavButton iconKey="Circle" label="My issues" to="/tasks" />
+        </div>
+      )}
+      {/* Groups */}
+      <div className="px-2.5 pb-2.5 flex-1">
+        {groups.map((group) => (
+          <div key={group.key}>
+            {group.label ? (
+              <button
+                onClick={() => toggle(group.key)}
+                className="flex items-center gap-1 w-full px-1.5 py-1 mt-2 border-none bg-transparent cursor-pointer rounded-md hover:bg-blue-50 transition-colors"
+              >
                 <ChevronRight
-                  size={13}
-                  className="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                  size={12}
+                  className="text-slate-400 transition-transform duration-150"
+                  style={{ transform: collapsed[group.key] ? "rotate(0deg)" : "rotate(90deg)" }}
                 />
-              )}
-            </NavLink>
-          );
-        })}
-      </nav>
-
-      <div className="mx-5 my-3 border-t border-gray-100" />
-
-      {/* ── Kullanıcı Profil Kartı ── */}
-      <div className="px-3">
-        <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group">
-          <div className="relative flex-shrink-0">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
-              <span className="text-white text-xs font-bold">AK</span>
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+                  {group.label}
+                </span>
+              </button>
+            ) : (
+              <div className="mt-2" />
+            )}
+            {!collapsed[group.key] && group.items.map(({ icon, label, badge, to }) => (
+              <NavButton
+                key={label + group.key}
+                iconKey={icon}
+                label={label}
+                badge={badge}
+                to={to}
+                indent={!!group.label && mode === "main"}
+              />
+            ))}
+          </div>
+        ))}
+        {/* YOUR TEAMS — sadece main modda */}
+        {mode === "main" && (
+          <div>
+            {/* Başlık satırı */}
+            <div className="flex items-center w-full mt-2">
+              <button
+                onClick={() => setTeamsCollapsed(p => !p)}
+                className="flex items-center gap-1 flex-1 px-1.5 py-1 border-none bg-transparent cursor-pointer rounded-md hover:bg-blue-50 transition-colors"
+              >
+                <ChevronRight
+                  size={12}
+                  className="text-slate-400 transition-transform duration-150"
+                  style={{ transform: teamsCollapsed ? "rotate(0deg)" : "rotate(90deg)" }}
+                />
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+                  Your teams
+                </span>
+              </button>
+              <button
+                onClick={() => { setAddingTeam(true); setTeamsCollapsed(false); }}
+                className="p-1 mr-1 rounded-md border-none bg-transparent cursor-pointer text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                title="Yeni takım ekle"
+              >
+                <Plus size={13} />
+              </button>
             </div>
-            <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-400 border-2 border-white" />
+            {/* Takımlar */}
+            {!teamsCollapsed && (
+              <>
+                {teams.map((team) => (
+                  <div key={team.id} className="group flex items-center">
+                    <NavLink
+                      to={`/teams/${team.id}`}
+                      className={({ isActive }) =>
+                        `flex-1 flex items-center gap-2 pl-5 pr-2 py-1.5 rounded-md text-[12.5px] transition-colors duration-100 ${
+                          isActive
+                            ? "bg-blue-100 text-blue-700 font-semibold"
+                            : "text-slate-500 hover:bg-blue-50 font-normal"
+                        }`
+                      }
+                    >
+                      <span className="flex items-center opacity-70">
+                        <Circle size={15} />
+                      </span>
+                      <span className="flex-1 truncate">{team.name}</span>
+                    </NavLink>
+                    <button
+                      onClick={(e) => handleDeleteTeam(e, team.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 mr-1 rounded-md border-none bg-transparent cursor-pointer text-slate-400 hover:text-red-500 hover:bg-red-50"
+                      title="Takımı sil"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+                {/* Yeni takım input */}
+                {addingTeam && (
+                  <div className="flex items-center gap-1 pl-5 pr-1 py-1">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={newTeamName}
+                      onChange={(e) => setNewTeamName(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Takım adı..."
+                      className="flex-1 text-[12px] bg-white border border-blue-300 rounded-md px-2 py-1 outline-none text-slate-700 placeholder-slate-400"
+                    />
+                    
+                    <button
+                      onClick={() => { setAddingTeam(false); setNewTeamName(""); }}
+                      className="p-1 rounded-md border-none bg-transparent cursor-pointer text-slate-400 hover:text-slate-600"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
+                {teams.length === 0 && !addingTeam && (
+                  <p className="pl-6 py-1 text-[11px] text-slate-400 italic">Henüz takım yok</p>
+                )}
+              </>
+            )}
           </div>
-
+        )}
+        {/* Try — sadece main modda, YOUR TEAMS'den sonra */}
+        {mode === "main" && (
+          <div>
+            <button
+              onClick={() => toggle(tryGroup.key)}
+              className="flex items-center gap-1 w-full px-1.5 py-1 mt-2 border-none bg-transparent cursor-pointer rounded-md hover:bg-blue-50 transition-colors"
+            >
+              <ChevronRight
+                size={12}
+                className="text-slate-400 transition-transform duration-150"
+                style={{ transform: collapsed[tryGroup.key] ? "rotate(0deg)" : "rotate(90deg)" }}
+              />
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+                {tryGroup.label}
+              </span>
+            </button>
+            {!collapsed[tryGroup.key] && tryGroup.items.map(({ icon, label, to }) => (
+              <NavButton key={label} iconKey={icon} label={label} to={to} indent />
+            ))}
+          </div>
+        )}
+      </div>
+      {/* Footer */}
+      <div className="border-t border-[#d1deff] px-2.5 py-2">
+        <div className="group flex items-center gap-2 p-1.5 rounded-md hover:bg-blue-50 cursor-pointer transition-colors">
+          <div className="relative">
+            <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+              {user ? getInitials(user.name) : "??"}
+            </div>
+            <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-400 rounded-full border border-white" />
+          </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[12.5px] font-semibold text-gray-800 truncate leading-tight">{user ? user.name : "Yükleniyor..."}</p>
-            <p className="text-[11px] text-gray-400 truncate leading-tight">{user ? user.email : "..."}</p>
+            <p className="text-[12px] font-semibold text-slate-700 truncate">
+              {user ? user.name : "Yükleniyor..."}
+            </p>
+            <p className="text-[10px] text-slate-400 truncate">
+              {user ? user.email : "..."}
+            </p>
           </div>
-
-          {/* 🚀 Çıkış butonu artık aktif */}
           <button
-            onClick={(e) => { 
-              e.stopPropagation(); 
-              handleLogout(); // 🚀 Fonksiyon çağrıldı
-            }}
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-gray-200 text-gray-400 hover:text-red-500"
+            onClick={(e) => { e.stopPropagation(); handleLogout(); }}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-red-100 text-slate-400 hover:text-red-500"
             title="Çıkış Yap"
           >
-            <LogOut size={13} />
+            <LogOut size={14} />
           </button>
         </div>
+        <NavButton iconKey="Help" label="Help & feedback" to="/help" />
       </div>
-
-    </aside>
+    </div>
   );
 }

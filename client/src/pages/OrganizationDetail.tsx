@@ -12,7 +12,7 @@ import {
   LogOut,
   ChevronRight,
   Trash2,
-  Lock // 🚀 Kilit ikonu eklendi
+  Lock // Kilit ikonu eklendi
 } from "lucide-react";
 
 // Token'dan userId'yi çözmek (decode) için basit bir helper
@@ -165,7 +165,7 @@ const OrganizationDetail = () => {
     } catch (error) { console.error(error); }
   };
 
-  // 🚀 Projeye Giriş Yetki Kontrolü Fonksiyonu
+  // Projeye Giriş Yetki Kontrolü Fonksiyonu
   const handleProjectClick = (project: any) => {
     // Proje sahibiyse veya projenin üyeleri (members/User_Project vb.) arasında ID'si varsa girsin
     // Not: Backend 'projects' çekerken 'members' dizisini de döndürdüğünü varsayıyoruz. 
