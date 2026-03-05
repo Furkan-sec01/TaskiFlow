@@ -26,35 +26,21 @@ const Notifications = () => {
         const userId = user.id || user.user?.id;
         if (userId) {
           fetch(`http://localhost:5000/api/notifications?userId=${userId}`, {
-  headers: {
-    Authorization: `Bearer ${localStorage.getItem("token")}`
-  }
-})
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          })
             .then(res => res.json())
             .then(data => {
-              console.log("Gelen data:", data);
               setNotifications(data.map((n: any) => ({ ...n, isRead: n.isRead ?? false })));
               setLoading(false);
             })
-            .catch(err => {
-              console.error(err);
-              setLoading(false);
-            });
-        } else {
-          setLoading(false);
-        }
-      } catch {
-        setLoading(false);
-      }
-    } else {
-      setLoading(false);
-    }
+            .catch(err => { console.error(err); setLoading(false); });
+        } else { setLoading(false); }
+      } catch { setLoading(false); }
+    } else { setLoading(false); }
   }, []);
 
   const markAsRead = (id: string) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, isRead: true } : n)
-    );
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     fetch(`http://localhost:5000/api/notifications/${id}/read`, { method: "PATCH" }).catch(console.error);
   };
 
@@ -83,9 +69,9 @@ const Notifications = () => {
   };
 
   const getIconStyle = (type: string) => {
-    if (type === "success") return "bg-green-100 text-green-600";
-    if (type === "alert") return "bg-red-100 text-red-600";
-    return "bg-blue-100 text-blue-600";
+    if (type === "success") return "bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400";
+    if (type === "alert") return "bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400";
+    return "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400";
   };
 
   const filterButtons: { label: string; value: FilterType }[] = [
@@ -95,23 +81,22 @@ const Notifications = () => {
   ];
 
   return (
-    <main className="flex-1 p-8 overflow-y-auto bg-[#F3F4F6] min-h-screen">
+    <main className="flex-1 p-8 overflow-y-auto bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-300">
       <div className="max-w-3xl mx-auto">
 
         {/* Başlık */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
               <Bell size={20} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Bildirimler</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bildirimler</h1>
               <p className="text-sm text-gray-400">
                 {unreadCount > 0 ? `${unreadCount} okunmamış bildirim` : "Tüm bildirimler okundu"}
               </p>
             </div>
           </div>
-
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
@@ -133,7 +118,7 @@ const Notifications = () => {
               className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                 filter === btn.value
                   ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-500 hover:bg-gray-100 border border-gray-200"
+                  : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
               }`}
             >
               {btn.label}
@@ -164,38 +149,30 @@ const Notifications = () => {
               <div
                 key={notif.id}
                 onClick={() => !notif.isRead && markAsRead(notif.id)}
-                className={`group relative bg-white p-5 rounded-2xl border transition-all cursor-pointer
+                className={`group relative p-5 rounded-2xl border transition-all cursor-pointer
                   ${notif.isRead
-                    ? "border-gray-100 shadow-sm opacity-75"
-                    : "border-blue-100 shadow-md hover:shadow-lg"
+                    ? "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-sm opacity-75"
+                    : "bg-white dark:bg-gray-800 border-blue-100 dark:border-blue-800 shadow-md hover:shadow-lg"
                   }`}
               >
                 <div className="flex items-start gap-4">
-
-                  {/* İkon */}
                   <div className={`h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 ${getIconStyle(notif.type)}`}>
                     {getIcon(notif.type)}
                   </div>
-
-                  {/* İçerik */}
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start gap-2">
-                      <h3 className={`font-semibold text-gray-800 ${!notif.isRead ? "font-bold" : ""}`}>
+                      <h3 className={`text-gray-800 dark:text-gray-100 ${!notif.isRead ? "font-bold" : "font-semibold"}`}>
                         {notif.title}
                       </h3>
                       <span className="text-xs text-gray-400 whitespace-nowrap">{notif.time}</span>
                     </div>
-                    <p className="text-gray-500 text-sm mt-1">{notif.message}</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{notif.message}</p>
                   </div>
-
-                  {/* Sağ taraf */}
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    {!notif.isRead && (
-                      <span className="w-2 h-2 rounded-full bg-blue-500 mt-1" />
-                    )}
+                    {!notif.isRead && <span className="w-2 h-2 rounded-full bg-blue-500 mt-1" />}
                     <button
                       onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900 text-gray-400 hover:text-red-500"
                       title="Sil"
                     >
                       <Trash2 size={15} />

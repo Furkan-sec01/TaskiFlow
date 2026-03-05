@@ -5,16 +5,15 @@ const ThemeContext = createContext<any>(null);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [darkMode, setDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem("darkMode");
-    return savedTheme === "true";
+    return localStorage.getItem("darkMode") === "true";
   });
 
   useEffect(() => {
     localStorage.setItem("darkMode", darkMode.toString());
     if (darkMode) {
-      document.documentElement.classList.add("dark");
+      document.documentElement.classList.add("dark");    // <html> elementine ekle
     } else {
-      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.remove("dark"); // <html> elementinden kaldır
     }
   }, [darkMode]);
 
