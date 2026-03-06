@@ -6,7 +6,7 @@ import {
   Folder, Calendar, ChevronRight, AlertCircle, Activity, Layout as LayoutIcon, Building2
 } from "lucide-react";
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
+  RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis 
 } from 'recharts';
 
 const Dashboard = () => {
@@ -16,7 +16,6 @@ const Dashboard = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [projects, setProjects] = useState<any[]>([]); 
-  const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [projectCount, setProjectCount] = useState(0);
@@ -57,23 +56,6 @@ const Dashboard = () => {
     }
   };
 
-  const calculateChartData = (projectList: any[]) => {
-    const daysMap: any = { "Pzt": 0, "Sal": 0, "Çar": 0, "Per": 0, "Cum": 0, "Cmt": 0, "Paz": 0 };
-    const dayNames = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
-
-    projectList.forEach((proj) => {
-      const date = new Date(proj.createdAt);
-      const dayName = dayNames[date.getDay()];
-      if (daysMap[dayName] !== undefined) daysMap[dayName]++;
-    });
-
-    const formattedData = Object.keys(daysMap).map(key => ({
-      name: key,
-      projects: daysMap[key]
-    }));
-    setChartData(formattedData);
-  };
-
   const fetchProjects = async () => {
     setErrorMessage("");
     const token = localStorage.getItem("token");
@@ -86,7 +68,6 @@ const Dashboard = () => {
         const data = await response.json();
         setProjects(Array.isArray(data) ? data : []);
         setProjectCount(data.length);
-        calculateChartData(data);
       } else {
         throw new Error("Projeler yüklenemedi.");
       }
@@ -127,6 +108,16 @@ const Dashboard = () => {
       setIsLoading(false);
     }
   };
+
+  // Hesaplamalar
+  const avgProgress = projects.length > 0 
+    ? Math.round(projects.reduce((acc, curr) => acc + (curr.progress || 0), 0) / projects.length) 
+    : 0;
+
+  const completedCount = projects.filter(p => (p.progress || 0) === 100).length;
+  const inProgressCount = projects.length - completedCount;
+
+  const radialData = [{ name: 'Progress', value: avgProgress, fill: '#3B82F6' }];
 
   return (
     <div className={`flex h-screen overflow-hidden transition-colors duration-500 ${darkMode ? 'bg-[#0F172A] text-slate-200' : 'bg-[#F1F5F9] text-slate-900'}`}>
@@ -217,35 +208,58 @@ const Dashboard = () => {
             </div>
           </section>
 
-          {/* ANALİZ ALANI */}
+          {/* ANALİZ ALANI*/}
           <section className="grid grid-cols-1 lg:grid-cols-4 gap-10 pb-12">
             <div className="lg:col-span-1 space-y-6">
               <StatBox title="Toplam Proje" value={projectCount} icon={<Folder size={22}/>} accentColor="blue" darkMode={darkMode} />
-              {/* Ekip Mevcudu StatBox'ı buradan kaldırıldı */}
+              
+              
             </div>
 
-            <div className={`lg:col-span-3 p-10 rounded-[2.5rem] border shadow-sm ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-              <div className="flex items-center justify-between mb-10">
-                <h3 className="text-xl font-bold tracking-tight">Proje Oluşturma Trendi</h3>
-                <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-white-800 rounded-full text-[10px] font-black tracking-widest opacity-60">
-                  <div className="w-2 h-2 rounded-full bg-blue-500"></div> GERÇEK ZAMANLI
+            <div className={`lg:col-span-3 p-10 rounded-[2.5rem] border shadow-sm flex flex-col md:flex-row items-center justify-between ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+              <div className="flex-1 space-y-6 w-full md:w-auto">
+                <div className="space-y-2">
+                  <h3 className="text-3xl font-black tracking-tight">Genel İlerleme</h3>
+                  <p className="text-sm font-medium opacity-50 max-w-sm">Tüm aktif projelerinizin ortalama tamamlanma ve verimlilik skoru.</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className={`p-5 rounded-2xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                    <p className="text-[10px] font-bold opacity-40 uppercase mb-1">Tamamlanan</p>
+                    <p className="text-2xl font-black text-emerald-500">{completedCount}</p>
+                  </div>
+                  <div className={`p-5 rounded-2xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                    <p className="text-[10px] font-bold opacity-40 uppercase mb-1">Devam Eden</p>
+                    <p className="text-2xl font-black text-blue-500">{inProgressCount}</p>
+                  </div>
                 </div>
               </div>
-              <div className="h-72 w-full">
+
+              <div className="h-64 w-64 relative flex items-center justify-center mt-8 md:mt-0">
+                <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+                  <span className="text-5xl font-black tracking-tighter">%{avgProgress}</span>
+                  <span className="text-[10px] font-black opacity-30 tracking-[0.2em] uppercase mt-1">Ortalama</span>
+                </div>
+
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="colorProj" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? '#334155' : '#E2E8F0'} />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontWeight: 'bold'}} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                    <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', background: darkMode ? '#1e293b' : '#fff'}} />
-                    <Area type="monotone" dataKey="projects" stroke="#3B82F6" strokeWidth={3} fill="url(#colorProj)" />
-                  </AreaChart>
+                  <RadialBarChart 
+                    cx="50%" 
+                    cy="50%" 
+                    innerRadius="75%" 
+                    outerRadius="100%" 
+                    barSize={15} 
+                    data={radialData} 
+                    startAngle={90} 
+                    endAngle={450}
+                  >
+                    <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                    <RadialBar
+                      background={{ fill: darkMode ? '#1e293b' : '#f1f5f9' }}
+                      dataKey="value"
+                      cornerRadius={30}
+                      fill="#3B82F6"
+                    />
+                  </RadialBarChart>
                 </ResponsiveContainer>
               </div>
             </div>
@@ -281,16 +295,29 @@ const ProjectCard = ({ project, darkMode }: any) => (
       <div className="h-14 w-14 bg-slate-100 dark:bg-slate-800 text-blue-600 rounded-2xl flex items-center justify-center transition-all group-hover:bg-blue-600 group-hover:text-white shadow-inner">
         <FolderKanban size={24} />
       </div>
-      <span className="text-[10px] font-bold tracking-widest bg-blue-50 dark:bg-blue-900/30 text-blue-600 px-3 py-1 rounded-full">KAYITLI</span>
+      <div className="flex flex-col items-end gap-2">
+        <span className="text-[10px] font-bold tracking-widest bg-blue-50 dark:bg-blue-900/30 text-blue-600 px-3 py-1 rounded-full uppercase">
+          {project.progress === 100 ? "Tamamlandı" : "Aktif"}
+        </span>
+      </div>
     </div>
     <h4 className="text-xl font-bold mb-3 tracking-tight group-hover:text-blue-500 transition-colors">{project.title}</h4>
     <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-8 h-10">{project.description || "Resmi kayıt açıklaması bulunmuyor."}</p>
+    
+
+    <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mb-6 overflow-hidden">
+      <div 
+        className="bg-blue-600 h-full rounded-full transition-all duration-1000" 
+        style={{ width: `${project.progress || 0}%` }}
+      ></div>
+    </div>
+
     <div className="flex items-center justify-between pt-6 border-t border-slate-100 dark:border-slate-800">
       <div className="flex items-center gap-2 text-slate-400 font-bold text-[10px]">
         <Calendar size={14} /> {new Date(project.createdAt).toLocaleDateString("tr-TR")}
       </div>
       <Link to={`/projects/${project.id}`} className="text-blue-600 font-bold text-sm flex items-center gap-1 hover:gap-3 transition-all">
-        Dosyayı Aç <ChevronRight size={18} />
+        Detay <ChevronRight size={18} />
       </Link>
     </div>
   </div>
