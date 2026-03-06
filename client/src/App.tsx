@@ -26,6 +26,7 @@ import Team from "./pages/Team";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import Reports from "./pages/Reports";
+import ReportsList from "./pages/Reportslist";   // ← YENİ
 import Proje from './pages/Proje';
 import Members from "./pages/Members";
 import Projelerim from "./pages/Projelerim";
@@ -78,7 +79,8 @@ const App = () => (
             <Route path="/team" element={<Team />} />
             <Route path="/teams/:orgId" element={<OrganizationDetail />} />
             <Route path="/organization/:orgId" element={<OrganizationDetail />} />
-            <Route path="/reports" element={<Reports />} />
+            <Route path="/reports" element={<ReportsList />} />              {/* ← Kart listesi */}
+            <Route path="/reports/:projectId" element={<Reports />} />       {/* ← Detay sayfası */}
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/test-projelerim" element={<Projelerim />} />

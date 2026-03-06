@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   LineChart, Line, BarChart, Bar, AreaChart, Area,
   ScatterChart, Scatter, PieChart, Pie, Cell,
@@ -19,6 +19,16 @@ interface Issue {
   key: string; summary: string; status: Status;
   priority: Priority; assignee: string; sp: number; age: number;
 }
+
+// ── Project Meta ───────────────────────────────────────────────────────────────
+const PROJECT_META: Record<string, { name: string; sprint: string }> = {
+  "proj-alpha":   { name: "PROJ-Alpha",   sprint: "Sprint 7" },
+  "proj-beta":    { name: "PROJ-Beta",    sprint: "Sprint 4" },
+  "proj-gamma":   { name: "PROJ-Gamma",   sprint: "Sprint 2" },
+  "proj-delta":   { name: "PROJ-Delta",   sprint: "Sprint 6" },
+  "proj-epsilon": { name: "PROJ-Epsilon", sprint: "Sprint 3" },
+  "proj-zeta":    { name: "PROJ-Zeta",    sprint: "Sprint 5" },
+};
 
 // ── Initial Data ───────────────────────────────────────────────────────────────
 const INITIAL_ISSUES: Issue[] = [
@@ -172,7 +182,6 @@ function SectionCard({ title, subtitle, children }: { title: string; subtitle?: 
   );
 }
 
-// ── Chart tick/grid helpers for dark mode ──────────────────────────────────────
 const chartProps = (dark: boolean) => ({
   cartesianGrid: { stroke: dark ? "#334155" : "#f1f5f9" },
   tick: { fill: dark ? "#94a3b8" : "#64748b", fontSize: 12 },
@@ -606,10 +615,14 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode; group: string }[]
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function Reports() {
   const navigate = useNavigate();
+  const { projectId } = useParams<{ projectId: string }>();
   const [activeTab, setActiveTab] = useState<TabId>("burndown");
   const [issues, setIssues] = useState<Issue[]>(INITIAL_ISSUES);
   const [showModal, setShowModal] = useState(false);
   const { dark, toggleDark } = useDark();
+
+  // Proje meta bilgisi — bilinmiyorsa fallback
+  const meta = (projectId && PROJECT_META[projectId]) ?? { name: "TaskiFlow", sprint: "Sprint 7" };
 
   const addIssue = (issue: Issue) => setIssues(prev => [...prev, issue]);
   const activeLabel = TABS.find(t => t.id === activeTab)?.label ?? "";
@@ -620,17 +633,28 @@ export default function Reports() {
       <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40 transition-colors">
         <div className="max-w-screen-xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate(-1)}
-              className="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 transition-colors">
+            {/* Geri → Raporlar listesine döner */}
+            <button
+              onClick={() => navigate("/reports")}
+              className="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 transition-colors"
+              title="Raporlar listesine dön"
+            >
               <ArrowLeft size={16} />
             </button>
             <div className="h-5 w-px bg-slate-200 dark:bg-slate-700" />
-            <span className="text-sm font-bold text-slate-800 dark:text-slate-100">TaskiFlow Reports</span>
+            {/* Breadcrumb: Raporlar > Proje Adı > Aktif Tab */}
+            <button
+              onClick={() => navigate("/reports")}
+              className="text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            >
+              Raporlar
+            </button>
+            <span className="text-slate-300 dark:text-slate-600">›</span>
+            <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{meta.name}</span>
             <span className="text-slate-300 dark:text-slate-600">›</span>
             <span className="text-sm text-slate-500 dark:text-slate-400">{activeLabel}</span>
           </div>
           <div className="flex items-center gap-2">
-            {/* Dark mode toggle */}
             <button
               onClick={toggleDark}
               className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-yellow-400 hover:bg-slate-200 dark:hover:bg-slate-600"
@@ -644,7 +668,7 @@ export default function Reports() {
             </button>
             <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 px-3 py-1.5 rounded-lg">
               <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
-              PROJ-Alpha · Sprint 7
+              {meta.name} · {meta.sprint}
             </div>
           </div>
         </div>
