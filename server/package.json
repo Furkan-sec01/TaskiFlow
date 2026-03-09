@@ -21,6 +21,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "kill-port": "^2.0.1",
     "prisma": "^5.12.0"
   }
 }
