@@ -35,6 +35,7 @@ import Footer from "./components/Footer";
 import Layout from "./components/Layout";
 
 import AIPage from "./pages/AI";
+import Pulse from "./pages/Pulse"
 
 function WithFooter({ children }: { children: React.ReactNode }) {
   return (
@@ -73,6 +74,7 @@ const App = () => (
           {/* Panel — Sidebar VAR */}
           <Route element={<Layout />}>
           <Route path="/ai" element={<AIPage />} />
+          <Route path="/pulse" element={<Pulse />} />
             <Route path="/inbox" element={<Notifications />} />
             <Route path="/members" element={<Members />} />
             <Route path="/projects" element={<Projelerim />} />
