@@ -8,7 +8,6 @@ import {
 import { 
   RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis 
 } from 'recharts';
-
 const Dashboard = () => {
   const { darkMode } = useTheme();
   const navigate = useNavigate();
@@ -19,15 +18,12 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [projectCount, setProjectCount] = useState(0);
-
   const [userOrgs, setUserOrgs] = useState<any[]>([]);
   const [newProject, setNewProject] = useState({ title: "", description: "", organizationId: "" });
   const [searchTerm, setSearchTerm] = useState("");
-
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const token = localStorage.getItem("token");
-
     if (!storedUser || !token) {
       navigate("/login"); 
     } else {
@@ -37,7 +33,6 @@ const Dashboard = () => {
       fetchUserOrgs();
     }
   }, []);
-
   const fetchUserOrgs = async () => {
     const token = localStorage.getItem("token");
     try {
@@ -55,7 +50,6 @@ const Dashboard = () => {
       console.error("Organizasyonlar çekilemedi:", error);
     }
   };
-
   const fetchProjects = async () => {
     setErrorMessage("");
     const token = localStorage.getItem("token");
@@ -75,7 +69,6 @@ const Dashboard = () => {
       setErrorMessage("Sunucuyla bağlantı kurulamadı.");
     }
   };
-
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProject.title || !newProject.organizationId) {
@@ -108,17 +101,13 @@ const Dashboard = () => {
       setIsLoading(false);
     }
   };
-
   // Hesaplamalar
   const avgProgress = projects.length > 0 
     ? Math.round(projects.reduce((acc, curr) => acc + (curr.progress || 0), 0) / projects.length) 
     : 0;
-
   const completedCount = projects.filter(p => (p.progress || 0) === 100).length;
   const inProgressCount = projects.length - completedCount;
-
   const radialData = [{ name: 'Progress', value: avgProgress, fill: '#3B82F6' }];
-
   return (
     <div className={`flex h-screen overflow-hidden transition-colors duration-500 ${darkMode ? 'bg-[#0F172A] text-slate-200' : 'bg-[#F1F5F9] text-slate-900'}`}>
       
@@ -148,17 +137,14 @@ const Dashboard = () => {
                   ))}
                 </select>
               </div>
-
               <div>
                 <label className="block text-sm font-semibold mb-2 opacity-70">PROJE ADI</label>
                 <input type="text" required value={newProject.title} onChange={(e) => setNewProject({...newProject, title: e.target.value})} className={`w-full px-6 py-4 rounded-xl border-2 outline-none focus:border-blue-500 transition-all font-medium ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`} placeholder="E-Ticaret Web Sitesi..." />
               </div>
-
               <div>
                 <label className="block text-sm font-semibold mb-2 opacity-70">AÇIKLAMA</label>
                 <textarea rows={3} value={newProject.description} onChange={(e) => setNewProject({...newProject, description: e.target.value})} className={`w-full px-6 py-4 rounded-xl border-2 outline-none focus:border-blue-500 transition-all font-medium ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`} placeholder="Projenin temel hedefleri..." />
               </div>
-
               <button type="submit" disabled={isLoading || userOrgs.length === 0} className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] disabled:opacity-50">
                 {isLoading ? "İşleniyor..." : "Projeyi Onayla"}
               </button>
@@ -166,7 +152,6 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-
       {/* MAIN */}
       <main className="flex-1 flex flex-col overflow-hidden">
         <header className={`h-24 flex items-center justify-between px-12 border-b ${darkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-white/70 border-slate-200'} backdrop-blur-xl`}>
@@ -183,10 +168,8 @@ const Dashboard = () => {
             </button>
           </div>
         </header>
-
         <div className="flex-1 overflow-y-auto p-12 space-y-12 bg-transparent">
           {errorMessage && <div className="p-5 bg-red-50 text-red-600 rounded-2xl flex items-center gap-3 border border-red-100 font-semibold shadow-sm"><AlertCircle size={20}/> {errorMessage}</div>}
-
           {/* PROJE GRID */}
           <section>
             <div className="flex items-baseline justify-between mb-10">
@@ -207,7 +190,6 @@ const Dashboard = () => {
               )}
             </div>
           </section>
-
           {/* ANALİZ ALANI*/}
           <section className="grid grid-cols-1 lg:grid-cols-4 gap-10 pb-12">
             <div className="lg:col-span-1 space-y-6">
@@ -215,7 +197,6 @@ const Dashboard = () => {
               
               
             </div>
-
             <div className={`lg:col-span-3 p-10 rounded-[2.5rem] border shadow-sm flex flex-col md:flex-row items-center justify-between ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
               <div className="flex-1 space-y-6 w-full md:w-auto">
                 <div className="space-y-2">
@@ -234,13 +215,11 @@ const Dashboard = () => {
                   </div>
                 </div>
               </div>
-
               <div className="h-64 w-64 relative flex items-center justify-center mt-8 md:mt-0">
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
                   <span className="text-5xl font-black tracking-tighter">%{avgProgress}</span>
                   <span className="text-[10px] font-black opacity-30 tracking-[0.2em] uppercase mt-1">Ortalama</span>
                 </div>
-
                 <ResponsiveContainer width="100%" height="100%">
                   <RadialBarChart 
                     cx="50%" 
@@ -269,7 +248,6 @@ const Dashboard = () => {
     </div>
   );
 };
-
 const StatBox = ({ title, value, icon, accentColor, darkMode }: any) => {
   const accentClasses: any = {
     blue: "text-blue-600 bg-blue-50 dark:bg-blue-900/20",
@@ -288,7 +266,6 @@ const StatBox = ({ title, value, icon, accentColor, darkMode }: any) => {
     </div>
   );
 };
-
 const ProjectCard = ({ project, darkMode }: any) => (
   <div className={`group p-8 rounded-[2.5rem] border transition-all hover:shadow-2xl hover:border-blue-500/50 hover:-translate-y-1 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
     <div className="flex justify-between items-start mb-8">
@@ -304,14 +281,12 @@ const ProjectCard = ({ project, darkMode }: any) => (
     <h4 className="text-xl font-bold mb-3 tracking-tight group-hover:text-blue-500 transition-colors">{project.title}</h4>
     <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-8 h-10">{project.description || "Resmi kayıt açıklaması bulunmuyor."}</p>
     
-
     <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mb-6 overflow-hidden">
       <div 
         className="bg-blue-600 h-full rounded-full transition-all duration-1000" 
         style={{ width: `${project.progress || 0}%` }}
       ></div>
     </div>
-
     <div className="flex items-center justify-between pt-6 border-t border-slate-100 dark:border-slate-800">
       <div className="flex items-center gap-2 text-slate-400 font-bold text-[10px]">
         <Calendar size={14} /> {new Date(project.createdAt).toLocaleDateString("tr-TR")}
@@ -322,5 +297,4 @@ const ProjectCard = ({ project, darkMode }: any) => (
     </div>
   </div>
 );
-
 export default Dashboard;

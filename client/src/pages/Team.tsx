@@ -6,7 +6,7 @@ import {
   Plus, 
   Trash2,
   ArrowRightCircle,
-  X // Modal kapatma ikonu için
+  X
 } from "lucide-react";
 import NotificationDropdown from "../components/NotificationDropdown";
 
@@ -14,12 +14,10 @@ const Team = () => {
   const { darkMode } = useTheme();
   const navigate = useNavigate();
   
-  //  STATE YÖNETİMİ
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Modal ve Form State'leri
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,10 +27,10 @@ const Team = () => {
   }, []);
 
   useEffect(() => {
-  const handler = () => setIsModalOpen(true);
-  window.addEventListener("open-create-team-modal", handler);
-  return () => window.removeEventListener("open-create-team-modal", handler);
-}, []);
+    const handler = () => setIsModalOpen(true);
+    window.addEventListener("open-create-team-modal", handler);
+    return () => window.removeEventListener("open-create-team-modal", handler);
+  }, []);
 
   const fetchMyOrganizations = async () => {
     const token = localStorage.getItem("token");
@@ -73,15 +71,27 @@ const Team = () => {
 
       const data = await res.json();
 
+      console.log("Backend response:", data);
+
       if (res.ok) {
-  // Sidebar'ı yenile
-  window.dispatchEvent(new CustomEvent("teams-updated"));
+        // Yeni organizasyonu Reports sayfası için localStorage'a kaydet
+        const orgId = data.organization?.id || data.id || data._id;
+        if (orgId) {
+          const existingProjects = JSON.parse(localStorage.getItem("orgProjects") || "{}");
+          existingProjects[orgId] = {
+            name: newOrgName,
+            sprint: "Sprint 1"
+          };
+          localStorage.setItem("orgProjects", JSON.stringify(existingProjects));
+        }
 
-  setIsModalOpen(false);
-  setNewOrgName("");
-  fetchMyOrganizations();
-}
+        // Sidebar'ı yenile
+        window.dispatchEvent(new CustomEvent("teams-updated"));
 
+        setIsModalOpen(false);
+        setNewOrgName("");
+        fetchMyOrganizations();
+      }
 
     } catch (err) {
       alert("Sunucu hatası oluştu.");
@@ -90,13 +100,10 @@ const Team = () => {
     }
   };
 
-const handleSwitchOrg = (orgId: string) => {
-  localStorage.setItem("activeOrgId", orgId);
-  navigate(`/teams/${orgId}`); 
-};
-
-
-  
+  const handleSwitchOrg = (orgId: string) => {
+    localStorage.setItem("activeOrgId", orgId);
+    navigate(`/teams/${orgId}`); 
+  };
 
   return (
     <div className={`flex h-screen font-sans transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-[#F3F4F6] text-gray-800'}`}>
@@ -167,7 +174,6 @@ const handleSwitchOrg = (orgId: string) => {
           <div className="mb-6 p-4 bg-red-100 text-red-600 rounded-2xl border border-red-200">{error}</div>
         )}
 
-        {/* ORGANİZASYON LİSTESİ */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {isLoading ? (
             <div className="col-span-full text-center py-20 animate-pulse">Veritabanından organizasyonlar getiriliyor...</div>

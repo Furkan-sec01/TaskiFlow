@@ -20,14 +20,24 @@ interface Issue {
   priority: Priority; assignee: string; sp: number; age: number;
 }
 
-// ── Project Meta ───────────────────────────────────────────────────────────────
-const PROJECT_META: Record<string, { name: string; sprint: string }> = {
+// ── Sabit proje meta verileri (hardcoded projeler) ─────────────────────────────
+const STATIC_PROJECT_META: Record<string, { name: string; sprint: string }> = {
   "proj-alpha":   { name: "PROJ-Alpha",   sprint: "Sprint 7" },
   "proj-beta":    { name: "PROJ-Beta",    sprint: "Sprint 4" },
   "proj-gamma":   { name: "PROJ-Gamma",   sprint: "Sprint 2" },
   "proj-delta":   { name: "PROJ-Delta",   sprint: "Sprint 6" },
   "proj-epsilon": { name: "PROJ-Epsilon", sprint: "Sprint 3" },
   "proj-zeta":    { name: "PROJ-Zeta",    sprint: "Sprint 5" },
+};
+
+// ── localStorage'dan dinamik org'ları da dahil eden meta getter ────────────────
+const getProjectMeta = (): Record<string, { name: string; sprint: string }> => {
+  try {
+    const stored = JSON.parse(localStorage.getItem("orgProjects") || "{}");
+    return { ...STATIC_PROJECT_META, ...stored };
+  } catch {
+    return STATIC_PROJECT_META;
+  }
 };
 
 // ── Initial Data ───────────────────────────────────────────────────────────────
@@ -621,8 +631,11 @@ export default function Reports() {
   const [showModal, setShowModal] = useState(false);
   const { dark, toggleDark } = useDark();
 
+  // localStorage'daki dinamik org'lar dahil tüm meta verileri al
+  const allProjectMeta = getProjectMeta();
+
   // Proje meta bilgisi — bilinmiyorsa fallback
-  const meta = (projectId && PROJECT_META[projectId]) ?? { name: "TaskiFlow", sprint: "Sprint 7" };
+  const meta = (projectId && allProjectMeta[projectId]) ?? { name: "TaskiFlow", sprint: "Sprint 1" };
 
   const addIssue = (issue: Issue) => setIssues(prev => [...prev, issue]);
   const activeLabel = TABS.find(t => t.id === activeTab)?.label ?? "";
@@ -633,7 +646,6 @@ export default function Reports() {
       <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40 transition-colors">
         <div className="max-w-screen-xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Geri → Raporlar listesine döner */}
             <button
               onClick={() => navigate("/reports")}
               className="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 transition-colors"
@@ -642,7 +654,6 @@ export default function Reports() {
               <ArrowLeft size={16} />
             </button>
             <div className="h-5 w-px bg-slate-200 dark:bg-slate-700" />
-            {/* Breadcrumb: Raporlar > Proje Adı > Aktif Tab */}
             <button
               onClick={() => navigate("/reports")}
               className="text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"

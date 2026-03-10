@@ -34,6 +34,8 @@ import Projelerim from "./pages/Projelerim";
 import Footer from "./components/Footer";
 import Layout from "./components/Layout";
 
+import AIPage from "./pages/AI";
+
 function WithFooter({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col">
@@ -70,6 +72,7 @@ const App = () => (
 
           {/* Panel — Sidebar VAR */}
           <Route element={<Layout />}>
+          <Route path="/ai" element={<AIPage />} />
             <Route path="/inbox" element={<Notifications />} />
             <Route path="/members" element={<Members />} />
             <Route path="/projects" element={<Projelerim />} />

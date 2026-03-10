@@ -12,11 +12,9 @@ import {
   LogOut,
   ChevronRight,
   Trash2,
-  Lock // Kilit ikonu eklendi
+  Lock
 } from "lucide-react";
 
-// Token'dan userId'yi çözmek (decode) için basit bir helper
-// (JWT payload kısmını okur, gerçek bir app'te jwt-decode kütüphanesi daha güvenlidir)
 const getUserIdFromToken = () => {
   const token = localStorage.getItem("token");
   if (!token) return null;
@@ -32,7 +30,7 @@ const OrganizationDetail = () => {
   const { orgId } = useParams();
   const { darkMode } = useTheme();
   const navigate = useNavigate();
-  const currentUserId = getUserIdFromToken(); // 🚀 Kullanıcının kendi ID'sini al
+  const currentUserId = getUserIdFromToken();
 
   const [members, setMembers] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -154,6 +152,11 @@ const OrganizationDetail = () => {
   };
 
   const handleDeleteTeam = async () => {
+
+    console.log("Silinecek orgId:", orgId);
+  console.log("localStorage orgProjects:", localStorage.getItem("orgProjects"));
+
+
     if (!window.confirm("Bu ekibi tamamen kapatmak istediğinize emin misiniz?")) return;
     const token = localStorage.getItem("token");
     try {
@@ -161,16 +164,21 @@ const OrganizationDetail = () => {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
-      if (res.ok) navigate("/team");
+      if (res.ok) {
+        // localStorage'dan bu org'u kaldır → Raporlar listesi otomatik güncellenir
+        const existing = JSON.parse(localStorage.getItem("orgProjects") || "{}");
+        delete existing[orgId!];
+        localStorage.setItem("orgProjects", JSON.stringify(existing));
+
+        // Sidebar ve Raporlar listesini güncelle
+        window.dispatchEvent(new CustomEvent("teams-updated"));
+
+        navigate("/team");
+      }
     } catch (error) { console.error(error); }
   };
 
-  // Projeye Giriş Yetki Kontrolü Fonksiyonu
   const handleProjectClick = (project: any) => {
-    // Proje sahibiyse veya projenin üyeleri (members/User_Project vb.) arasında ID'si varsa girsin
-    // Not: Backend 'projects' çekerken 'members' dizisini de döndürdüğünü varsayıyoruz. 
-    // Eğer dönmüyorsa API'ni (getProjectByOrg) include: { members: true } şeklinde güncellemelisin.
-    
     const isOwner = project.ownerId === currentUserId;
     const isMember = project.members?.some((m: any) => m.userId === currentUserId);
 
@@ -214,6 +222,10 @@ const OrganizationDetail = () => {
           </button>
 
           <button onClick={handleDeleteTeam} className="bg-red-500/10 text-red-500 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-red-500 hover:text-white transition-all">
+           
+             
+           
+           
             <Trash2 size={18} /> Ekibi Kapat
           </button>
 
@@ -244,7 +256,6 @@ const OrganizationDetail = () => {
                 {member.role !== 'OWNER' && (
                   <button onClick={() => handleDeleteMember(member.id)} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><UserMinus size={18} /></button>
                 )}
-
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center font-bold text-white uppercase">{member.name.charAt(0)}</div>
                   <div><h3 className="font-bold">{member.name}</h3><p className="text-xs opacity-60 truncate w-40">{member.email}</p></div>
@@ -257,7 +268,6 @@ const OrganizationDetail = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {isProjectsLoading ? <div className="col-span-full text-center font-bold opacity-50">Projeler yükleniyor...</div> : projects.map((project) => {
               
-              // 🚀 YETKİ KONTROLÜ (GÖRSEL İÇİN)
               const isOwner = project.ownerId === currentUserId;
               const isMember = project.members?.some((m: any) => m.userId === currentUserId);
               const hasAccess = isOwner || isMember;
@@ -270,8 +280,6 @@ const OrganizationDetail = () => {
                     ${hasAccess ? 'cursor-pointer hover:shadow-2xl hover:-translate-y-2' : 'cursor-not-allowed opacity-60 grayscale-[0.3]'} 
                     ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}
                 >
-                  
-                  {/* Sadece yetkisi varsa SİL butonunu göster */}
                   {isOwner && (
                     <button onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.id); }} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 z-10"><Trash2 size={18} /></button>
                   )}
