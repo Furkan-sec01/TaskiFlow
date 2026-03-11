@@ -18,7 +18,7 @@ import { MaterialIcons } from "@expo/vector-icons";
    🌐 API AYARI
    ===================================================== */
 
-const LAN_IP = "http://192.168.1.12:5000"; // ← login.tsx ile aynı IP
+const LAN_IP = "http://192.168.100.23:5000"; // ← login.tsx ile aynı IP
 const API_BASE =
   Platform.OS === "android"
     ? "http://10.0.2.2:5000"
@@ -195,9 +195,9 @@ export default function BildirimlerScreen() {
             <MaterialIcons name="tune" size={18} color="#9CA3AF" />
           </View>
 
-          <Chip label="Hepsi" active={filter==="ALL"} onPress={()=>setFilter("ALL")} />
-          <Chip label="Okunmadı" active={filter==="UNREAD"} onPress={()=>setFilter("UNREAD")} />
-          <Chip label="Uyarılar" active={filter==="ALERTS"} onPress={()=>setFilter("ALERTS")} />
+          <Chip label="Hepsi" active={filter === "ALL"} onPress={() => setFilter("ALL")} />
+          <Chip label="Okunmadı" active={filter === "UNREAD"} onPress={() => setFilter("UNREAD")} />
+          <Chip label="Uyarılar" active={filter === "ALERTS"} onPress={() => setFilter("ALERTS")} />
         </View>
 
         {filtered.length === 0 ? (

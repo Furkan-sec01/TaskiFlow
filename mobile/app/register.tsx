@@ -15,7 +15,7 @@ import {
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 
-const API_URL = "http://192.168.1.12:5000/api";
+const API_URL = "http://192.168.100.23:5000/api";
 
 export default function RegisterScreen() {
     const router = useRouter();
@@ -29,7 +29,7 @@ export default function RegisterScreen() {
 
     const handleRegister = async () => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        
+
         if (!name.trim() || !email.trim() || !password.trim()) {
             Alert.alert("Hata", "Lütfen tüm alanları doldurun.");
             return;
@@ -125,7 +125,7 @@ export default function RegisterScreen() {
                         </View>
 
                         <View style={styles.termsRow}>
-                            <Pressable 
+                            <Pressable
                                 onPress={() => setAgreeTerms(!agreeTerms)}
                                 style={[styles.checkbox, agreeTerms && styles.checkboxChecked]}
                             >
@@ -141,9 +141,9 @@ export default function RegisterScreen() {
                             </View>
                         </View>
 
-                        <Pressable 
-                            style={[styles.button, (!agreeTerms || loading) && { backgroundColor: "#93C5FD", opacity: 0.8 }]} 
-                            onPress={handleRegister} 
+                        <Pressable
+                            style={[styles.button, (!agreeTerms || loading) && { backgroundColor: "#93C5FD", opacity: 0.8 }]}
+                            onPress={handleRegister}
                             disabled={!agreeTerms || loading}
                         >
                             {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Kayıt Ol</Text>}

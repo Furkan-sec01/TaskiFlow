@@ -15,7 +15,7 @@ import {
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 
-const API_URL = "http://192.168.1.12:5000/api";
+const API_URL = "http://192.168.100.23:5000/api";
 
 export default function LoginScreen() {
     const router = useRouter();
@@ -78,7 +78,7 @@ export default function LoginScreen() {
                                 <Text style={styles.forgotBtn}>Şifremi Unuttum?</Text>
                             </Pressable>
                         </View>
-                        
+
                         <View style={styles.passwordWrapper}>
                             <TextInput
                                 style={styles.passwordInput}
