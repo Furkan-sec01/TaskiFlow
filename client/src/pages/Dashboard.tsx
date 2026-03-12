@@ -60,14 +60,15 @@ const Dashboard = () => {
     setErrorMessage("");
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch("http://localhost:5000/api/project", {
+      const response = await fetch("http://localhost:5000/api/project/my-projects", {
         method: "GET",
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
         const data = await response.json();
-        setProjects(Array.isArray(data) ? data : []);
-        setProjectCount(data.length);
+        const projectList = data.projects || (Array.isArray(data) ? data : []);
+        setProjects(projectList);
+        setProjectCount(projectList.length);
       } else {
         throw new Error("Projeler yüklenemedi.");
       }
@@ -97,6 +98,7 @@ const Dashboard = () => {
       if (res.ok) {
         setIsModalOpen(false);
         setNewProject({ title: "", description: "", organizationId: userOrgs[0]?.id || "" });
+        
         fetchProjects();
       } else {
         const data = await res.json();
@@ -128,7 +130,7 @@ const Dashboard = () => {
 
   const userProgress = calculateProgress(userProjects);
   const adminProgress = calculateProgress(adminProjects);
-  const avgProgress = Math.round((userProgress + adminProgress) / 2);
+  const avgProgress = Math.round((userProgress + adminProgress) / 2) || 0;
   const completedCount = projects.filter((p) => (p.progress || 0) === 100).length;
   const inProgressCount = projects.length - completedCount;
 
@@ -139,7 +141,6 @@ const Dashboard = () => {
   return (
     <div className={`flex h-screen overflow-hidden transition-colors duration-500 ${darkMode ? 'bg-[#0F172A] text-slate-200' : 'bg-[#F1F5F9] text-slate-900'}`}>
 
-      {/* MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-md p-6">
           <div className={`w-full max-w-lg p-10 rounded-[2rem] shadow-2xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
@@ -180,7 +181,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* MAIN */}
       <main className="flex-1 flex flex-col overflow-hidden">
         <header className={`h-24 flex items-center justify-between px-12 border-b ${darkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-white/70 border-slate-200'} backdrop-blur-xl`}>
           <div>
@@ -200,7 +200,6 @@ const Dashboard = () => {
         <div className="flex-1 overflow-y-auto p-12 space-y-12 bg-transparent">
           {errorMessage && <div className="p-5 bg-red-50 text-red-600 rounded-2xl flex items-center gap-3 border border-red-100 font-semibold shadow-sm"><AlertCircle size={20} /> {errorMessage}</div>}
 
-          {/* PROJE GRID */}
           <section>
             <div className="flex items-baseline justify-between mb-10">
               <h2 className="text-3xl font-bold tracking-tight">Kayıtlı Projeler</h2>
@@ -221,26 +220,20 @@ const Dashboard = () => {
             </div>
           </section>
 
-          {/* ANALİZ ALANI*/}
           <section className="grid grid-cols-1 lg:grid-cols-4 gap-10 pb-12 items-stretch">
-            {/* SOL TARAF: STAT KUTULARI */}
             <div className="lg:col-span-1 space-y-6 flex flex-col justify-between">
               <StatBox title="Toplam Proje" value={projectCount} icon={<Folder size={22} />} accentColor="blue" darkMode={darkMode} />
               <StatBox title="Kullanıcı Tamamlanma" value={`${userProgress}%`} icon={<Activity size={22} />} accentColor="emerald" darkMode={darkMode} />
               <StatBox title="Admin Tamamlanma" value={`${adminProgress}%`} icon={<Activity size={22} />} accentColor="purple" darkMode={darkMode} />
             </div>
 
-            {/* SAĞ TARAF: GENEL İLERLEME VE SCROLL LİSTE */}
             <div className={`lg:col-span-3 p-10 rounded-[2.5rem] border shadow-sm flex flex-col ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-              
-              {/* Sabit Üst Grafik Alanı */}
               <div className="flex flex-col md:flex-row items-center justify-between mb-8 pb-8 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
                 <div className="flex-1 space-y-6 w-full md:w-auto">
                   <div className="space-y-2">
                     <h3 className="text-3xl font-black tracking-tight">Genel İlerleme</h3>
                     <p className="text-sm font-medium opacity-50 max-w-sm">Aktif projelerin ortalama verimlilik skoru.</p>
                   </div>
-
                   <div className="grid grid-cols-2 gap-4">
                     <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
                       <p className="text-[10px] font-bold opacity-40 uppercase mb-1">Biten</p>
@@ -252,7 +245,6 @@ const Dashboard = () => {
                     </div>
                   </div>
                 </div>
-
                 <div className="h-44 w-44 relative flex items-center justify-center mt-6 md:mt-0 flex-shrink-0">
                   <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
                     <span className="text-3xl font-black tracking-tighter">%{avgProgress}</span>
@@ -265,35 +257,38 @@ const Dashboard = () => {
                   </ResponsiveContainer>
                 </div>
               </div>
-
           
               <div className="flex flex-col flex-1">
-                <div className="flex items-center justify-between mb-6 flex-shrink-0">
-                  <h4 className="text-[10px] font-bold opacity-40 uppercase tracking-widest">Proje Bazlı Dağılım</h4>
-
-                </div>
-                
-             
-                <div className="h-[280px] overflow-y-auto pr-4 custom-scrollbar space-y-7">
+                <h4 className="text-[10px] font-bold opacity-40 uppercase tracking-widest mb-6">Proje Bazlı Dağılım</h4>
+                <div className="h-[280px] overflow-y-auto pr-4 custom-scrollbar space-y-4">
                   {projects.length === 0 ? (
                     <p className="text-xs opacity-50 italic text-center py-4">Henüz proje verisi bulunmuyor.</p>
                   ) : (
                     projects.map((project) => (
-                      <div key={project.id} className="group animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        <div className="flex justify-between items-center mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className={`h-2 w-2 rounded-full ${project.progress === 100 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]'}`} />
-                            <span className="text-sm font-bold tracking-tight group-hover:text-blue-500 transition-colors">{project.title}</span>
+                      <div key={project.id} className={`p-5 rounded-3xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                        <div className="flex justify-between items-center mb-4">
+                          <div className="flex items-center gap-4">
+                            <div className={`h-12 w-12 rounded-full border-4 flex items-center justify-center font-black text-[10px] ${project.progress === 100 ? 'border-emerald-500 text-emerald-500' : 'border-blue-500 text-blue-500'}`}>
+                              %{project.progress || 0}
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-sm">{project.title}</h4>
+                              <div className="flex gap-4 text-[10px] font-bold opacity-50 uppercase mt-1">
+                                <span>{project.totalTasks || 0} görev</span>
+                                <span>{project.completedTasks || 0} tamamlandı</span>
+                              </div>
+                            </div>
                           </div>
-                          <span className={`text-xs font-black ${project.progress === 100 ? 'text-emerald-500' : 'text-blue-500'}`}>
-                            %{project.progress || 0}
-                          </span>
+                          <div className="flex -space-x-2">
+                             {(project.members || []).map((m: any, idx: number) => (
+                               <div key={m.id || idx} title={m.name} className="h-7 w-7 rounded-full bg-blue-500 border-2 border-white dark:border-slate-900 flex items-center justify-center text-[9px] text-white font-bold overflow-hidden">
+                                 {m.avatarUrl ? <img src={m.avatarUrl} alt={m.name} className="w-full h-full object-cover" /> : m.name?.charAt(0).toUpperCase()}
+                               </div>
+                             ))}
+                          </div>
                         </div>
-                        <div className={`h-1.5 w-full rounded-full overflow-hidden ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
-                          <div 
-                            className={`h-full rounded-full transition-all duration-1000 ease-out ${project.progress === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                            style={{ width: `${project.progress || 0}%` }}
-                          />
+                        <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                          <div className={`${project.progress === 100 ? 'bg-emerald-500' : 'bg-blue-500'} h-full rounded-full transition-all duration-1000`} style={{ width: `${project.progress || 0}%` }} />
                         </div>
                       </div>
                     ))
@@ -306,19 +301,10 @@ const Dashboard = () => {
       </main>
       
       <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 5px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: ${darkMode ? '#334155' : '#cbd5e1'};
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #3B82F6;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: ${darkMode ? '#334155' : '#cbd5e1'}; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #3B82F6; }
       `}</style>
     </div>
   );
@@ -343,37 +329,51 @@ const StatBox = ({ title, value, icon, accentColor, darkMode }: any) => {
   );
 };
 
-const ProjectCard = ({ project, darkMode }: any) => (
-  <div className={`group p-8 rounded-[2.5rem] border transition-all hover:shadow-2xl hover:border-blue-500/50 hover:-translate-y-1 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
-    <div className="flex justify-between items-start mb-8">
-      <div className="h-14 w-14 bg-slate-100 dark:bg-slate-800 text-blue-600 rounded-2xl flex items-center justify-center transition-all group-hover:bg-blue-600 group-hover:text-white shadow-inner">
-        <FolderKanban size={24} />
-      </div>
-      <div className="flex flex-col items-end gap-2">
-        <span className="text-[10px] font-bold tracking-widest bg-blue-50 dark:bg-blue-900/30 text-blue-600 px-3 py-1 rounded-full uppercase">
-          {project.progress === 100 ? "Tamamlandı" : "Aktif"}
-        </span>
-      </div>
-    </div>
-    <h4 className="text-xl font-bold mb-3 tracking-tight group-hover:text-blue-500 transition-colors">{project.title}</h4>
-    <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-8 h-10">{project.description || "Resmi kayıt açıklaması bulunmuyor."}</p>
+const ProjectCard = ({ project, darkMode }: any) => {
+  
+  const projectMembers = project.members || [];
 
-    <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mb-6 overflow-hidden">
-      <div
-        className="bg-blue-600 h-full rounded-full transition-all duration-1000"
-        style={{ width: `${project.progress || 0}%` }}
-      ></div>
-    </div>
-
-    <div className="flex items-center justify-between pt-6 border-t border-slate-100 dark:border-slate-800">
-      <div className="flex items-center gap-2 text-slate-400 font-bold text-[10px]">
-        <Calendar size={14} /> {new Date(project.createdAt).toLocaleDateString("tr-TR")}
+  return (
+    <div className={`group p-8 rounded-[2.5rem] border transition-all hover:shadow-2xl hover:border-blue-500/50 hover:-translate-y-1 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+      <div className="flex justify-between items-start mb-8">
+        <div className="h-14 w-14 bg-slate-100 dark:bg-slate-800 text-blue-600 rounded-2xl flex items-center justify-center transition-all group-hover:bg-blue-600 group-hover:text-white shadow-inner">
+          <FolderKanban size={24} />
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <span className="text-[10px] font-bold tracking-widest bg-blue-50 dark:bg-blue-900/30 text-blue-600 px-3 py-1 rounded-full uppercase">
+            {project.progress === 100 ? "Tamamlandı" : "Aktif"}
+          </span>
+        </div>
       </div>
-      <Link to={`/projects/${project.id}`} className="text-blue-600 font-bold text-sm flex items-center gap-1 hover:gap-3 transition-all">
-        Detay <ChevronRight size={18} />
-      </Link>
+      <h4 className="text-xl font-bold mb-3 tracking-tight group-hover:text-blue-500 transition-colors">{project.title}</h4>
+      <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-8 h-10">{project.description || "Resmi kayıt açıklaması bulunmuyor."}</p>
+
+      <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mb-6 overflow-hidden">
+        <div
+          className="bg-blue-600 h-full rounded-full transition-all duration-1000"
+          style={{ width: `${project.progress || 0}%` }}
+        ></div>
+      </div>
+
+      <div className="flex items-center justify-between pt-6 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex -space-x-2">
+          {projectMembers.slice(0, 3).map((m: any, idx: number) => (
+              <div key={m.id || idx} title={m.name} className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 flex items-center justify-center text-[10px] font-bold overflow-hidden">
+                  {m.avatarUrl ? <img src={m.avatarUrl} alt={m.name} className="w-full h-full object-cover" /> : m.name?.charAt(0).toUpperCase()}
+              </div>
+          ))}
+          {projectMembers.length > 3 && (
+              <div className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                  +{projectMembers.length - 3}
+              </div>
+          )}
+        </div>
+        <Link to={`/projects/${project.id}`} className="text-blue-600 font-bold text-sm flex items-center gap-1 hover:gap-3 transition-all">
+          Detay <ChevronRight size={18} />
+        </Link>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default Dashboard;
