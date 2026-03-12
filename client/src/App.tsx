@@ -37,6 +37,9 @@ import Layout from "./components/Layout";
 import AIPage from "./pages/AI";
 import Pulse from "./pages/Pulse"
 
+import Connected from "./pages/ConnectedAccounts"; 
+import Export from "./pages/ExportProjects"
+
 function WithFooter({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col">
@@ -53,6 +56,10 @@ const App = () => (
     <ThemeProvider>
       <BrowserRouter>
         <Routes>
+        
+ 
+
+
 
           {/* Landing Sayfaları */}
           <Route path="/" element={<WithFooter><Index /></WithFooter>} />
@@ -89,6 +96,10 @@ const App = () => (
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/test-projelerim" element={<Projelerim />} />
+            <Route path="/settings/connections" element={<Connected userId={""} />} />
+             <Route path="/settings/import" element={<Export/>} />
+            
+            
           </Route>
 
         </Routes>
