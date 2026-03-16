@@ -90,7 +90,7 @@ const settingsGroups: Group[] = [
       //{ icon: "Grid",     label: "Workspace",       to: "/settings/workspace" },
       //{ icon: "Users",    label: "Teams",           to: "/settings/teams" },
       //{ icon: "Users",    label: "Members",         to: "/settings/members" },
-      { icon: "Shield",   label: "Security",        to: "/settings/security-admin" },
+      //{ icon: "Shield",   label: "Security",        to: "/settings/security-admin" },
       // { icon: "Git",      label: "API",             to: "/settings/api" },
       //{ icon: "Link",     label: "Applications",    to: "/settings/applications" },
       { icon: "Card",     label: "Billing",         to: "/settings/billing" },

@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
-import authRoutes from './routes/authRoutes'; // YENİ: Rota dosyasını çağırdık
+import authRoutes from './routes/authRoutes'; 
+import chatRoutes from './routes/chatRoutes';// YENİ: Rota dosyasını çağırdık
 
 dotenv.config();
 
@@ -21,6 +22,10 @@ app.get('/', async (req, res) => {
   res.json({ message: 'TaskiFlow Backend çalışıyor! 🚀' });
 });
 
+app.use('/api/chat', chatRoutes);
+
 app.listen(PORT, () => {
   console.log(`Sunucu http://localhost:${PORT} adresinde çalışıyor`);
 });
+```
+

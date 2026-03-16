@@ -39,6 +39,10 @@ import Pulse from "./pages/Pulse"
 
 import Connected from "./pages/ConnectedAccounts"; 
 import Export from "./pages/ExportProjects"
+import ProfilePage from "./pages/ProfilePage";
+import SecurityPage from "./pages/SecurityPage";
+import BillingPage from "./pages/BillingPage";
+
 
 function WithFooter({ children }: { children: React.ReactNode }) {
   return (
@@ -98,6 +102,9 @@ const App = () => (
             <Route path="/test-projelerim" element={<Projelerim />} />
             <Route path="/settings/connections" element={<Connected userId={""} />} />
              <Route path="/settings/import" element={<Export/>} />
+             <Route path="/settings/profile" element={<ProfilePage />} />
+             <Route path="/settings/security" element={<SecurityPage />} />
+             <Route path="/settings/billing" element={<BillingPage />} />
             
             
           </Route>

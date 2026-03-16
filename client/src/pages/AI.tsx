@@ -5,7 +5,6 @@ import {
   RefreshCw, ChevronDown, ChevronUp, Bot, User
 } from "lucide-react";
 
-// ── Örnek proje verisi (gerçek uygulamada backend'den gelir) ──────────────────
 const PROJECT_CONTEXT = {
   name: "PROJ-Alpha",
   sprint: "Sprint 7",
@@ -25,7 +24,6 @@ const PROJECT_CONTEXT = {
   ],
 };
 
-// ── Analiz kartları için sabit prompt'lar ────────────────────────────────────
 const ANALYSIS_CARDS = [
   {
     id: "risk",
@@ -33,9 +31,7 @@ const ANALYSIS_CARDS = [
     icon: <AlertTriangle size={18} />,
     color: "text-red-400",
     bgColor: "bg-red-500/10 border-red-500/20",
-    prompt: `Aşağıdaki proje verilerine göre risk analizi yap ve kısa, net Türkçe öneriler sun (maksimum 4 madde, her biri 1-2 cümle):
-Proje: ${JSON.stringify(PROJECT_CONTEXT)}
-Özellikle bloke görevler, geciken işler ve sprint hedefine ulaşma ihtimali üzerine odaklan.`,
+    prompt: `Aşağıdaki proje verilerine göre risk analizi yap ve kısa, net Türkçe öneriler sun (maksimum 4 madde, her biri 1-2 cümle):\nProje: ${JSON.stringify(PROJECT_CONTEXT)}\nÖzellikle bloke görevler, geciken işler ve sprint hedefine ulaşma ihtimali üzerine odaklan.`,
   },
   {
     id: "priority",
@@ -43,9 +39,7 @@ Proje: ${JSON.stringify(PROJECT_CONTEXT)}
     icon: <ListTodo size={18} />,
     color: "text-blue-400",
     bgColor: "bg-blue-500/10 border-blue-500/20",
-    prompt: `Aşağıdaki proje verilerine göre hangi görevlere öncelik verilmeli? Kısa, net Türkçe öneriler sun (maksimum 4 madde):
-Proje: ${JSON.stringify(PROJECT_CONTEXT)}
-Sprint hedefine ulaşmak için en kritik görevleri ve neden öncelikli olduklarını belirt.`,
+    prompt: `Aşağıdaki proje verilerine göre hangi görevlere öncelik verilmeli? Kısa, net Türkçe öneriler sun (maksimum 4 madde):\nProje: ${JSON.stringify(PROJECT_CONTEXT)}\nSprint hedefine ulaşmak için en kritik görevleri ve neden öncelikli olduklarını belirt.`,
   },
   {
     id: "team",
@@ -53,16 +47,13 @@ Sprint hedefine ulaşmak için en kritik görevleri ve neden öncelikli olduklar
     icon: <Users size={18} />,
     color: "text-emerald-400",
     bgColor: "bg-emerald-500/10 border-emerald-500/20",
-    prompt: `Aşağıdaki proje verilerine göre takım performansını analiz et ve kısa, net Türkçe öneriler sun (maksimum 4 madde):
-Proje: ${JSON.stringify(PROJECT_CONTEXT)}
-Velocity trendi, iş yükü dağılımı ve takımın güçlü/zayıf yönlerine odaklan.`,
+    prompt: `Aşağıdaki proje verilerine göre takım performansını analiz et ve kısa, net Türkçe öneriler sun (maksimum 4 madde):\nProje: ${JSON.stringify(PROJECT_CONTEXT)}\nVelocity trendi, iş yükü dağılımı ve takımın güçlü/zayıf yönlerine odaklan.`,
   },
 ];
 
 type Message = { role: "user" | "assistant"; content: string };
 type AnalysisResult = { id: string; content: string; loading: boolean };
 
-// ── Ana Bileşen ──────────────────────────────────────────────────────────────
 export default function AIPage() {
   const { darkMode } = useTheme();
   const [messages, setMessages] = useState<Message[]>([
@@ -81,36 +72,36 @@ export default function AIPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const callClaude = async (prompt: string, systemPrompt?: string): Promise<string> => {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+  // ── Tek API çağrısı — her zaman kendi backend'imize gider ────────────────
+const callBackend = async (message: string, history: Message[] = []): Promise<string> => {
+  try {
+    const response = await fetch("/api/ai/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        system: systemPrompt || `Sen bir proje yönetimi AI asistanısın. Türkçe, kısa ve net yanıtlar ver. Proje bağlamı: ${JSON.stringify(PROJECT_CONTEXT)}`,
-        messages: [{ role: "user", content: prompt }],
-      }),
+      body: JSON.stringify({ message, history, projectContext: PROJECT_CONTEXT }),
     });
-    const data = await response.json();
-    return data.content?.[0]?.text || "Yanıt alınamadı.";
-  };
 
-  const runAnalysis = async (card: typeof ANALYSIS_CARDS[0]) => {
-    setAnalyses(prev => {
-      const existing = prev.find(a => a.id === card.id);
-      if (existing) return prev.map(a => a.id === card.id ? { ...a, loading: true } : a);
-      return [...prev, { id: card.id, content: "", loading: true }];
-    });
-    setExpandedCard(card.id);
-
-    try {
-      const result = await callClaude(card.prompt);
-      setAnalyses(prev => prev.map(a => a.id === card.id ? { ...a, content: result, loading: false } : a));
-    } catch {
-      setAnalyses(prev => prev.map(a => a.id === card.id ? { ...a, content: "Analiz yapılırken hata oluştu.", loading: false } : a));
+    // Eğer backend 200 dönmediyse hatayı detaylıca yakala
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      // Backend'den gelen 'details' veya 'error' mesajını fırlat
+      throw new Error(errData.details || errData.error || `Sunucu Hatası: ${response.status}`);
     }
-  };
+
+    const data = await response.json();
+    
+    // Backend'den gelen verinin içinde 'reply' olduğundan emin ol
+    if (!data.reply) {
+      console.error("Backend'den geçersiz veri geldi:", data);
+      return "Sunucudan boş yanıt döndü.";
+    }
+
+    return data.reply;
+  } catch (err: any) {
+    console.error("Bağlantı Hatası:", err);
+    throw err; // Bu hata yukarıdaki catch bloğuna (Hata: ...) gider
+  }
+};
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -120,22 +111,10 @@ export default function AIPage() {
     setIsLoading(true);
 
     try {
-      const history = messages.map(m => ({ role: m.role, content: m.content }));
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: `Sen TaskiFlow proje yönetimi AI asistanısın. Türkçe yanıt ver. Proje bağlamı: ${JSON.stringify(PROJECT_CONTEXT)}`,
-          messages: [...history, { role: "user", content: userMsg }],
-        }),
-      });
-      const data = await response.json();
-      const reply = data.content?.[0]?.text || "Yanıt alınamadı.";
+      const reply = await callBackend(userMsg, messages);
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
-    } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: "Bağlantı hatası oluştu, lütfen tekrar deneyin." }]);
+    } catch (err: any) {
+      setMessages(prev => [...prev, { role: "assistant", content: `Hata: ${err.message}` }]);
     } finally {
       setIsLoading(false);
     }
@@ -145,10 +124,10 @@ export default function AIPage() {
 
   return (
     <div className={`flex h-screen font-sans transition-colors duration-300 ${darkMode ? "bg-gray-900 text-gray-100" : "bg-gray-50 text-gray-800"}`}>
-      
+
       {/* SOL: Analiz Kartları */}
       <div className={`w-80 flex-shrink-0 border-r p-4 overflow-y-auto flex flex-col gap-4 ${darkMode ? "border-gray-700 bg-gray-800/50" : "border-gray-200 bg-white"}`}>
-        
+
         {/* Proje Özeti */}
         <div className={`p-4 rounded-2xl border ${darkMode ? "bg-gray-800 border-gray-700" : "bg-gray-50 border-gray-200"}`}>
           <div className="flex items-center gap-2 mb-3">
@@ -166,7 +145,7 @@ export default function AIPage() {
 
         {/* Analiz Kartları */}
         <p className="text-xs font-bold uppercase tracking-widest opacity-40 px-1">AI Analizleri</p>
-        
+
         {ANALYSIS_CARDS.map(card => {
           const analysis = getAnalysis(card.id);
           const isExpanded = expandedCard === card.id;
@@ -175,7 +154,7 @@ export default function AIPage() {
             <div key={card.id} className={`rounded-2xl border overflow-hidden transition-all ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>
               <button
                 onClick={() => analysis ? setExpandedCard(isExpanded ? null : card.id) : runAnalysis(card)}
-                className={`w-full p-4 flex items-center justify-between text-left hover:opacity-80 transition-opacity`}
+                className="w-full p-4 flex items-center justify-between text-left hover:opacity-80 transition-opacity"
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center border ${card.bgColor} ${card.color}`}>
@@ -189,9 +168,10 @@ export default function AIPage() {
                       <RefreshCw size={13} />
                     </button>
                   )}
-                  {analysis ? (isExpanded ? <ChevronUp size={16} className="opacity-40" /> : <ChevronDown size={16} className="opacity-40" />) : (
-                    <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full">Çalıştır</span>
-                  )}
+                  {analysis
+                    ? (isExpanded ? <ChevronUp size={16} className="opacity-40" /> : <ChevronDown size={16} className="opacity-40" />)
+                    : <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full">Çalıştır</span>
+                  }
                 </div>
               </button>
 
@@ -214,7 +194,7 @@ export default function AIPage() {
 
       {/* SAĞ: Sohbet */}
       <div className="flex-1 flex flex-col">
-        
+
         {/* Header */}
         <div className={`px-6 py-4 border-b flex items-center gap-3 ${darkMode ? "border-gray-700 bg-gray-800/30" : "border-gray-200 bg-white"}`}>
           <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center">
@@ -234,8 +214,7 @@ export default function AIPage() {
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
-              <div className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 text-white text-xs font-bold
-                ${msg.role === "assistant" ? "bg-blue-600" : "bg-gray-600"}`}>
+              <div className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 text-white text-xs font-bold ${msg.role === "assistant" ? "bg-blue-600" : "bg-gray-600"}`}>
                 {msg.role === "assistant" ? <Bot size={14} /> : <User size={14} />}
               </div>
               <div className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap
@@ -268,7 +247,7 @@ export default function AIPage() {
         {/* Hızlı sorular */}
         <div className={`px-6 py-2 flex gap-2 flex-wrap border-t ${darkMode ? "border-gray-700" : "border-gray-100"}`}>
           {["Sprint'i tamamlayabilir miyiz?", "En riskli görev hangisi?", "Takım iş yükü dengeli mi?"].map(q => (
-            <button key={q} onClick={() => { setInput(q); }}
+            <button key={q} onClick={() => setInput(q)}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors
                 ${darkMode ? "border-gray-700 hover:border-blue-500 hover:text-blue-400" : "border-gray-200 hover:border-blue-400 hover:text-blue-600"}`}>
               {q}

@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const app = express();
@@ -10,6 +12,7 @@ const orgRoutes = require("./src/routes/organizationRoutes");
 const notificRoutes = require("./src/routes/notificationRoutes");
 const columnRoutes = require("./src/routes/columnRoutes");
 const taskRoutes = require("./src/routes/taskRoutes");
+const aiRoutes = require("./src/routes/aiRoutes");
 
 app.use(cors());
 app.use(express.json());
@@ -21,6 +24,7 @@ app.use("/api/organizations",orgRoutes);
 app.use("/api/notifications",notificRoutes);
 app.use("/api/column",columnRoutes);
 app.use("/api/tasks",taskRoutes);
+app.use("/api/ai", aiRoutes);
 
 const PORT = 5000;
 app.listen(PORT, () => {
