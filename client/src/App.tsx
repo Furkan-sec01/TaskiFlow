@@ -26,7 +26,7 @@ import Team from "./pages/Team";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import Reports from "./pages/Reports";
-import ReportsList from "./pages/Reportslist";   // ← YENİ
+import ReportsList from "./pages/Reportslist";   // ← YENİ
 import Proje from './pages/Proje';
 import Members from "./pages/Members";
 import Projelerim from "./pages/Projelerim";
@@ -37,82 +37,84 @@ import Layout from "./components/Layout";
 import AIPage from "./pages/AI";
 import Pulse from "./pages/Pulse"
 
-import Connected from "./pages/ConnectedAccounts"; 
+import Connected from "./pages/ConnectedAccounts";
 import Export from "./pages/ExportProjects"
-import ProfilePage from "./pages/ProfilePage";
-import SecurityPage from "./pages/SecurityPage";
-import BillingPage from "./pages/BillingPage";
+import ProfilePage from "./pages/Profilepage";
+import SecurityPage from "./pages/Securitypage";
+import BillingPage from "./pages/Billingpage";
+import TemplatesPage from "./pages/Templatespage.tsx"
 
 
 function WithFooter({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen flex flex-col">
-      <div className="flex-grow">{children}</div>
-      <Footer />
-    </div>
-  );
+    return (
+        <div className="min-h-screen flex flex-col">
+            <div className="flex-grow">{children}</div>
+            <Footer />
+        </div>
+    );
 }
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <BrowserRouter>
-        <Routes>
-        
- 
+    <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+            <BrowserRouter>
+                <Routes>
 
 
 
-          {/* Landing Sayfaları */}
-          <Route path="/" element={<WithFooter><Index /></WithFooter>} />
-          <Route path="/features" element={<WithFooter><Features /></WithFooter>} />
-          <Route path="/solutions" element={<WithFooter><Solutions /></WithFooter>} />
-          <Route path="/plans" element={<WithFooter><Plans /></WithFooter>} />
-          <Route path="/resources" element={<WithFooter><Resources /></WithFooter>} />
-          <Route path="/contact" element={<WithFooter><Contact /></WithFooter>} />
-          <Route path="/terms" element={<WithFooter><Terms /></WithFooter>} />
-          <Route path="/privacy" element={<WithFooter><Privacy /></WithFooter>} />
-          <Route path="/payment" element={<WithFooter><Payment /></WithFooter>} />
-          <Route path="/payment-success" element={<WithFooter><PaymentSuccess /></WithFooter>} />
 
-          {/* Auth */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify" element={<Verify />} />
 
-          {/* Panel — Sidebar VAR */}
-          <Route element={<Layout />}>
-          <Route path="/ai" element={<AIPage />} />
-          <Route path="/pulse" element={<Pulse />} />
-            <Route path="/inbox" element={<Notifications />} />
-            <Route path="/members" element={<Members />} />
-            <Route path="/projects" element={<Projelerim />} />
-            <Route path="/projects/:projectId" element={<Proje />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/team" element={<Team />} />
-            <Route path="/teams/:orgId" element={<OrganizationDetail />} />
-            <Route path="/organization/:orgId" element={<OrganizationDetail />} />
-            <Route path="/reports" element={<ReportsList />} />              {/* ← Kart listesi */}
-            <Route path="/reports/:projectId" element={<Reports />} />       {/* ← Detay sayfası */}
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/test-projelerim" element={<Projelerim />} />
-            <Route path="/settings/connections" element={<Connected userId={""} />} />
-             <Route path="/settings/import" element={<Export/>} />
-             <Route path="/settings/profile" element={<ProfilePage />} />
-             <Route path="/settings/security" element={<SecurityPage />} />
-             <Route path="/settings/billing" element={<BillingPage />} />
-            
-            
-          </Route>
+                    {/* Landing Sayfaları */}
+                    <Route path="/" element={<WithFooter><Index /></WithFooter>} />
+                    <Route path="/features" element={<WithFooter><Features /></WithFooter>} />
+                    <Route path="/solutions" element={<WithFooter><Solutions /></WithFooter>} />
+                    <Route path="/plans" element={<WithFooter><Plans /></WithFooter>} />
+                    <Route path="/resources" element={<WithFooter><Resources /></WithFooter>} />
+                    <Route path="/contact" element={<WithFooter><Contact /></WithFooter>} />
+                    <Route path="/terms" element={<WithFooter><Terms /></WithFooter>} />
+                    <Route path="/privacy" element={<WithFooter><Privacy /></WithFooter>} />
+                    <Route path="/payment" element={<WithFooter><Payment /></WithFooter>} />
+                    <Route path="/payment-success" element={<WithFooter><PaymentSuccess /></WithFooter>} />
 
-        </Routes>
-      </BrowserRouter>
-    </ThemeProvider>
-  </QueryClientProvider>
+                    {/* Auth */}
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/verify" element={<Verify />} />
+
+                    {/* Panel — Sidebar VAR */}
+                    <Route element={<Layout />}>
+                        <Route path="/ai" element={<AIPage />} />
+                        <Route path="/pulse" element={<Pulse />} />
+                        <Route path="/inbox" element={<Notifications />} />
+                        <Route path="/members" element={<Members />} />
+                        <Route path="/projects" element={<Projelerim />} />
+                        <Route path="/projects/:projectId" element={<Proje />} />
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/tasks" element={<Tasks />} />
+                        <Route path="/team" element={<Team />} />
+                        <Route path="/teams/:orgId" element={<OrganizationDetail />} />
+                        <Route path="/organization/:orgId" element={<OrganizationDetail />} />
+                        <Route path="/reports" element={<ReportsList />} />              {/* ← Kart listesi */}
+                        <Route path="/reports/:projectId" element={<Reports />} />       {/* ← Detay sayfası */}
+                        <Route path="/notifications" element={<Notifications />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/test-projelerim" element={<Projelerim />} />
+                        <Route path="/settings/connections" element={<Connected userId={""} />} />
+                        <Route path="/settings/import" element={<Export />} />
+                        <Route path="/settings/profile" element={<ProfilePage />} />
+                        <Route path="/settings/security" element={<SecurityPage />} />
+                        <Route path="/settings/billing" element={<BillingPage />} />
+                        <Route path="/settings/templates" element={<TemplatesPage />} />
+
+
+                    </Route>
+
+                </Routes>
+            </BrowserRouter>
+        </ThemeProvider>
+    </QueryClientProvider>
 );
 
 export default App;
