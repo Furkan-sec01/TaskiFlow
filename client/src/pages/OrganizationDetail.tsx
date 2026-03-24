@@ -12,8 +12,12 @@ import {
   LogOut,
   ChevronRight,
   Trash2,
-  Lock
+  Lock,
+  FileText          // 👈 Belgeler ikonu için eklendi
 } from "lucide-react";
+
+// DocumentsTab bileşenini proje yapınıza göre doğru yoldan import edin
+import DocumentsTab from "./Documentstab";   // 👈 Dosyanın yolu değişebilir
 
 const getUserIdFromToken = () => {
   const token = localStorage.getItem("token");
@@ -36,7 +40,7 @@ const OrganizationDetail = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProjectsLoading, setIsProjectsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"members" | "projects">("members");
+  const [activeTab, setActiveTab] = useState<"members" | "projects" | "documents">("members"); // 👈 documents eklendi
 
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -222,10 +226,6 @@ const OrganizationDetail = () => {
           </button>
 
           <button onClick={handleDeleteTeam} className="bg-red-500/10 text-red-500 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-red-500 hover:text-white transition-all">
-           
-             
-           
-           
             <Trash2 size={18} /> Ekibi Kapat
           </button>
 
@@ -246,6 +246,10 @@ const OrganizationDetail = () => {
           <button onClick={() => setActiveTab("projects")} className={`pb-4 font-bold flex items-center gap-2 transition-all ${activeTab === "projects" ? 'border-b-2 border-blue-500 text-blue-500' : 'opacity-50 hover:opacity-80'}`}>
             <FolderKanban size={20} /> Projeler
           </button>
+          {/* 👇 Yeni Belgeler sekmesi */}
+          <button onClick={() => setActiveTab("documents")} className={`pb-4 font-bold flex items-center gap-2 transition-all ${activeTab === "documents" ? 'border-b-2 border-blue-500 text-blue-500' : 'opacity-50 hover:opacity-80'}`}>
+            <FileText size={20} /> Belgeler
+          </button>
         </div>
 
         {/* İÇERİK LİSTESİ */}
@@ -264,7 +268,7 @@ const OrganizationDetail = () => {
               </div>
             ))}
           </div>
-        ) : (
+        ) : activeTab === "projects" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {isProjectsLoading ? <div className="col-span-full text-center font-bold opacity-50">Projeler yükleniyor...</div> : projects.map((project) => {
               
@@ -311,6 +315,9 @@ const OrganizationDetail = () => {
               );
             })}
           </div>
+        ) : (
+          // 👇 Belgeler sekmesi – DocumentsTab bileşeni render ediliyor
+          <DocumentsTab orgId={orgId} darkMode={darkMode} />
         )}
       </div>
     </div>

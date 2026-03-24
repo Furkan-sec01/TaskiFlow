@@ -43,6 +43,8 @@ import ProfilePage from "./pages/Profilepage";
 import SecurityPage from "./pages/Securitypage";
 import BillingPage from "./pages/Billingpage";
 import TemplatesPage from "./pages/Templatespage.tsx"
+import DocumentsPage from "./pages/Documentspage";
+
 
 
 function WithFooter({ children }: { children: React.ReactNode }) {
@@ -107,6 +109,9 @@ const App = () => (
                         <Route path="/settings/security" element={<SecurityPage />} />
                         <Route path="/settings/billing" element={<BillingPage />} />
                         <Route path="/settings/templates" element={<TemplatesPage />} />
+                        <Route path="/settings/documents" element={<DocumentsPage />} />
+                        
+                        
 
 
                     </Route>
@@ -118,3 +123,4 @@ const App = () => (
 );
 
 export default App;
+
