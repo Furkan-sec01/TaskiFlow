@@ -7,12 +7,11 @@ export default function Layout() {
 
   return (
     <div className={darkMode ? "dark" : ""}>
-      <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
-        <Sidebar />
-        <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
-          <Outlet />
-        </main>
-      </div>
+      {/* Sidebar fixed, ana içerik margin-left ile kaydırıldı */}
+      <Sidebar />
+      <main className="ml-[220px] min-h-screen bg-gray-50 dark:bg-gray-900 overflow-auto">
+        <Outlet />
+      </main>
     </div>
   );
 }

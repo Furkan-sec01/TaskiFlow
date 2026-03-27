@@ -139,12 +139,12 @@ export default function DocumentsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#f0f4f8] font-sans">
+    <div className="min-h-screen bg-[#f0f4f8] dark:bg-gray-900 font-sans">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-8 py-5 flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 px-8 py-5 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Belgeler</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{docs.length} belge</p>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight">Belgeler</h1>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">{docs.length} belge</p>
         </div>
         <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
           <FilePlus size={16} />
@@ -157,18 +157,18 @@ export default function DocumentsPage() {
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           {/* Search */}
           <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Belge ara..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
+              className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition"
             />
           </div>
 
           {/* Filter tabs */}
-          <div className="flex bg-white border border-gray-200 rounded-lg p-1 gap-0.5">
+          <div className="flex bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-1 gap-0.5">
             {(["all", "starred", "recent"] as FilterType[]).map((f) => (
               <button
                 key={f}
@@ -176,7 +176,7 @@ export default function DocumentsPage() {
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                   filter === f
                     ? "bg-blue-600 text-white"
-                    : "text-gray-500 hover:text-gray-700"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 }`}
               >
                 {f === "all" ? "Tümü" : f === "starred" ? "★ Yıldızlı" : "Son"}
@@ -185,11 +185,11 @@ export default function DocumentsPage() {
           </div>
 
           {/* View toggle */}
-          <div className="flex bg-white border border-gray-200 rounded-lg p-1 gap-0.5">
+          <div className="flex bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-1 gap-0.5">
             <button
               onClick={() => setViewMode("grid")}
               className={`p-1.5 rounded-md transition-colors ${
-                viewMode === "grid" ? "bg-gray-100 text-gray-700" : "text-gray-400 hover:text-gray-600"
+                viewMode === "grid" ? "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
               }`}
             >
               <Grid3X3 size={15} />
@@ -197,7 +197,7 @@ export default function DocumentsPage() {
             <button
               onClick={() => setViewMode("list")}
               className={`p-1.5 rounded-md transition-colors ${
-                viewMode === "list" ? "bg-gray-100 text-gray-700" : "text-gray-400 hover:text-gray-600"
+                viewMode === "list" ? "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
               }`}
             >
               <List size={15} />
@@ -212,28 +212,28 @@ export default function DocumentsPage() {
           onDrop={(e) => { e.preventDefault(); setIsDragging(false); }}
           className={`mb-6 border-2 border-dashed rounded-xl p-6 flex flex-col items-center gap-2 transition-all cursor-pointer ${
             isDragging
-              ? "border-blue-400 bg-blue-50"
-              : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/30"
+              ? "border-blue-400 bg-blue-50 dark:border-blue-500 dark:bg-blue-900/30"
+              : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50/30 dark:hover:bg-blue-900/20"
           }`}
         >
-          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-            <Upload size={18} className="text-blue-500" />
+          <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+            <Upload size={18} className="text-blue-500 dark:text-blue-400" />
           </div>
-          <p className="text-sm text-gray-600 font-medium">
+          <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">
             Dosyaları buraya sürükleyin veya{" "}
-            <span className="text-blue-600 hover:underline cursor-pointer">seçin</span>
+            <span className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">seçin</span>
           </p>
-          <p className="text-xs text-gray-400">PDF, Word, Excel, Sunu, Görseller desteklenir</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">PDF, Word, Excel, Sunu, Görseller desteklenir</p>
         </div>
 
         {/* Empty State */}
         {filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-              <FolderOpen size={28} className="text-gray-400" />
+            <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+              <FolderOpen size={28} className="text-gray-400 dark:text-gray-500" />
             </div>
-            <p className="text-gray-600 font-medium">Belge bulunamadı</p>
-            <p className="text-sm text-gray-400 mt-1">
+            <p className="text-gray-600 dark:text-gray-300 font-medium">Belge bulunamadı</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
               {search ? "Arama kriterlerini değiştirin" : "Henüz belge yüklenmemiş"}
             </p>
           </div>
@@ -247,7 +247,7 @@ export default function DocumentsPage() {
               return (
                 <div
                   key={doc.id}
-                  className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group relative"
+                  className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group relative"
                 >
                   {/* Top row */}
                   <div className="flex items-start justify-between mb-3">
@@ -260,36 +260,36 @@ export default function DocumentsPage() {
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => toggleStar(doc.id)}
-                        className="p-1 rounded hover:bg-gray-100"
+                        className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         {doc.starred ? (
                           <Star size={14} className="text-amber-400 fill-amber-400" />
                         ) : (
-                          <StarOff size={14} className="text-gray-400" />
+                          <StarOff size={14} className="text-gray-400 dark:text-gray-500" />
                         )}
                       </button>
                       <div className="relative">
                         <button
                           onClick={() => setActiveMenu(activeMenu === doc.id ? null : doc.id)}
-                          className="p-1 rounded hover:bg-gray-100"
+                          className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                         >
-                          <MoreHorizontal size={14} className="text-gray-400" />
+                          <MoreHorizontal size={14} className="text-gray-400 dark:text-gray-500" />
                         </button>
                         {activeMenu === doc.id && (
-                          <div className="absolute right-0 top-6 z-10 bg-white rounded-lg shadow-lg border border-gray-100 py-1 w-36">
-                            <button className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50">
+                          <div className="absolute right-0 top-6 z-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700 py-1 w-36">
+                            <button className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                               <Eye size={12} /> Görüntüle
                             </button>
-                            <button className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50">
+                            <button className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                               <Download size={12} /> İndir
                             </button>
-                            <button className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50">
+                            <button className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                               <Edit3 size={12} /> Yeniden adlandır
                             </button>
-                            <hr className="my-1 border-gray-100" />
+                            <hr className="my-1 border-gray-100 dark:border-gray-700" />
                             <button
                               onClick={() => deleteDoc(doc.id)}
-                              className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-red-500 hover:bg-red-50"
+                              className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                             >
                               <Trash2 size={12} /> Sil
                             </button>
@@ -300,8 +300,8 @@ export default function DocumentsPage() {
                   </div>
 
                   {/* Name */}
-                  <p className="text-sm font-medium text-gray-800 truncate mb-1">{doc.name}</p>
-                  <p className="text-xs text-gray-400 mb-3">
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate mb-1">{doc.name}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
                     {fileTypeLabels[doc.type]} · {doc.size}
                   </p>
 
@@ -311,7 +311,7 @@ export default function DocumentsPage() {
                       {doc.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px]"
+                          className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded text-[10px]"
                         >
                           {tag}
                         </span>
@@ -321,8 +321,8 @@ export default function DocumentsPage() {
 
                   {/* Date */}
                   <div className="flex items-center gap-1 mt-auto">
-                    <Clock size={10} className="text-gray-300" />
-                    <span className="text-[10px] text-gray-400">{doc.updatedAt}</span>
+                    <Clock size={10} className="text-gray-300 dark:text-gray-600" />
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500">{doc.updatedAt}</span>
                     {doc.starred && (
                       <Star size={10} className="text-amber-400 fill-amber-400 ml-auto" />
                     )}
@@ -335,8 +335,8 @@ export default function DocumentsPage() {
 
         {/* List View */}
         {viewMode === "list" && filtered.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] px-4 py-2.5 border-b border-gray-100 text-xs text-gray-400 font-medium">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] px-4 py-2.5 border-b border-gray-100 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500 font-medium">
               <span>Ad</span>
               <span>Tür</span>
               <span>Boyut</span>
@@ -348,8 +348,8 @@ export default function DocumentsPage() {
               return (
                 <div
                   key={doc.id}
-                  className={`grid grid-cols-[2fr_1fr_1fr_1fr_auto] px-4 py-3 items-center hover:bg-gray-50 transition-colors group ${
-                    i !== filtered.length - 1 ? "border-b border-gray-50" : ""
+                  className={`grid grid-cols-[2fr_1fr_1fr_1fr_auto] px-4 py-3 items-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group ${
+                    i !== filtered.length - 1 ? "border-b border-gray-50 dark:border-gray-700/50" : ""
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -359,29 +359,29 @@ export default function DocumentsPage() {
                     >
                       <Icon size={16} style={{ color }} />
                     </div>
-                    <span className="text-sm font-medium text-gray-800 truncate">{doc.name}</span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{doc.name}</span>
                     {doc.starred && <Star size={12} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
                   </div>
-                  <span className="text-xs text-gray-500">{fileTypeLabels[doc.type]}</span>
-                  <span className="text-xs text-gray-500">{doc.size}</span>
-                  <span className="text-xs text-gray-400">{doc.updatedAt}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{fileTypeLabels[doc.type]}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{doc.size}</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">{doc.updatedAt}</span>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => toggleStar(doc.id)}
-                      className="p-1.5 rounded hover:bg-gray-100"
+                      className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                       {doc.starred ? (
                         <Star size={13} className="text-amber-400 fill-amber-400" />
                       ) : (
-                        <StarOff size={13} className="text-gray-400" />
+                        <StarOff size={13} className="text-gray-400 dark:text-gray-500" />
                       )}
                     </button>
-                    <button className="p-1.5 rounded hover:bg-gray-100">
-                      <Download size={13} className="text-gray-400" />
+                    <button className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <Download size={13} className="text-gray-400 dark:text-gray-500" />
                     </button>
                     <button
                       onClick={() => deleteDoc(doc.id)}
-                      className="p-1.5 rounded hover:bg-red-50"
+                      className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
                     >
                       <Trash2 size={13} className="text-red-400" />
                     </button>

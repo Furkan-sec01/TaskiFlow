@@ -110,20 +110,20 @@ const TemplatesPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F5F7] p-8 font-sans">
+    <div className="min-h-screen bg-[#F4F5F7] dark:bg-gray-900 p-8 font-sans">
       <header className="max-w-6xl mx-auto mb-12 text-center">
-        <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm mb-4">
-          <Sparkles className="w-4 h-4 text-indigo-600" />
-          <span className="text-xs font-black uppercase tracking-widest text-indigo-600">
+        <div className="inline-flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm mb-4">
+          <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          <span className="text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
             TaskiFlow Şablonları
           </span>
         </div>
 
-        <h1 className="text-4xl font-black text-gray-900 tracking-tighter uppercase mb-2">
+        <h1 className="text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tighter uppercase mb-2">
           Hızlı Başlangıç
         </h1>
 
-        <p className="text-gray-500 font-medium">
+        <p className="text-gray-500 dark:text-gray-400 font-medium">
           İş akışınıza en uygun şablonu seçin.
         </p>
       </header>
@@ -132,7 +132,7 @@ const TemplatesPage: React.FC = () => {
         {PROJECT_TEMPLATES.map((tpl) => (
           <div
             key={tpl.id}
-            className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-transparent hover:border-indigo-100 hover:shadow-xl transition-all"
+            className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 shadow-sm border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800 hover:shadow-xl transition-all"
           >
             <div
               className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-${tpl.color}-50 text-${tpl.color}-600`}
@@ -140,11 +140,11 @@ const TemplatesPage: React.FC = () => {
               {tpl.icon}
             </div>
 
-            <h3 className="text-xl font-black text-gray-900 tracking-tight mb-3 uppercase">
+            <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-3 uppercase">
               {tpl.title}
             </h3>
 
-            <p className="text-gray-500 text-sm leading-relaxed mb-6 font-medium">
+            <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-6 font-medium">
               {tpl.description}
             </p>
 
@@ -169,7 +169,7 @@ const TemplatesPage: React.FC = () => {
             <button
               disabled={loadingId === tpl.id}
               onClick={() => handleSelectTemplate(tpl)}
-              className="w-full bg-gray-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-600 transition-all disabled:opacity-50"
+              className="w-full bg-gray-900 dark:bg-gray-700 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-all disabled:opacity-50"
             >
               {loadingId === tpl.id ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

@@ -37,18 +37,18 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-7">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-7">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-lg font-medium text-gray-900">Profil</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-lg font-medium text-gray-900 dark:text-gray-100">Profil</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             Kişisel bilgilerini ve tercihlerini yönet
           </p>
         </div>
         <button
           onClick={() => { setEditing(true); setDraft(profile); }}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
         >
           <Pencil size={13} />
           Düzenle
@@ -56,30 +56,30 @@ export default function ProfilePage() {
       </div>
 
       {/* Hero Card */}
-      <div className="bg-white border border-gray-100 rounded-xl p-6 mb-4 flex items-center gap-5">
+      <div className="bg-white border border-gray-100 rounded-xl p-6 mb-4 flex items-center gap-5 dark:bg-gray-900 dark:border-gray-700">
         <div className="relative shrink-0">
           <div className="w-[72px] h-[72px] rounded-full bg-[#4F6EF7] flex items-center justify-center text-white text-2xl font-medium">
             S
           </div>
-          <button className="absolute bottom-0 right-0 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50">
-            <Upload size={11} className="text-gray-500" />
+          <button className="absolute bottom-0 right-0 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:hover:bg-gray-700">
+            <Upload size={11} className="text-gray-500 dark:text-gray-400" />
           </button>
         </div>
         <div>
-          <p className="text-[19px] font-medium text-gray-900 mb-0.5">
+          <p className="text-[19px] font-medium text-gray-900 dark:text-gray-100 mb-0.5">
             {profile.fullName}
           </p>
-          <p className="text-sm text-gray-500 mb-2.5">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2.5">
             Proje Yöneticisi · TaskiFlow
           </p>
           <div className="flex gap-2 flex-wrap">
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
               Pro plan
             </span>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300">
               Aktif
             </span>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
               Admin
             </span>
           </div>
@@ -93,9 +93,9 @@ export default function ProfilePage() {
           { label: "Aktif proje", value: 7 },
           { label: "Takım üyesi", value: 12 },
         ].map((s) => (
-          <div key={s.label} className="bg-gray-100 rounded-lg px-4 py-3.5">
-            <p className="text-xs text-gray-500 mb-1">{s.label}</p>
-            <p className="text-[22px] font-medium text-gray-900">{s.value}</p>
+          <div key={s.label} className="bg-gray-100 rounded-lg px-4 py-3.5 dark:bg-gray-800">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{s.label}</p>
+            <p className="text-[22px] font-medium text-gray-900 dark:text-gray-100">{s.value}</p>
           </div>
         ))}
       </div>
@@ -103,9 +103,9 @@ export default function ProfilePage() {
       {/* Info Cards */}
       <div className="grid grid-cols-2 gap-3.5 mb-3.5">
         {/* Personal Info */}
-        <div className="bg-white border border-gray-100 rounded-xl p-5">
-          <p className="text-sm font-medium text-gray-800 mb-4 flex items-center gap-2">
-            <User size={14} className="text-gray-400" />
+        <div className="bg-white border border-gray-100 rounded-xl p-5 dark:bg-gray-900 dark:border-gray-700">
+          <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
+            <User size={14} className="text-gray-400 dark:text-gray-500" />
             Kişisel bilgiler
           </p>
           <Field label="Ad soyad" value={draft.fullName} editing={editing} onChange={(v) => handleChange("fullName", v)} />
@@ -114,9 +114,9 @@ export default function ProfilePage() {
         </div>
 
         {/* Contact */}
-        <div className="bg-white border border-gray-100 rounded-xl p-5">
-          <p className="text-sm font-medium text-gray-800 mb-4 flex items-center gap-2">
-            <Mail size={14} className="text-gray-400" />
+        <div className="bg-white border border-gray-100 rounded-xl p-5 dark:bg-gray-900 dark:border-gray-700">
+          <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
+            <Mail size={14} className="text-gray-400 dark:text-gray-500" />
             İletişim
           </p>
           <Field label="E-posta" value={draft.email} editing={editing} onChange={(v) => handleChange("email", v)} />
@@ -126,9 +126,9 @@ export default function ProfilePage() {
       </div>
 
       {/* Activity */}
-      <div className="bg-white border border-gray-100 rounded-xl p-5 mb-4">
-        <p className="text-sm font-medium text-gray-800 mb-3 flex items-center gap-2">
-          <Clock size={14} className="text-gray-400" />
+      <div className="bg-white border border-gray-100 rounded-xl p-5 mb-4 dark:bg-gray-900 dark:border-gray-700">
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+          <Clock size={14} className="text-gray-400 dark:text-gray-500" />
           Son aktivite
         </p>
         {[
@@ -138,17 +138,17 @@ export default function ProfilePage() {
         ].map((a, i) => (
           <div
             key={i}
-            className="flex items-center gap-2.5 py-2.5 border-b border-gray-100 last:border-none"
+            className="flex items-center gap-2.5 py-2.5 border-b border-gray-100 last:border-none dark:border-gray-700"
           >
             <span
               className="w-2 h-2 rounded-full shrink-0"
               style={{ background: a.color }}
             />
-            <span className="text-sm text-gray-800 flex-1">
+            <span className="text-sm text-gray-800 dark:text-gray-200 flex-1">
               {a.text}
               <strong className="font-medium">{a.bold}</strong>
             </span>
-            <span className="text-xs text-gray-400">{a.time}</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">{a.time}</span>
           </div>
         ))}
       </div>
@@ -158,7 +158,7 @@ export default function ProfilePage() {
         <div className="flex justify-end gap-2.5">
           <button
             onClick={handleCancel}
-            className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800"
           >
             İptal
           </button>
@@ -185,7 +185,7 @@ interface FieldProps {
 function Field({ label, value, editing, onChange, last }: FieldProps) {
   return (
     <div className={last ? "" : "mb-3"}>
-      <p className="text-[10px] uppercase tracking-wider font-medium text-gray-400 mb-1">
+      <p className="text-[10px] uppercase tracking-wider font-medium text-gray-400 dark:text-gray-500 mb-1">
         {label}
       </p>
       {editing ? (
@@ -193,10 +193,10 @@ function Field({ label, value, editing, onChange, last }: FieldProps) {
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 bg-white text-sm text-gray-900 outline-none focus:border-[#4F6EF7] focus:ring-2 focus:ring-[#4F6EF7]/10"
+          className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 bg-white text-sm text-gray-900 outline-none focus:border-[#4F6EF7] focus:ring-2 focus:ring-[#4F6EF7]/10 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
         />
       ) : (
-        <p className="text-sm text-gray-800">{value}</p>
+        <p className="text-sm text-gray-800 dark:text-gray-200">{value}</p>
       )}
     </div>
   );

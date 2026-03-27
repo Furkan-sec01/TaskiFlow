@@ -216,7 +216,8 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="w-[220px] min-w-[220px] h-screen bg-[#f1f5fd] dark:bg-gray-900 border-r border-[#d1deff] dark:border-gray-700 flex flex-col overflow-y-auto">
+    // FIXED SIDEBAR: konum sabit, tüm ekran yüksekliği, kendi içinde kaydırma
+    <div className="fixed top-0 left-0 w-[220px] h-screen bg-[#f1f5fd] dark:bg-gray-900 border-r border-[#d1deff] dark:border-gray-700 flex flex-col overflow-y-auto z-10">
       {/* Header */}
       <div className="flex items-center justify-between px-2.5 pt-2.5 pb-1">
         <button
