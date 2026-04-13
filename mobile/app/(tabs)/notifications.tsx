@@ -18,7 +18,7 @@ import { MaterialIcons } from "@expo/vector-icons";
    🌐 API AYARI
    ===================================================== */
 
-const LAN_IP = "http://192.168.100.23:5000"; // ← login.tsx ile aynı IP
+const LAN_IP = "http://192.168.1.128:5001/api"; // ← login.tsx ile aynı IP
 const API_BASE =
   Platform.OS === "android"
     ? "http://10.0.2.2:5000"

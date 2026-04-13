@@ -15,7 +15,7 @@ import {
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 
-const API_URL = "http://192.168.100.23:5000/api";
+const API_URL = "http://192.168.1.128:5001//10.158.192.96:5000/api";
 
 export default function RegisterScreen() {
     const router = useRouter();

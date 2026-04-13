@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     View,
     Text,
@@ -8,53 +8,208 @@ import {
     Pressable,
     TextInput,
     Modal,
-    Platform
+    Platform,
+    ActivityIndicator,
+    Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const API_URL = "http://192.168.1.128:5001";
+
+interface Member {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+}
+
+interface Project {
+    id: string;
+    name: string;
+    title?: string;
+    description?: string;
+    createdAt: string;
+    members?: Member[];
+    progress?: number;
+}
+
+const AVATAR_COLORS = ["#2563EB", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
 export default function GenelBakisScreen() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
-
-    // Form states
-    const [workspace, setWorkspace] = useState("deneme's Workspace");
+    const [addMemberModal, setAddMemberModal] = useState(false);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [userName, setUserName] = useState("Kullanıcı");
+    const [orgId, setOrgId] = useState<string | null>(null);
+    const [members, setMembers] = useState<Member[]>([]);
+    const [membersLoading, setMembersLoading] = useState(true);
     const [projectName, setProjectName] = useState("");
     const [projectDesc, setProjectDesc] = useState("");
+    const [newMemberEmail, setNewMemberEmail] = useState("");
+    const [addingMember, setAddingMember] = useState(false);
 
-    const [projects, setProjects] = useState([
-        { id: '1', name: 'Deneme', owner: 'deneme', date: '23.02.2026' }
-    ]);
+    useEffect(() => { loadUserAndOrg(); }, []);
 
-    const handleCreateProject = () => {
-        if (!projectName.trim()) return;
-        setProjects([
-            ...projects,
-            {
-                id: Date.now().toString(),
-                name: projectName,
-                owner: 'deneme',
-                date: new Date().toLocaleDateString('tr-TR')
+    const loadUserAndOrg = async () => {
+        try {
+            const userData = await AsyncStorage.getItem("user");
+            if (userData) {
+                const user = JSON.parse(userData);
+                setUserName(user.name || user.email || "Kullanıcı");
             }
-        ]);
-        setProjectName("");
-        setProjectDesc("");
-        setModalVisible(false);
+            const token = await AsyncStorage.getItem("token");
+            const res = await fetch(`${API_URL}/api/organizations`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+            let foundOrgId = null;
+            if (Array.isArray(data) && data.length > 0) {
+                foundOrgId = data[0].id;
+                setOrgId(data[0].id);
+            } else if (data.id) {
+                foundOrgId = data.id;
+                setOrgId(data.id);
+            }
+            if (foundOrgId) fetchMembers(foundOrgId, token!);
+        } catch (e) {
+            console.log("Org yükleme hatası:", e);
+        } finally {
+            fetchProjects();
+        }
+    };
+
+    const fetchMembers = async (oid: string, token: string) => {
+        try {
+            setMembersLoading(true);
+            const res = await fetch(`${API_URL}/api/organizations/${oid}/members`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (Array.isArray(data)) setMembers(data);
+        } catch (e) {
+            console.log("Üye yükleme hatası:", e);
+        } finally {
+            setMembersLoading(false);
+        }
+    };
+
+    const fetchProjects = async () => {
+        try {
+            setLoading(true);
+            const token = await AsyncStorage.getItem("token");
+            const res = await fetch(`${API_URL}/api/project`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                const projectsWithProgress = data.map((p: any) => {
+                    const tasks = p.tasks || p.columns?.flatMap((c: any) => c.tasks || []) || [];
+                    const total = tasks.length;
+                    const done = tasks.filter((t: any) => t.isCompleted === true).length;
+                    const progress = total > 0 ? Math.round((done / total) * 100) : 0;
+                    return { ...p, progress };
+                });
+                setProjects(projectsWithProgress);
+            }
+        } catch (e) {
+            console.log("Proje yükleme hatası:", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCreateProject = async () => {
+        if (!projectName.trim()) return;
+        if (!projectDesc.trim()) { Alert.alert("Hata", "Açıklama zorunludur."); return; }
+        if (!orgId) { Alert.alert("Hata", "Organizasyon bulunamadı."); return; }
+        try {
+            const token = await AsyncStorage.getItem("token");
+            const res = await fetch(`${API_URL}/api/project`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ title: projectName, description: projectDesc, organizationId: orgId }),
+            });
+            const newProject = await res.json();
+            if (newProject.project?.id || newProject.id) {
+                const p = newProject.project || newProject;
+                setProjects([...projects, { ...p, progress: 0 }]);
+                setProjectName("");
+                setProjectDesc("");
+                setModalVisible(false);
+            } else {
+                Alert.alert("Hata", newProject.error || "Proje oluşturulamadı.");
+            }
+        } catch (e) {
+            Alert.alert("Hata", "Sunucuya bağlanılamadı.");
+        }
+    };
+
+    const handleAddMember = async () => {
+        if (!newMemberEmail.trim()) return;
+        if (!orgId) { Alert.alert("Hata", "Organizasyon bulunamadı."); return; }
+        try {
+            setAddingMember(true);
+            const token = await AsyncStorage.getItem("token");
+            const res = await fetch(`${API_URL}/api/organizations/${orgId}/members`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ email: newMemberEmail.trim() }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                Alert.alert("Başarılı", `${newMemberEmail} organizasyona eklendi!`);
+                setNewMemberEmail("");
+                setAddMemberModal(false);
+                fetchMembers(orgId, token!);
+            } else {
+                Alert.alert("Hata", data.error || "Üye eklenemedi.");
+            }
+        } catch (e) {
+            Alert.alert("Hata", "Sunucuya bağlanılamadı.");
+        } finally {
+            setAddingMember(false);
+        }
+    };
+
+    const filteredProjects = projects.filter((p) =>
+        (p.title || p.name || "").toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const getProgressColor = (progress: number) => {
+        if (progress >= 75) return "#10B981";
+        if (progress >= 40) return "#F59E0B";
+        return "#3B82F6";
+    };
+
+    const formatDate = (dateStr: string) => {
+        try { return new Date(dateStr).toLocaleDateString("tr-TR"); }
+        catch { return dateStr; }
     };
 
     return (
         <SafeAreaView style={styles.safe}>
-            {/* Header */}
             <View style={styles.topHeader}>
                 <Pressable onPress={() => router.back()} style={styles.backButton}>
                     <MaterialIcons name="arrow-back" size={24} color="#111827" />
                 </Pressable>
-                <Text style={styles.welcomeText}>Hoş Geldiniz, deneme</Text>
+                <Text style={styles.welcomeText}>Hoş Geldiniz, {userName}</Text>
+                <Pressable
+                    style={styles.notifBtn}
+                    onPress={() => router.push("/(tabs)/notifications")}
+                >
+                    <MaterialIcons name="notifications" size={24} color="#111827" />
+                    <View style={styles.notifDot} />
+                </Pressable>
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                {/* Search & Actions */}
+
+                {/* Arama ve Yeni Proje */}
                 <View style={styles.actionRow}>
                     <View style={styles.searchBox}>
                         <MaterialIcons name="search" size={20} color="#9CA3AF" />
@@ -72,98 +227,148 @@ export default function GenelBakisScreen() {
                     </Pressable>
                 </View>
 
-                {/* Section Title */}
+                {/* Şirket Çalışanları */}
+                <View style={styles.teamSection}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Şirket Çalışanları</Text>
+                        <View style={styles.line} />
+                        <Text style={styles.sectionCount}>{members.length} ÜYE</Text>
+                        <Pressable style={styles.addMemberBtn} onPress={() => setAddMemberModal(true)}>
+                            <MaterialIcons name="person-add" size={18} color="#2563EB" />
+                        </Pressable>
+                    </View>
+
+                    {membersLoading ? (
+                        <ActivityIndicator size="small" color="#2563EB" />
+                    ) : members.length === 0 ? (
+                        <Text style={styles.emptyText}>Henüz ekip üyesi yok.</Text>
+                    ) : (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.membersList}>
+                            {members.map((m, i) => (
+                                <Pressable
+                                    key={m.id}
+                                    style={styles.memberCard}
+                                    onPress={() => router.push({
+                                        pathname: "/calisan-detay",
+                                        params: { memberId: m.id, memberName: m.name, memberEmail: m.email, memberRole: m.role }
+                                    })}
+                                >
+                                    <View style={[styles.memberCardAvatar, { backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }]}>
+                                        <Text style={styles.memberCardAvatarText}>
+                                            {m.name?.charAt(0).toUpperCase() || "?"}
+                                        </Text>
+                                    </View>
+                                    <Text style={styles.memberCardName} numberOfLines={1}>{m.name}</Text>
+                                    <View style={[styles.memberRoleBadge, m.role === "OWNER" && styles.memberRoleBadgeOwner]}>
+                                        <Text style={[styles.memberRoleText, m.role === "OWNER" && styles.memberRoleTextOwner]}>
+                                            {m.role === "OWNER" ? "Lider" : "Üye"}
+                                        </Text>
+                                    </View>
+                                </Pressable>
+                            ))}
+                        </ScrollView>
+                    )}
+                </View>
+
+                {/* Projeler */}
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Kayıtlı Projeler</Text>
                     <View style={styles.line} />
-                    <Text style={styles.sectionCount}>{projects.length} TOPLAM</Text>
+                    <Text style={styles.sectionCount}>{filteredProjects.length} TOPLAM</Text>
                 </View>
 
-                {/* Projects Display */}
-                {projects.length === 0 ? (
+                {loading ? (
+                    <ActivityIndicator size="large" color="#2563EB" style={{ marginVertical: 40 }} />
+                ) : filteredProjects.length === 0 ? (
                     <View style={styles.emptyProjectsCard}>
                         <MaterialIcons name="web-asset" size={48} color="#D1D5DB" />
                         <Text style={styles.emptyText}>Görüntülenecek proje bulunamadı.</Text>
                     </View>
                 ) : (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.projectsList}>
-                        {projects.map(proj => (
-                            <Pressable
-                                key={proj.id}
-                                style={styles.projectCard}
-                                onPress={() => router.push("/proje-panosu")}
-                            >
-                                <View style={styles.projectCardTop}>
-                                    <View style={styles.projectIconBox}>
-                                        <MaterialIcons name="folder" size={24} color="#fff" />
+                        {filteredProjects.map((proj) => {
+                            const progressColor = getProgressColor(proj.progress || 0);
+                            return (
+                                <Pressable
+                                    key={proj.id}
+                                    style={styles.projectCard}
+                                    onPress={() => router.push({ pathname: "/proje-panosu", params: { projectId: proj.id } })}
+                                >
+                                    <View style={styles.projectCardTop}>
+                                        <View style={styles.projectIconBox}>
+                                            <MaterialIcons name="folder" size={24} color="#fff" />
+                                        </View>
+                                        <View style={styles.statusBadge}>
+                                            <Text style={styles.statusBadgeText}>KAYITLI</Text>
+                                        </View>
                                     </View>
-                                    <View style={styles.statusBadge}>
-                                        <Text style={styles.statusBadgeText}>KAYITLI</Text>
+                                    <Text style={styles.projectName}>{proj.title || proj.name}</Text>
+                                    {proj.description ? <Text style={styles.projectDesc} numberOfLines={1}>{proj.description}</Text> : null}
+                                    <View style={styles.progressSection}>
+                                        <View style={styles.progressLabelRow}>
+                                            <Text style={styles.progressLabel}>İlerleme</Text>
+                                            <Text style={[styles.progressPercent, { color: progressColor }]}>%{proj.progress || 0}</Text>
+                                        </View>
+                                        <View style={styles.progressBarBg}>
+                                            <View style={[styles.progressBarFill, { width: `${proj.progress || 0}%` as any, backgroundColor: progressColor }]} />
+                                        </View>
                                     </View>
-                                </View>
-                                <Text style={styles.projectName}>{proj.name}</Text>
-                                <Text style={styles.projectOwner}>{proj.owner}</Text>
-
-                                <View style={styles.projectCardBottom}>
-                                    <View style={styles.dateRow}>
-                                        <MaterialIcons name="calendar-today" size={12} color="#9CA3AF" />
-                                        <Text style={styles.dateText}>{proj.date}</Text>
+                                    <View style={styles.membersRow}>
+                                        {members.slice(0, 4).map((m, i) => (
+                                            <View key={m.id} style={[styles.memberAvatar, { marginLeft: i === 0 ? 0 : -8, zIndex: 10 - i, backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }]}>
+                                                <Text style={styles.memberAvatarText}>{m.name ? m.name.charAt(0).toUpperCase() : "?"}</Text>
+                                            </View>
+                                        ))}
+                                        {members.length > 4 && (
+                                            <View style={[styles.memberAvatar, styles.memberAvatarMore, { marginLeft: -8 }]}>
+                                                <Text style={styles.memberAvatarMoreText}>+{members.length - 4}</Text>
+                                            </View>
+                                        )}
+                                        {members.length > 0 && <Text style={styles.memberCount}>{members.length} üye</Text>}
                                     </View>
-                                    <View>
+                                    <View style={styles.projectCardBottom}>
+                                        <View style={styles.dateRow}>
+                                            <MaterialIcons name="calendar-today" size={12} color="#9CA3AF" />
+                                            <Text style={styles.dateText}>{formatDate(proj.createdAt)}</Text>
+                                        </View>
                                         <Text style={styles.openFileText}>Dosyayı Aç {">"}</Text>
                                     </View>
-                                </View>
-                            </Pressable>
-                        ))}
+                                </Pressable>
+                            );
+                        })}
                     </ScrollView>
                 )}
 
-                {/* Bottom Stats Section */}
+                {/* İstatistikler */}
                 <View style={styles.statsLayout}>
-                    {/* Total Projects Card */}
                     <View style={styles.totalCard}>
                         <View style={styles.totalCardHeader}>
                             <Text style={styles.totalCardTitle}>TOPLAM PROJE</Text>
-                            <View style={styles.folderIconLight}>
-                                <MaterialIcons name="folder" size={20} color="#2563EB" />
-                            </View>
+                            <View style={styles.folderIconLight}><MaterialIcons name="folder" size={20} color="#2563EB" /></View>
                         </View>
                         <Text style={styles.totalNumber}>{projects.length}</Text>
                     </View>
-
-                    {/* Mock Chart Card */}
-                    <View style={styles.chartCard}>
-                        <View style={styles.chartCardHeader}>
-                            <Text style={styles.chartCardTitle}>Proje Oluşturma Trendi</Text>
-                            <View style={styles.realtimeBadge}>
-                                <View style={styles.realtimeDot} />
-                                <Text style={styles.realtimeText}>GERÇEK ZAMANLI</Text>
-                            </View>
+                    <View style={styles.avgCard}>
+                        <View style={styles.totalCardHeader}>
+                            <Text style={styles.totalCardTitle}>ORTALAMA İLERLEME</Text>
+                            <View style={[styles.folderIconLight, { backgroundColor: "#F0FDF4" }]}><MaterialIcons name="trending-up" size={20} color="#10B981" /></View>
                         </View>
-                        <View style={styles.mockChartArea}>
-                            <View style={styles.yAxis}>
-                                <Text style={styles.axisText}>4</Text>
-                                <Text style={styles.axisText}>3</Text>
-                                <Text style={styles.axisText}>2</Text>
-                                <Text style={styles.axisText}>1</Text>
-                                <Text style={styles.axisText}>0</Text>
-                            </View>
-                            <View style={styles.chartLines}>
-                                {[4, 3, 2, 1, 0].map((_, i) => (
-                                    <View key={i} style={styles.hLine} />
-                                ))}
-                            </View>
+                        <Text style={[styles.totalNumber, { color: "#10B981" }]}>
+                            %{projects.length > 0 ? Math.round(projects.reduce((acc, p) => acc + (p.progress || 0), 0) / projects.length) : 0}
+                        </Text>
+                    </View>
+                    <View style={styles.totalCard}>
+                        <View style={styles.totalCardHeader}>
+                            <Text style={styles.totalCardTitle}>ÇALIŞAN SAYISI</Text>
+                            <View style={styles.folderIconLight}><MaterialIcons name="people" size={20} color="#2563EB" /></View>
                         </View>
+                        <Text style={styles.totalNumber}>{members.length}</Text>
                     </View>
                 </View>
             </ScrollView>
 
-            {/* New Project Modal */}
-            <Modal
-                visible={modalVisible}
-                animationType="fade"
-                transparent={true}
-            >
+            {/* Yeni Proje Modal */}
+            <Modal visible={modalVisible} animationType="fade" transparent={true}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
@@ -172,258 +377,124 @@ export default function GenelBakisScreen() {
                                 <MaterialIcons name="close" size={20} color="#374151" />
                             </Pressable>
                         </View>
-
-                        <Text style={styles.label}>ÇALIŞMA ALANI SEÇİN</Text>
-                        <TextInput
-                            style={[styles.modalInput, styles.disabledInput]}
-                            value={workspace}
-                            editable={false}
-                        />
-
                         <Text style={styles.label}>PROJE ADI</Text>
-                        <TextInput
-                            style={styles.modalInput}
-                            value={projectName}
-                            onChangeText={setProjectName}
-                            placeholder="E-Ticaret Web Sitesi..."
-                            placeholderTextColor="#9CA3AF"
-                        />
-
+                        <TextInput style={styles.modalInput} value={projectName} onChangeText={setProjectName} placeholder="E-Ticaret Web Sitesi..." placeholderTextColor="#9CA3AF" />
                         <Text style={styles.label}>AÇIKLAMA</Text>
-                        <TextInput
-                            style={[styles.modalInput, styles.textArea]}
-                            value={projectDesc}
-                            onChangeText={setProjectDesc}
-                            placeholder="Projenin temel hedefleri..."
-                            placeholderTextColor="#9CA3AF"
-                            multiline
-                            textAlignVertical="top"
-                        />
-
-                        <Pressable
-                            style={styles.submitBtn}
-                            onPress={handleCreateProject}
-                        >
+                        <TextInput style={[styles.modalInput, styles.textArea]} value={projectDesc} onChangeText={setProjectDesc} placeholder="Projenin temel hedefleri..." placeholderTextColor="#9CA3AF" multiline textAlignVertical="top" />
+                        <Pressable style={styles.submitBtn} onPress={handleCreateProject}>
                             <Text style={styles.submitBtnText}>Projeyi Onayla</Text>
                         </Pressable>
                     </View>
                 </View>
             </Modal>
+
+            {/* Üye Ekle Modal */}
+            <Modal visible={addMemberModal} animationType="fade" transparent={true}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Çalışan Ekle</Text>
+                            <Pressable onPress={() => setAddMemberModal(false)} style={styles.closeBtn}>
+                                <MaterialIcons name="close" size={20} color="#374151" />
+                            </Pressable>
+                        </View>
+                        <Text style={styles.label}>E-POSTA ADRESİ</Text>
+                        <TextInput
+                            style={styles.modalInput}
+                            value={newMemberEmail}
+                            onChangeText={setNewMemberEmail}
+                            placeholder="ornek@email.com"
+                            placeholderTextColor="#9CA3AF"
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                        />
+                        <Text style={styles.modalHint}>
+                            Bu e-posta adresiyle kayıtlı kullanıcı organizasyona eklenecek.
+                        </Text>
+                        <Pressable style={[styles.submitBtn, addingMember && { opacity: 0.6 }]} onPress={handleAddMember} disabled={addingMember}>
+                            {addingMember
+                                ? <ActivityIndicator color="#fff" />
+                                : <Text style={styles.submitBtnText}>Çalışanı Ekle</Text>
+                            }
+                        </Pressable>
+                    </View>
+                </View>
+            </Modal>
+
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     safe: { flex: 1, backgroundColor: "#F7F9FC" },
-
-    topHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 20,
-        paddingTop: Platform.OS === "android" ? 40 : 20,
-        paddingBottom: 16,
-        backgroundColor: "#fff",
-        borderBottomWidth: 1,
-        borderBottomColor: "#E5E7EB",
-    },
+    topHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: Platform.OS === "android" ? 40 : 20, paddingBottom: 16, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#E5E7EB" },
     backButton: { marginRight: 16 },
-    welcomeText: { fontSize: 20, fontWeight: "700", color: "#111827" },
-
+    welcomeText: { flex: 1, fontSize: 20, fontWeight: "700", color: "#111827" },
+    notifBtn: { padding: 4, position: "relative" },
+    notifDot: { position: "absolute", top: 4, right: 4, width: 8, height: 8, borderRadius: 4, backgroundColor: "#EF4444" },
     scrollContent: { padding: 20, flexGrow: 1 },
-
-    actionRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 24,
-        gap: 12,
-    },
-    searchBox: {
-        flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#fff",
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        height: 48,
-        borderWidth: 1,
-        borderColor: "#E5E7EB",
-    },
+    actionRow: { flexDirection: "row", alignItems: "center", marginBottom: 24, gap: 12 },
+    searchBox: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 12, paddingHorizontal: 12, height: 48, borderWidth: 1, borderColor: "#E5E7EB" },
     searchInput: { flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 },
-    newProjectBtn: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#2563EB",
-        height: 48,
-        paddingHorizontal: 16,
-        borderRadius: 12,
-        shadowColor: "#2563EB",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
-    },
+    newProjectBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "#2563EB", height: 48, paddingHorizontal: 16, borderRadius: 12, shadowColor: "#2563EB", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
     newProjectBtnText: { color: "#fff", fontWeight: "600", marginLeft: 4 },
-
-    sectionHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 16,
-    },
+    teamSection: { marginBottom: 24 },
+    membersList: { gap: 12, paddingVertical: 8 },
+    memberCard: { alignItems: "center", backgroundColor: "#fff", borderRadius: 16, padding: 14, width: 90, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+    memberCardAvatar: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", marginBottom: 8 },
+    memberCardAvatarText: { color: "#fff", fontSize: 20, fontWeight: "800" },
+    memberCardName: { fontSize: 11, fontWeight: "700", color: "#111827", textAlign: "center", marginBottom: 6 },
+    memberRoleBadge: { backgroundColor: "#F3F4F6", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+    memberRoleBadgeOwner: { backgroundColor: "#EEF2FF" },
+    memberRoleText: { fontSize: 9, fontWeight: "700", color: "#6B7280" },
+    memberRoleTextOwner: { color: "#4F46E5" },
+    addMemberBtn: { marginLeft: 8, padding: 4 },
+    sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
     sectionTitle: { fontSize: 18, fontWeight: "700", color: "#111827" },
     line: { flex: 1, height: 1, backgroundColor: "#E5E7EB", marginHorizontal: 16 },
     sectionCount: { fontSize: 12, fontWeight: "600", color: "#6B7280" },
-
-    emptyProjectsCard: {
-        height: 160,
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: "#E5E7EB",
-        borderStyle: "dashed",
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: 24,
-    },
+    emptyProjectsCard: { height: 160, backgroundColor: "#fff", borderRadius: 16, borderWidth: 1, borderColor: "#E5E7EB", borderStyle: "dashed", alignItems: "center", justifyContent: "center", marginBottom: 24 },
     emptyText: { marginTop: 12, color: "#9CA3AF", fontSize: 14 },
-
     projectsList: { paddingRight: 20, marginBottom: 24, gap: 16 },
-    projectCard: {
-        width: 250,
-        backgroundColor: "#fff",
-        borderRadius: 20,
-        padding: 20,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    projectCardTop: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        marginBottom: 16,
-    },
-    projectIconBox: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
-        backgroundColor: "#2563EB",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    statusBadge: {
-        backgroundColor: "#EEF2FF",
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
+    projectCard: { width: 260, backgroundColor: "#fff", borderRadius: 20, padding: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
+    projectCardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 },
+    projectIconBox: { width: 48, height: 48, borderRadius: 12, backgroundColor: "#2563EB", alignItems: "center", justifyContent: "center" },
+    statusBadge: { backgroundColor: "#EEF2FF", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
     statusBadgeText: { color: "#4F46E5", fontSize: 10, fontWeight: "700" },
-    projectName: { fontSize: 16, fontWeight: "700", color: "#111827", marginBottom: 4 },
-    projectOwner: { fontSize: 13, color: "#6B7280", marginBottom: 20 },
-    projectCardBottom: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        borderTopWidth: 1,
-        borderTopColor: "#F3F4F6",
-        paddingTop: 16,
-    },
+    projectName: { fontSize: 16, fontWeight: "700", color: "#111827", marginBottom: 2 },
+    projectDesc: { fontSize: 12, color: "#9CA3AF", marginBottom: 12 },
+    progressSection: { marginBottom: 12 },
+    progressLabelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
+    progressLabel: { fontSize: 11, fontWeight: "600", color: "#6B7280" },
+    progressPercent: { fontSize: 11, fontWeight: "700" },
+    progressBarBg: { height: 6, backgroundColor: "#F3F4F6", borderRadius: 3, overflow: "hidden" },
+    progressBarFill: { height: 6, borderRadius: 3 },
+    membersRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+    memberAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#2563EB", alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#fff" },
+    memberAvatarText: { fontSize: 11, fontWeight: "700", color: "#fff" },
+    memberAvatarMore: { backgroundColor: "#E5E7EB" },
+    memberAvatarMoreText: { fontSize: 9, fontWeight: "700", color: "#6B7280" },
+    memberCount: { fontSize: 11, color: "#9CA3AF", marginLeft: 8 },
+    projectCardBottom: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: "#F3F4F6", paddingTop: 12 },
     dateRow: { flexDirection: "row", alignItems: "center", gap: 6 },
     dateText: { fontSize: 12, color: "#6B7280" },
     openFileText: { fontSize: 13, color: "#2563EB", fontWeight: "600" },
-
     statsLayout: { marginBottom: 32, gap: 16 },
-    totalCard: {
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        padding: 20,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-    },
+    totalCard: { backgroundColor: "#fff", borderRadius: 16, padding: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+    avgCard: { backgroundColor: "#fff", borderRadius: 16, padding: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
     totalCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
     totalCardTitle: { fontSize: 11, fontWeight: "700", color: "#6B7280", letterSpacing: 0.5 },
-    folderIconLight: {
-        backgroundColor: "#EEF2FF",
-        padding: 8,
-        borderRadius: 8,
-    },
+    folderIconLight: { backgroundColor: "#EEF2FF", padding: 8, borderRadius: 8 },
     totalNumber: { fontSize: 28, fontWeight: "800", color: "#111827" },
-
-    chartCard: {
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        padding: 20,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    chartCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
-    chartCardTitle: { fontSize: 14, fontWeight: "700", color: "#111827" },
-    realtimeBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#F3F4F6",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-        gap: 6,
-    },
-    realtimeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#3B82F6" },
-    realtimeText: { fontSize: 10, fontWeight: "600", color: "#4B5563" },
-
-    mockChartArea: { flexDirection: "row", height: 160 },
-    yAxis: { justifyContent: "space-between", paddingRight: 12, paddingVertical: 8 },
-    axisText: { fontSize: 10, color: "#9CA3AF" },
-    chartLines: { flex: 1, justifyContent: "space-between", paddingVertical: 14 },
-    hLine: { height: 1, backgroundColor: "#F3F4F6", borderStyle: "dashed" },
-
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: "rgba(0,0,0,0.5)",
-        justifyContent: "center",
-        padding: 20,
-    },
-    modalContent: {
-        backgroundColor: "#fff",
-        borderRadius: 24,
-        padding: 24,
-    },
-    modalHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 24,
-    },
+    modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 20 },
+    modalContent: { backgroundColor: "#fff", borderRadius: 24, padding: 24 },
+    modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
     modalTitle: { fontSize: 20, fontWeight: "800", color: "#111827" },
     closeBtn: { padding: 4 },
-
     label: { fontSize: 11, fontWeight: "700", color: "#6B7280", marginBottom: 8, marginTop: 16, letterSpacing: 0.5 },
-    modalInput: {
-        height: 48,
-        backgroundColor: "#F9FAFB",
-        borderWidth: 1,
-        borderColor: "#E5E7EB",
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        fontSize: 14,
-        color: "#111827",
-    },
-    disabledInput: { color: "#6B7280" },
+    modalInput: { height: 48, backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, paddingHorizontal: 16, fontSize: 14, color: "#111827" },
     textArea: { height: 100, paddingTop: 16 },
-
-    submitBtn: {
-        backgroundColor: "#2563EB",
-        height: 52,
-        borderRadius: 12,
-        alignItems: "center",
-        justifyContent: "center",
-        marginTop: 24,
-    },
+    modalHint: { fontSize: 12, color: "#9CA3AF", marginTop: 8 },
+    submitBtn: { backgroundColor: "#2563EB", height: 52, borderRadius: 12, alignItems: "center", justifyContent: "center", marginTop: 24 },
     submitBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 });

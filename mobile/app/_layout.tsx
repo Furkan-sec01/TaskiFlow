@@ -17,9 +17,11 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="proje-panosu" />
         <Stack.Screen name="proje-raporu" />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: true, title: 'Modal' }} />
+        <Stack.Screen name="calisan-detay" />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
   );
 }
+
+

@@ -14,8 +14,9 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://192.168.100.23:5000/api";
+const API_URL = "http://192.168.1.128:5001/api";
 
 export default function LoginScreen() {
     const router = useRouter();
@@ -41,6 +42,8 @@ export default function LoginScreen() {
                 Alert.alert("Hata", data.error || "Giriş başarısız.");
                 return;
             }
+            await AsyncStorage.setItem("token", data.token);
+            await AsyncStorage.setItem("user", JSON.stringify(data.user));
             router.replace("/(tabs)/genel-bakis");
         } catch (error) {
             Alert.alert("Bağlantı Hatası", "Sunucuya bağlanılamadı.");
