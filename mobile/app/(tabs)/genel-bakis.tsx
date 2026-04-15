@@ -15,8 +15,7 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const API_URL = "http://192.168.1.128:5001";
+import { API_URL } from "@/constants/api";
 
 interface Member {
     id: string;
@@ -63,7 +62,7 @@ export default function GenelBakisScreen() {
                 setUserName(user.name || user.email || "Kullanıcı");
             }
             const token = await AsyncStorage.getItem("token");
-            const res = await fetch(`${API_URL}/api/organizations`, {
+            const res = await fetch(`${API_URL}/organizations`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();
@@ -86,7 +85,7 @@ export default function GenelBakisScreen() {
     const fetchMembers = async (oid: string, token: string) => {
         try {
             setMembersLoading(true);
-            const res = await fetch(`${API_URL}/api/organizations/${oid}/members`, {
+            const res = await fetch(`${API_URL}/organizations/${oid}/members`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();
@@ -102,7 +101,7 @@ export default function GenelBakisScreen() {
         try {
             setLoading(true);
             const token = await AsyncStorage.getItem("token");
-            const res = await fetch(`${API_URL}/api/project`, {
+            const res = await fetch(`${API_URL}/project`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();
@@ -129,7 +128,7 @@ export default function GenelBakisScreen() {
         if (!orgId) { Alert.alert("Hata", "Organizasyon bulunamadı."); return; }
         try {
             const token = await AsyncStorage.getItem("token");
-            const res = await fetch(`${API_URL}/api/project`, {
+            const res = await fetch(`${API_URL}/project`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ title: projectName, description: projectDesc, organizationId: orgId }),
@@ -155,7 +154,7 @@ export default function GenelBakisScreen() {
         try {
             setAddingMember(true);
             const token = await AsyncStorage.getItem("token");
-            const res = await fetch(`${API_URL}/api/organizations/${orgId}/members`, {
+            const res = await fetch(`${API_URL}/organizations/${orgId}/members`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ email: newMemberEmail.trim() }),

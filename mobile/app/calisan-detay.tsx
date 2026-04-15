@@ -6,8 +6,7 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const API_URL = "http://192.168.1.128:5001";
+import { API_URL } from "@/constants/api";
 
 const AVATAR_COLORS = ["#2563EB", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
@@ -34,7 +33,7 @@ export default function CalisanDetayScreen() {
   const fetchMemberTasks = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/tasks?assigneeId=${memberId}`, {
+      const res = await fetch(`${API_URL}/tasks?assigneeId=${memberId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();

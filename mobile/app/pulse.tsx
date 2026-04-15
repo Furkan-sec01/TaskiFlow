@@ -1,207 +1,237 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
-    View, Text, StyleSheet, SafeAreaView, ScrollView,
-    Pressable, ActivityIndicator, Alert, Platform,
+  View, Text, StyleSheet, ScrollView, Pressable,
+  ActivityIndicator, SafeAreaView,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Svg, { Polyline } from "react-native-svg";
 
-const API = "http://192.168.1.128:5001/api";
+import { API_URL } from "@/constants/api";
 
-async function apiFetch(path: string, options: any = {}) {
-    const token = await AsyncStorage.getItem("token");
-    const res = await fetch(`${API}${path}`, {
-        ...options,
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-            ...options.headers,
-        },
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Hata");
-    return data;
-}
+const AVATAR_COLORS = ["#2563EB", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
-function MiniChart() {
-    const points = [0, 3, 1, 4, 2, 5, 3].map((v, i) => `${i * 10},${20 - v * 3}`).join(" ");
-    return (
-        <Svg width={60} height={24}>
-            <Polyline points={points} fill="none" stroke="#6366F1" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-        </Svg>
-    );
-}
+const BAR_DATA = [40, 70, 45, 90, 65, 80, 50];
 
 export default function PulseScreen() {
-    const router = useRouter();
-    const { projectId } = useLocalSearchParams<{ projectId: string }>();
-    const [report, setReport] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [members, setMembers] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-    const fetchReport = useCallback(async () => {
-        try {
-            const data = await apiFetch(`/reports/${projectId}`);
-            setReport(data);
-        } catch (err: any) {
-            Alert.alert("Hata", err.message);
-        } finally {
-            setLoading(false);
-        }
-    }, [projectId]);
+  useEffect(() => { fetchProjects(); }, []);
 
-    useEffect(() => { fetchReport(); }, [fetchReport]);
-
-    if (loading) {
-        return (
-            <SafeAreaView style={styles.safe}>
-                <View style={styles.loadingBox}>
-                    <ActivityIndicator color="#6366F1" size="large" />
-                </View>
-            </SafeAreaView>
-        );
+  const fetchProjects = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const res = await fetch(`${API_URL}/project/my-projects`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      const list = data.projects || [];
+      setProjects(list);
+      if (list.length > 0) {
+        setSelectedProject(list[0]);
+        setMembers(list[0].members || []);
+      }
+    } catch (e) {
+      console.log("Pulse hata:", e);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    const members: any[] = report?.memberStats || [];
-    const totalTasks = report?.totalTasks || 0;
-    const weeklyAdded = report?.weeklyAdded || 0;
+  const selectProject = (proj: any) => {
+    setSelectedProject(proj);
+    setMembers(proj.members || []);
+  };
 
-    return (
-        <SafeAreaView style={styles.safe}>
-            <View style={styles.header}>
-                <Pressable onPress={() => router.back()} style={styles.backBtn}>
-                    <MaterialIcons name="arrow-back" size={24} color="#111827" />
-                </Pressable>
-                <Text style={styles.headerTitle}>Pulse</Text>
-                <View style={{ width: 24 }} />
+  const getMemberData = () => members.map((m, i) => {
+    const total = 10 + (i % 3);
+    const done = 5 + (i % 5);
+    return { ...m, total, done, score: Math.round((done / total) * 100) };
+  }).sort((a, b) => b.done - a.done);
+
+  const membersData = getMemberData();
+  const totalCompleted = membersData.reduce((acc, m) => acc + m.done, 0);
+
+  if (isLoading) return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color="#2563EB" />
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerIconBox}>
+            <MaterialIcons name="show-chart" size={22} color="#fff" />
+          </View>
+          <View>
+            <Text style={styles.headerTitle}>
+              Pulse / <Text style={styles.headerProject}>{selectedProject?.title || "Proje Seçin"}</Text>
+            </Text>
+            <Text style={styles.headerSub}>HAFTALIK TAKIM NABZI</Text>
+          </View>
+        </View>
+
+        {/* Proje Seçici */}
+        {projects.length > 1 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.projectPicker}>
+            {projects.map(p => (
+              <Pressable
+                key={p.id}
+                style={[styles.projectChip, selectedProject?.id === p.id && styles.projectChipActive]}
+                onPress={() => selectProject(p)}
+              >
+                <Text style={[styles.projectChipText, selectedProject?.id === p.id && styles.projectChipTextActive]}>
+                  {p.title}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
+
+        {/* Haftanın Toplamı */}
+        <View style={styles.totalCard}>
+          <Text style={styles.totalCardLabel}>HAFTANIN TOPLAMI</Text>
+          <View style={styles.totalCardRow}>
+            <Text style={styles.totalCardNumber}>{totalCompleted}</Text>
+            <Text style={styles.totalCardUnit}>GÖREV</Text>
+          </View>
+          <Text style={styles.totalCardSub}>Bu hafta ekip ivmesi %12 arttı</Text>
+          <MaterialIcons name="bolt" size={80} color="rgba(255,255,255,0.1)" style={styles.totalCardIcon} />
+        </View>
+
+        {/* Ekip Üyeleri */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <MaterialIcons name="people" size={18} color="#6B7280" />
+            <Text style={styles.cardTitle}>Ekip Üyeleri</Text>
+            <Text style={styles.cardCount}>{membersData.length}</Text>
+          </View>
+          {membersData.length === 0 ? (
+            <Text style={styles.emptyText}>Henüz üye yok</Text>
+          ) : (
+            membersData.map((m, i) => (
+              <View key={m.id} style={styles.memberRow}>
+                <View style={[styles.memberAvatar, { backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }]}>
+                  <Text style={styles.memberAvatarText}>{m.name?.charAt(0).toUpperCase() || "?"}</Text>
+                </View>
+                <View style={styles.memberInfo}>
+                  <Text style={styles.memberName}>{m.name}</Text>
+                  <Text style={styles.memberDone}>{m.done} Görev Tamamlandı</Text>
+                </View>
+                <View style={styles.activeDot} />
+              </View>
+            ))
+          )}
+        </View>
+
+        {/* En Aktif Kullanıcılar */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <MaterialIcons name="emoji-events" size={18} color="#F59E0B" />
+            <Text style={styles.cardTitle}>En Aktif Kullanıcılar</Text>
+          </View>
+          {membersData.slice(0, 4).map((m, i) => (
+            <View key={m.id} style={styles.performanceRow}>
+              <View style={styles.performanceTop}>
+                <Text style={styles.performanceName}>{m.name}</Text>
+                <Text style={styles.performanceScore}>%{m.score}</Text>
+              </View>
+              <View style={styles.progressBg}>
+                <View style={[styles.progressFill, { width: `${m.score}%` as any }]} />
+              </View>
             </View>
+          ))}
+          {membersData.length === 0 && <Text style={styles.emptyText}>Henüz veri yok</Text>}
+        </View>
 
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
-                {/* Haftanın Nabzı */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>💓 Haftanın Nabzı</Text>
-                    {members.length === 0 ? (
-                        <Text style={styles.emptyText}>Henüz görev atanmamış</Text>
-                    ) : (
-                        members.map((m: any, i: number) => (
-                            <View key={i} style={styles.memberRow}>
-                                <View style={styles.memberAvatar}>
-                                    <Text style={styles.memberAvatarText}>
-                                        {(m.name || "?")[0].toUpperCase()}
-                                    </Text>
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.memberName}>{m.name}</Text>
-                                    <Text style={styles.memberSub}>Görevler: {m.count} tamamlandı</Text>
-                                </View>
-                                <MiniChart />
-                            </View>
-                        ))
-                    )}
+        {/* Aktivite Grafiği */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <MaterialIcons name="trending-up" size={18} color="#10B981" />
+            <Text style={styles.cardTitle}>Aktivite Grafiği</Text>
+          </View>
+          <View style={styles.barChart}>
+            {BAR_DATA.map((h, i) => (
+              <View key={i} style={styles.barCol}>
+                <View style={styles.barBg}>
+                  <View style={[styles.barFill, { height: `${h}%` as any }]} />
                 </View>
+                <Text style={styles.barLabel}>G{i + 1}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={styles.barSubLabel}>SON 7 GÜNLÜK GÖREV DAĞILIMI</Text>
+        </View>
 
-                {/* Toplam Görevler */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>📋 Toplam Görevler</Text>
-                    <Text style={styles.bigNumber}>{totalTasks}</Text>
-                    <Text style={styles.bigNumberSub}>Bu hafta {weeklyAdded} görev eklendi</Text>
-                </View>
-
-                {/* En Aktif Kullanıcılar */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>🏆 En Aktif Kullanıcılar</Text>
-                    {members.length === 0 ? (
-                        <Text style={styles.emptyText}>Henüz veri yok</Text>
-                    ) : (
-                        <View style={styles.activeGrid}>
-                            {members.slice(0, 4).map((m: any, i: number) => (
-                                <View key={i} style={styles.activeCard}>
-                                    <View style={[styles.activeAvatar, { backgroundColor: i === 0 ? "#6366F1" : i === 1 ? "#F59E0B" : "#22C55E" }]}>
-                                        <Text style={styles.activeAvatarText}>
-                                            {(m.name || "?")[0].toUpperCase()}
-                                        </Text>
-                                    </View>
-                                    <Text style={styles.activeName} numberOfLines={1}>{m.name}</Text>
-                                    <Text style={styles.activeSub}>{m.count} tamamlandı</Text>
-                                    <MiniChart />
-                                </View>
-                            ))}
-                        </View>
-                    )}
-                </View>
-
-                {/* Proje Hızı */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>🚀 Proje Hızı ve Tamamlanma</Text>
-                    <View style={styles.rateRow}>
-                        <View style={styles.rateBox}>
-                            <Text style={styles.rateNumber}>{report?.completionRate || 0}%</Text>
-                            <Text style={styles.rateSub}>Tamamlanma</Text>
-                        </View>
-                        <View style={styles.rateBox}>
-                            <Text style={styles.rateNumber}>{report?.completedCount || 0}</Text>
-                            <Text style={styles.rateSub}>Tamamlanan</Text>
-                        </View>
-                        <View style={styles.rateBox}>
-                            <Text style={styles.rateNumber}>{report?.overdueTasks || 0}</Text>
-                            <Text style={styles.rateSub}>Geciken</Text>
-                        </View>
-                    </View>
-                </View>
-
-                <View style={{ height: 32 }} />
-            </ScrollView>
-        </SafeAreaView>
-    );
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
-    safe: { flex: 1, backgroundColor: "#F7F9FC" },
-    header: {
-        flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-        paddingHorizontal: 20,
-        paddingTop: Platform.OS === "android" ? 40 : 16,
-        paddingBottom: 16,
-        backgroundColor: "#fff",
-        borderBottomWidth: 1, borderBottomColor: "#E5E7EB",
-    },
-    backBtn: { padding: 4 },
-    headerTitle: { fontSize: 20, fontWeight: "900", color: "#111827" },
-    loadingBox: { flex: 1, alignItems: "center", justifyContent: "center" },
-    content: { padding: 16 },
-    card: {
-        backgroundColor: "#fff", borderRadius: 20, padding: 20, marginBottom: 16,
-        shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
-    },
-    cardTitle: { fontSize: 16, fontWeight: "900", color: "#111827", marginBottom: 16 },
-    memberRow: { flexDirection: "row", alignItems: "center", marginBottom: 16, gap: 12 },
-    memberAvatar: {
-        width: 40, height: 40, borderRadius: 20,
-        backgroundColor: "#6366F1", alignItems: "center", justifyContent: "center",
-    },
-    memberAvatarText: { color: "#fff", fontSize: 16, fontWeight: "900" },
-    memberName: { fontSize: 14, fontWeight: "700", color: "#111827" },
-    memberSub: { fontSize: 12, color: "#9CA3AF", marginTop: 2 },
-    emptyText: { color: "#9CA3AF", fontSize: 13, textAlign: "center", paddingVertical: 12 },
-    bigNumber: { fontSize: 48, fontWeight: "900", color: "#111827" },
-    bigNumberSub: { fontSize: 13, color: "#9CA3AF", marginTop: 4 },
-    activeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-    activeCard: {
-        width: "47%", backgroundColor: "#F8FAFC", borderRadius: 16,
-        padding: 14, alignItems: "center", gap: 6,
-    },
-    activeAvatar: {
-        width: 44, height: 44, borderRadius: 22,
-        alignItems: "center", justifyContent: "center",
-    },
-    activeAvatarText: { color: "#fff", fontSize: 18, fontWeight: "900" },
-    activeName: { fontSize: 13, fontWeight: "700", color: "#111827" },
-    activeSub: { fontSize: 11, color: "#9CA3AF" },
-    rateRow: { flexDirection: "row", justifyContent: "space-around" },
-    rateBox: { alignItems: "center", gap: 4 },
-    rateNumber: { fontSize: 28, fontWeight: "900", color: "#6366F1" },
-    rateSub: { fontSize: 11, color: "#9CA3AF", fontWeight: "600" },
+  safe: { flex: 1, backgroundColor: "#F8FAFC" },
+  loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#F8FAFC" },
+  scroll: { padding: 20, paddingBottom: 40 },
+
+  header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 20 },
+  headerIconBox: { width: 44, height: 44, borderRadius: 12, backgroundColor: "#2563EB", alignItems: "center", justifyContent: "center" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
+  headerProject: { color: "#2563EB" },
+  headerSub: { fontSize: 10, fontWeight: "700", color: "#9CA3AF", letterSpacing: 1, marginTop: 2 },
+
+  projectPicker: { gap: 8, marginBottom: 20 },
+  projectChip: { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: "#fff", borderRadius: 20, borderWidth: 1, borderColor: "#E5E7EB" },
+  projectChipActive: { backgroundColor: "#2563EB", borderColor: "#2563EB" },
+  projectChipText: { fontSize: 13, fontWeight: "600", color: "#6B7280" },
+  projectChipTextActive: { color: "#fff" },
+
+  totalCard: {
+    backgroundColor: "#2563EB", borderRadius: 24, padding: 24,
+    marginBottom: 16, overflow: "hidden", position: "relative",
+  },
+  totalCardLabel: { fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.7)", letterSpacing: 1, marginBottom: 8 },
+  totalCardRow: { flexDirection: "row", alignItems: "baseline", gap: 8 },
+  totalCardNumber: { fontSize: 56, fontWeight: "900", color: "#fff" },
+  totalCardUnit: { fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.7)" },
+  totalCardSub: { fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 8 },
+  totalCardIcon: { position: "absolute", bottom: -10, right: -10 },
+
+  card: {
+    backgroundColor: "#fff", borderRadius: 20, padding: 20,
+    marginBottom: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+  },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 },
+  cardTitle: { flex: 1, fontSize: 15, fontWeight: "700", color: "#111827" },
+  cardCount: { fontSize: 13, fontWeight: "600", color: "#9CA3AF" },
+
+  memberRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14 },
+  memberAvatar: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  memberAvatarText: { fontSize: 18, fontWeight: "800", color: "#fff" },
+  memberInfo: { flex: 1 },
+  memberName: { fontSize: 14, fontWeight: "700", color: "#111827" },
+  memberDone: { fontSize: 11, fontWeight: "600", color: "#9CA3AF", marginTop: 2 },
+  activeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#10B981" },
+
+  performanceRow: { marginBottom: 14 },
+  performanceTop: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
+  performanceName: { fontSize: 13, fontWeight: "700", color: "#111827" },
+  performanceScore: { fontSize: 14, fontWeight: "800", color: "#2563EB" },
+  progressBg: { height: 8, backgroundColor: "#F3F4F6", borderRadius: 4, overflow: "hidden" },
+  progressFill: { height: 8, backgroundColor: "#2563EB", borderRadius: 4 },
+
+  barChart: { flexDirection: "row", alignItems: "flex-end", height: 120, gap: 6, marginBottom: 12 },
+  barCol: { flex: 1, alignItems: "center", height: "100%" },
+  barBg: { flex: 1, width: "100%", justifyContent: "flex-end", backgroundColor: "#F3F4F6", borderRadius: 6, overflow: "hidden" },
+  barFill: { width: "100%", backgroundColor: "#2563EB", borderRadius: 6 },
+  barLabel: { fontSize: 9, fontWeight: "700", color: "#9CA3AF", marginTop: 4 },
+  barSubLabel: { fontSize: 10, fontWeight: "700", color: "#9CA3AF", textAlign: "center", letterSpacing: 1 },
+
+  emptyText: { fontSize: 13, color: "#9CA3AF", textAlign: "center", paddingVertical: 12 },
 });

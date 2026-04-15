@@ -31,28 +31,99 @@ export default function TabLayout() {
         },
       }}>
 
-      <Tabs.Screen name="genel-bakis" options={{ title: 'Genel Bakış', tabBarIcon: ({ color }) => <IconSymbol size={24} name="folder.fill" color={color} /> }} />
-      <Tabs.Screen name="ai" options={{ title: 'AI', tabBarIcon: ({ color }) => <IconSymbol size={24} name="sparkles" color={color} /> }} />
-      <Tabs.Screen name="add" options={{ title: '', tabBarIcon: () => (
-        <View style={styles.centerBtn}>
-          <View style={styles.centerBtnInner}>
-            <IconSymbol size={28} name="plus" color="#fff" />
-          </View>
-        </View>
-      ), tabBarLabel: () => null }} />
-      <Tabs.Screen name="reports" options={{ title: 'Raporlar', tabBarIcon: ({ color }) => <IconSymbol size={24} name="chart.bar.fill" color={color} /> }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profil', tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.fill" color={color} /> }} />
+      <Tabs.Screen
+        name="genel-bakis"
+        options={{
+          title: 'Genel Bakış',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={24} name="folder.fill" color={color} />
+          ),
+        }}
+      />
 
-      {/* Gizli sayfalar */}
-      <Tabs.Screen name="index" options={{ href: null }} />
-      <Tabs.Screen name="tasks" options={{ href: null }} />
-      <Tabs.Screen name="pulse" options={{ href: null }} />
-      <Tabs.Screen name="notifications" options={{ href: null }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Anasayfa',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={24} name="house.fill" color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="tasks"
+        options={{
+          title: 'Görevler',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={24} name="checklist" color={color} />
+          ),
+        }}
+      />
+
+      {/* REPORTS TAB */}
+      <Tabs.Screen
+        name="reports"
+        options={{
+          title: 'Raporlar',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={24} name="chart.bar.fill" color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="add"
+        options={{
+          title: '',
+          tabBarIcon: () => (
+            <View style={styles.centerBtn}>
+              <View style={styles.centerBtnInner}>
+                <IconSymbol size={28} name="plus" color="#fff" />
+              </View>
+            </View>
+          ),
+          tabBarLabel: () => null
+        }}
+      />
+
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: 'Bildirim',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={24} name="bell.fill" color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profil',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={24} name="person.fill" color={color} />
+          ),
+        }}
+      />
+
     </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
-  centerBtn: { alignItems: 'center', justifyContent: 'center', top: -12 },
-  centerBtnInner: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center', elevation: 8 },
+  centerBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    top: -12,
+  },
+  centerBtnInner: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
+  },
 });
