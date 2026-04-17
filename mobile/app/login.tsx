@@ -14,9 +14,9 @@ import {
   Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Eye, EyeOff } from "lucide-react-native";
 import { API_URL } from "@/constants/api";
+import { Eye, EyeOff } from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -92,7 +92,7 @@ export default function LoginScreen() {
         if (orgId) {
           await AsyncStorage.setItem("activeOrgId", String(orgId));
         }
-      }
+}
 
       Alert.alert("Başarılı", "Giriş yapıldı.");
       router.replace("/(tabs)/genel-bakis");

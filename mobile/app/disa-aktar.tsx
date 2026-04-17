@@ -7,11 +7,11 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { API_URL } from "@/constants/api";
+const API = "http://192.168.1.128:5000/api";
 
 async function apiFetch(path: string, options: any = {}) {
     const token = await AsyncStorage.getItem("token");
-    const res = await fetch(`${API_URL}${path}`, {
+    const res = await fetch(`${API}${path}`, {
         ...options,
         headers: {
             "Content-Type": "application/json",

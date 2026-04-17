@@ -12,7 +12,7 @@ const { width } = Dimensions.get("window");
 
 async function apiFetch(path: string) {
   const token = await AsyncStorage.getItem("token");
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${API}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json();

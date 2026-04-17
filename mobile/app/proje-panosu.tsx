@@ -10,7 +10,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width } = Dimensions.get("window");
 const COLUMN_WIDTH = width * 0.75;
-import { API_URL } from "@/constants/api";
+const API_URL = "http://192.168.1.128:5000";
 
 const BACKGROUNDS = [
     'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=2000',
@@ -73,14 +73,14 @@ export default function ProjePanosuScreen() {
     const loadOrgAndBoard = async () => {
         try {
             const token = await AsyncStorage.getItem("token");
-            const orgRes = await fetch(`${API_URL}/organizations`, {
+            const orgRes = await fetch(`${API_URL}/api/organizations`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const orgData = await orgRes.json();
             const org = Array.isArray(orgData) ? orgData[0] : orgData;
             if (org?.id) {
                 setOrgId(org.id);
-                const membersRes = await fetch(`${API_URL}/organizations/${org.id}/members`, {
+                const membersRes = await fetch(`${API_URL}/api/organizations/${org.id}/members`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 const membersData = await membersRes.json();
@@ -96,7 +96,7 @@ export default function ProjePanosuScreen() {
         try {
             setLoading(true);
             const token = await AsyncStorage.getItem("token");
-            const res = await fetch(`${API_URL}/project/${projectId}/board`, {
+            const res = await fetch(`${API_URL}/api/project/${projectId}/board`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();
@@ -119,7 +119,7 @@ export default function ProjePanosuScreen() {
         try {
             setAddLoading(true);
             const token = await AsyncStorage.getItem("token");
-            const res = await fetch(`${API_URL}/tasks/create/${projectId}/${activeColumnId}`, {
+            const res = await fetch(`${API_URL}/api/tasks/create/${projectId}/${activeColumnId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({
@@ -148,7 +148,7 @@ export default function ProjePanosuScreen() {
     const handleComplete = async (task: Task) => {
         try {
             const token = await AsyncStorage.getItem("token");
-            await fetch(`${API_URL}/tasks/${task.id}/complete`, {
+            await fetch(`${API_URL}/api/tasks/${task.id}/complete`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ action: task.isCompleted ? "NONE" : "COMPLETED" }),

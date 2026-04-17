@@ -15,7 +15,8 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_URL } from "@/constants/api";
+
+const API_URL = "http://192.168.1.128:5000/api";
 
 interface Member {
     id: string;
@@ -123,58 +124,67 @@ export default function GenelBakisScreen() {
     };
 
     const handleCreateProject = async () => {
-        if (!projectName.trim()) return;
-        if (!projectDesc.trim()) { Alert.alert("Hata", "Açıklama zorunludur."); return; }
-        if (!orgId) { Alert.alert("Hata", "Organizasyon bulunamadı."); return; }
-        try {
-            const token = await AsyncStorage.getItem("token");
-            const res = await fetch(`${API_URL}/project`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ title: projectName, description: projectDesc, organizationId: orgId }),
-            });
-            const newProject = await res.json();
-            if (newProject.project?.id || newProject.id) {
-                const p = newProject.project || newProject;
-                setProjects([...projects, { ...p, progress: 0 }]);
-                setProjectName("");
-                setProjectDesc("");
-                setModalVisible(false);
-            } else {
-                Alert.alert("Hata", newProject.error || "Proje oluşturulamadı.");
+    if (!projectName.trim()) return;
+    if (!projectDesc.trim()) { Alert.alert("Hata", "Açıklama zorunludur."); return; }
+    if (!orgId) { Alert.alert("Hata", "Organizasyon bulunamadı."); return; }
+    try {
+        const token = await AsyncStorage.getItem("token");
+        const res = await fetch(`${API_URL}/project`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ title: projectName, description: projectDesc, organizationId: orgId }),
+        });
+        const newProject = await res.json();
+        if (newProject.project?.id || newProject.id) {
+            const p = newProject.project || newProject;
+            const defaultColumns = ["Yapılacak", "Devam Ediyor", "Tamamlandı"];
+            for (const colName of defaultColumns) {
+                await fetch(`${API_URL}/column/create/${p.id}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ title: colName }),
+                });
             }
-        } catch (e) {
-            Alert.alert("Hata", "Sunucuya bağlanılamadı.");
+            setProjects([...projects, { ...p, progress: 0 }]);
+            setProjectName("");
+            setProjectDesc("");
+            setModalVisible(false);
+            Alert.alert("Başarılı ✅", "Proje ve kolonlar oluşturuldu!");
+        } else {
+            Alert.alert("Hata", newProject.error || "Proje oluşturulamadı.");
         }
-    };
+    } catch (e) {
+        Alert.alert("Hata", "Sunucuya bağlanılamadı.");
+    }
+};
 
     const handleAddMember = async () => {
-        if (!newMemberEmail.trim()) return;
-        if (!orgId) { Alert.alert("Hata", "Organizasyon bulunamadı."); return; }
-        try {
-            setAddingMember(true);
-            const token = await AsyncStorage.getItem("token");
-            const res = await fetch(`${API_URL}/organizations/${orgId}/members`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ email: newMemberEmail.trim() }),
-            });
-            const data = await res.json();
-            if (res.ok) {
-                Alert.alert("Başarılı", `${newMemberEmail} organizasyona eklendi!`);
-                setNewMemberEmail("");
-                setAddMemberModal(false);
-                fetchMembers(orgId, token!);
-            } else {
-                Alert.alert("Hata", data.error || "Üye eklenemedi.");
-            }
-        } catch (e) {
-            Alert.alert("Hata", "Sunucuya bağlanılamadı.");
-        } finally {
-            setAddingMember(false);
+    if (!newMemberEmail.trim()) return;
+    if (!orgId) { Alert.alert("Hata", "Organizasyon bulunamadı."); return; }
+    try {
+        setAddingMember(true);
+        const token = await AsyncStorage.getItem("token");
+        const res = await fetch(`${API_URL}/organizations/invite`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+           body: JSON.stringify({ email: newMemberEmail.trim(), orgId: orgId }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+            Alert.alert("Başarılı", `${newMemberEmail} organizasyona eklendi!`);
+            setNewMemberEmail("");
+            setAddMemberModal(false);
+            fetchMembers(orgId, token!);
+        } else {
+            Alert.alert("Hata", data.error || "Üye eklenemedi.");
         }
-    };
-
+    } catch (e) {
+    console.log("Üye ekleme hatası:", e);
+    Alert.alert("Hata", "Sunucuya bağlanılamadı.");
+}
+        setAddingMember(false);
+    
+};
     const filteredProjects = projects.filter((p) =>
         (p.title || p.name || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -197,18 +207,13 @@ export default function GenelBakisScreen() {
                     <MaterialIcons name="arrow-back" size={24} color="#111827" />
                 </Pressable>
                 <Text style={styles.welcomeText}>Hoş Geldiniz, {userName}</Text>
-                <Pressable
-                    style={styles.notifBtn}
-                    onPress={() => router.push("/(tabs)/notifications")}
-                >
+                <Pressable style={styles.notifBtn} onPress={() => router.push("/(tabs)/notifications")}>
                     <MaterialIcons name="notifications" size={24} color="#111827" />
                     <View style={styles.notifDot} />
                 </Pressable>
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-                {/* Arama ve Yeni Proje */}
                 <View style={styles.actionRow}>
                     <View style={styles.searchBox}>
                         <MaterialIcons name="search" size={20} color="#9CA3AF" />
@@ -226,7 +231,6 @@ export default function GenelBakisScreen() {
                     </Pressable>
                 </View>
 
-                {/* Şirket Çalışanları */}
                 <View style={styles.teamSection}>
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Şirket Çalışanları</Text>
@@ -253,9 +257,7 @@ export default function GenelBakisScreen() {
                                     })}
                                 >
                                     <View style={[styles.memberCardAvatar, { backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }]}>
-                                        <Text style={styles.memberCardAvatarText}>
-                                            {m.name?.charAt(0).toUpperCase() || "?"}
-                                        </Text>
+                                        <Text style={styles.memberCardAvatarText}>{m.name?.charAt(0).toUpperCase() || "?"}</Text>
                                     </View>
                                     <Text style={styles.memberCardName} numberOfLines={1}>{m.name}</Text>
                                     <View style={[styles.memberRoleBadge, m.role === "OWNER" && styles.memberRoleBadgeOwner]}>
@@ -269,7 +271,6 @@ export default function GenelBakisScreen() {
                     )}
                 </View>
 
-                {/* Projeler */}
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Kayıtlı Projeler</Text>
                     <View style={styles.line} />
@@ -338,7 +339,6 @@ export default function GenelBakisScreen() {
                     </ScrollView>
                 )}
 
-                {/* İstatistikler */}
                 <View style={styles.statsLayout}>
                     <View style={styles.totalCard}>
                         <View style={styles.totalCardHeader}>
@@ -366,7 +366,6 @@ export default function GenelBakisScreen() {
                 </View>
             </ScrollView>
 
-            {/* Yeni Proje Modal */}
             <Modal visible={modalVisible} animationType="fade" transparent={true}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -387,7 +386,6 @@ export default function GenelBakisScreen() {
                 </View>
             </Modal>
 
-            {/* Üye Ekle Modal */}
             <Modal visible={addMemberModal} animationType="fade" transparent={true}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -407,19 +405,13 @@ export default function GenelBakisScreen() {
                             keyboardType="email-address"
                             autoCapitalize="none"
                         />
-                        <Text style={styles.modalHint}>
-                            Bu e-posta adresiyle kayıtlı kullanıcı organizasyona eklenecek.
-                        </Text>
+                        <Text style={styles.modalHint}>Bu e-posta adresiyle kayıtlı kullanıcı organizasyona eklenecek.</Text>
                         <Pressable style={[styles.submitBtn, addingMember && { opacity: 0.6 }]} onPress={handleAddMember} disabled={addingMember}>
-                            {addingMember
-                                ? <ActivityIndicator color="#fff" />
-                                : <Text style={styles.submitBtnText}>Çalışanı Ekle</Text>
-                            }
+                            {addingMember ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>Çalışanı Ekle</Text>}
                         </Pressable>
                     </View>
                 </View>
             </Modal>
-
         </SafeAreaView>
     );
 }
@@ -435,11 +427,11 @@ const styles = StyleSheet.create({
     actionRow: { flexDirection: "row", alignItems: "center", marginBottom: 24, gap: 12 },
     searchBox: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 12, paddingHorizontal: 12, height: 48, borderWidth: 1, borderColor: "#E5E7EB" },
     searchInput: { flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 },
-    newProjectBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "#2563EB", height: 48, paddingHorizontal: 16, borderRadius: 12, shadowColor: "#2563EB", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+    newProjectBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "#2563EB", height: 48, paddingHorizontal: 16, borderRadius: 12, elevation: 4 },
     newProjectBtnText: { color: "#fff", fontWeight: "600", marginLeft: 4 },
     teamSection: { marginBottom: 24 },
     membersList: { gap: 12, paddingVertical: 8 },
-    memberCard: { alignItems: "center", backgroundColor: "#fff", borderRadius: 16, padding: 14, width: 90, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+    memberCard: { alignItems: "center", backgroundColor: "#fff", borderRadius: 16, padding: 14, width: 90, elevation: 2 },
     memberCardAvatar: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", marginBottom: 8 },
     memberCardAvatarText: { color: "#fff", fontSize: 20, fontWeight: "800" },
     memberCardName: { fontSize: 11, fontWeight: "700", color: "#111827", textAlign: "center", marginBottom: 6 },
@@ -455,7 +447,7 @@ const styles = StyleSheet.create({
     emptyProjectsCard: { height: 160, backgroundColor: "#fff", borderRadius: 16, borderWidth: 1, borderColor: "#E5E7EB", borderStyle: "dashed", alignItems: "center", justifyContent: "center", marginBottom: 24 },
     emptyText: { marginTop: 12, color: "#9CA3AF", fontSize: 14 },
     projectsList: { paddingRight: 20, marginBottom: 24, gap: 16 },
-    projectCard: { width: 260, backgroundColor: "#fff", borderRadius: 20, padding: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
+    projectCard: { width: 260, backgroundColor: "#fff", borderRadius: 20, padding: 20, elevation: 3 },
     projectCardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 },
     projectIconBox: { width: 48, height: 48, borderRadius: 12, backgroundColor: "#2563EB", alignItems: "center", justifyContent: "center" },
     statusBadge: { backgroundColor: "#EEF2FF", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
@@ -479,8 +471,8 @@ const styles = StyleSheet.create({
     dateText: { fontSize: 12, color: "#6B7280" },
     openFileText: { fontSize: 13, color: "#2563EB", fontWeight: "600" },
     statsLayout: { marginBottom: 32, gap: 16 },
-    totalCard: { backgroundColor: "#fff", borderRadius: 16, padding: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-    avgCard: { backgroundColor: "#fff", borderRadius: 16, padding: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+    totalCard: { backgroundColor: "#fff", borderRadius: 16, padding: 20, elevation: 2 },
+    avgCard: { backgroundColor: "#fff", borderRadius: 16, padding: 20, elevation: 2 },
     totalCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
     totalCardTitle: { fontSize: 11, fontWeight: "700", color: "#6B7280", letterSpacing: 0.5 },
     folderIconLight: { backgroundColor: "#EEF2FF", padding: 8, borderRadius: 8 },

@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, SafeAreaView } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_URL } from "@/constants/api";
+
+const API_URL = "http://192.168.1.128:5000";
 
 const PROJECT_CONTEXT = {
   name: "PROJ-Alpha", sprint: "Sprint 7", totalTasks: 16, done: 7,
@@ -35,7 +36,7 @@ export default function AIScreen() {
 
   const callBackend = async (message: string, history: Message[]): Promise<string> => {
     const token = await AsyncStorage.getItem("token");
-    const response = await fetch(`${API_URL}/ai/chat`, {
+    const response = await fetch(`${API_URL}/api/ai/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ message, history, projectContext: PROJECT_CONTEXT }),

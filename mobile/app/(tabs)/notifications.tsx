@@ -6,25 +6,14 @@ import {
   Pressable,
   ActivityIndicator,
   FlatList,
-  Alert,
   RefreshControl,
-  Platform,
+  ScrollView,
+  Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
-
-/* =====================================================
-   🌐 API AYARI
-   ===================================================== */
-
-const LAN_IP = "http://192.168.100.23:5000"; // ← login.tsx ile aynı IP
-const API_BASE =
-  Platform.OS === "android"
-    ? "http://10.0.2.2:5000"
-    : LAN_IP;
-
-const API_URL = `${API_BASE}/api`;
+import { API_URL } from "@/constants/api";
 
 type NotificationItem = {
   id: string;
@@ -32,9 +21,11 @@ type NotificationItem = {
   message: string;
   type?: string;
   isRead?: boolean;
+  createdAt?: string;
 };
 
 type FilterKey = "ALL" | "UNREAD" | "ALERTS";
+type SortKey = "NEWEST" | "UNREAD_FIRST";
 
 export default function BildirimlerScreen() {
   const [token, setToken] = useState<string | null>(null);
@@ -43,8 +34,22 @@ export default function BildirimlerScreen() {
   const [firstLoading, setFirstLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterKey>("ALL");
+  const [sortBy, setSortBy] = useState<SortKey>("NEWEST");
 
   const intervalRef = useRef<any>(null);
+
+  const fetchWithTimeout = async (
+    url: string,
+    options: RequestInit = {},
+    timeout = 7000
+  ) => {
+    return Promise.race([
+      fetch(url, options),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("İstek zaman aşımına uğradı.")), timeout)
+      ),
+    ]) as Promise<Response>;
+  };
 
   const loadToken = async () => {
     const t = await AsyncStorage.getItem("token");
@@ -52,31 +57,40 @@ export default function BildirimlerScreen() {
     return t;
   };
 
-  const fetchNotifications = useCallback(async (tParam?: string | null) => {
-    const t = tParam ?? token ?? (await AsyncStorage.getItem("token"));
-    if (!t) {
-      setFirstLoading(false);
-      return;
-    }
+  const fetchNotifications = useCallback(
+    async (tParam?: string | null) => {
+      const t = tParam ?? token ?? (await AsyncStorage.getItem("token"));
 
-    try {
-      const res = await fetch(`${API_URL}/notifications`, {
-        headers: { Authorization: `Bearer ${t}` },
-      });
+      if (!t) {
+        setFirstLoading(false);
+        return;
+      }
 
-      const data = await res.json();
-      setNotifications(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.log("Bildirimler alınamadı:", err);
-    } finally {
-      setFirstLoading(false);
-    }
-  }, [token]);
+      try {
+        const res = await fetchWithTimeout(
+          `${API_URL}/notifications`,
+          {
+            headers: { Authorization: `Bearer ${t}` },
+          },
+          7000
+        );
+
+        const data = await res.json();
+        setNotifications(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.log("Bildirimler alınamadı:", err);
+        setNotifications([]);
+      } finally {
+        setFirstLoading(false);
+      }
+    },
+    [token]
+  );
 
   useEffect(() => {
     (async () => {
       const t = await loadToken();
-      await fetchNotifications(t);
+      fetchNotifications(t);
 
       intervalRef.current = setInterval(() => {
         fetchNotifications(t);
@@ -92,56 +106,102 @@ export default function BildirimlerScreen() {
     setRefreshing(false);
   };
 
-  const filtered = useMemo(() => {
-    if (filter === "ALL") return notifications;
-    if (filter === "UNREAD") return notifications.filter(n => n.isRead === false);
-    return notifications.filter(n =>
-      (n.type || "").toUpperCase().includes("ALERT") ||
-      (n.type || "").toUpperCase().includes("UYARI")
-    );
-  }, [notifications, filter]);
+  const filteredAndSorted = useMemo(() => {
+    let list = [...notifications];
+
+    if (filter === "UNREAD") {
+      list = list.filter((n) => n.isRead === false);
+    } else if (filter === "ALERTS") {
+      list = list.filter(
+        (n) =>
+          (n.type || "").toUpperCase().includes("ALERT") ||
+          (n.type || "").toUpperCase().includes("UYARI")
+      );
+    }
+
+    if (sortBy === "UNREAD_FIRST") {
+      list.sort((a, b) => {
+        const aRead = a.isRead ? 1 : 0;
+        const bRead = b.isRead ? 1 : 0;
+        if (aRead !== bRead) return aRead - bRead;
+
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bTime - aTime;
+      });
+    } else {
+      list.sort((a, b) => {
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bTime - aTime;
+      });
+    }
+
+    return list;
+  }, [notifications, filter, sortBy]);
+
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => n.isRead === false).length,
+    [notifications]
+  );
 
   const allReadText = useMemo(() => {
-    const anyUnread = notifications.some(n => n.isRead === false);
-    return anyUnread ? "Okunmamış bildirimlerin var" : "Tüm bildirimler okundu";
-  }, [notifications]);
+    return unreadCount > 0
+      ? `${unreadCount} okunmamış bildirim var`
+      : "Tüm bildirimler okundu";
+  }, [unreadCount]);
 
   const markAsRead = async (id: string) => {
     if (!token) return;
 
-    setLoading(true);
-    await fetch(`${API_URL}/notifications/${id}/read`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, isRead: true } : n))
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
     );
 
-    setLoading(false);
+    try {
+      await fetch(`${API_URL}/notifications/${id}/read`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (err) {
+      console.log("Bildirim okundu yapılamadı:", err);
+    }
   };
 
   const markAllAsRead = async () => {
     if (!token) return;
 
     setLoading(true);
-    await fetch(`${API_URL}/notifications/read-all`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    try {
+      await fetch(`${API_URL}/notifications/read-all`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-    setLoading(false);
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch (err) {
+      console.log("Tümü okundu yapılamadı:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const Chip = ({ label, active, onPress }) => (
+  const toggleSort = () => {
+    setSortBy((prev) => (prev === "NEWEST" ? "UNREAD_FIRST" : "NEWEST"));
+  };
+
+  const Chip = ({
+    label,
+    active,
+    onPress,
+  }: {
+    label: string;
+    active: boolean;
+    onPress: () => void;
+  }) => (
     <Pressable
       onPress={onPress}
-      style={[
-        styles.chip,
-        active ? styles.chipActive : styles.chipPassive,
-      ]}
+      style={[styles.chip, active ? styles.chipActive : styles.chipPassive]}
     >
       <Text style={active ? styles.chipTextActive : styles.chipTextPassive}>
         {label}
@@ -149,25 +209,70 @@ export default function BildirimlerScreen() {
     </Pressable>
   );
 
-  const renderItem = ({ item }: { item: NotificationItem }) => (
-    <View style={styles.card}>
-      <View style={styles.row}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>{item.title}</Text>
-          <Text style={styles.msg}>{item.message}</Text>
-        </View>
+  const respondInvite = async (notificationId: string, action: "ACCEPT" | "REJECT") => {
+  if (!token) return;
+  try {
+    const res = await fetch(`${API_URL}/notifications/respond-invite`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ notificationId, action }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      Alert.alert("Başarılı", action === "ACCEPT" ? "Ekibe katıldınız!" : "Davet reddedildi.");
+      fetchNotifications();
+    } else {
+      Alert.alert("Hata", data.error || "İşlem başarısız.");
+    }
+  } catch (e) {
+    Alert.alert("Hata", "Sunucuya bağlanılamadı.");
+  }
+};
 
-        <Pressable onPress={() => markAsRead(item.id)}>
-          <MaterialIcons name="done-all" size={20} color="#2563EB" />
-        </Pressable>
+const renderItem = ({ item }: { item: NotificationItem }) => (
+  <Pressable
+    style={[styles.card, item.isRead ? styles.cardRead : styles.cardUnread]}
+    onPress={() => { if (!item.isRead) markAsRead(item.id); }}
+  >
+    <View style={styles.cardTopRow}>
+      <View style={styles.cardTextArea}>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{item.title}</Text>
+          {!item.isRead && <View style={styles.unreadDot} />}
+        </View>
+        <Text style={styles.msg}>{item.message}</Text>
+
+        {item.type === "INVITE" && !item.isRead && (
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+            <Pressable
+              style={{ backgroundColor: "#2563EB", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 }}
+              onPress={() => respondInvite(item.id, "ACCEPT")}
+            >
+              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>Kabul Et</Text>
+            </Pressable>
+            <Pressable
+              style={{ backgroundColor: "#FEE2E2", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 }}
+              onPress={() => respondInvite(item.id, "REJECT")}
+            >
+              <Text style={{ color: "#DC2626", fontWeight: "800", fontSize: 13 }}>Reddet</Text>
+            </Pressable>
+          </View>
+        )}
       </View>
+
+      {!item.isRead && item.type !== "INVITE" && (
+        <Pressable style={styles.doneButton} onPress={() => markAsRead(item.id)}>
+          <MaterialIcons name="done" size={18} color="#2563EB" />
+        </Pressable>
+      )}
     </View>
-  );
+  </Pressable>
+);
 
   if (firstLoading) {
     return (
       <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#2563EB" />
       </SafeAreaView>
     );
   }
@@ -175,125 +280,281 @@ export default function BildirimlerScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-
-        {/* HEADER */}
-        <View style={styles.header}>
-          <View style={styles.headerRow}>
+        <View style={styles.headerCard}>
+          <View style={styles.headerTop}>
             <View style={styles.iconBox}>
               <MaterialIcons name="notifications-none" size={22} color="#2563EB" />
             </View>
-            <View>
+
+            <View style={styles.headerTextArea}>
               <Text style={styles.headerTitle}>Bildirimler</Text>
               <Text style={styles.headerSub}>{allReadText}</Text>
             </View>
           </View>
+
+          <Pressable
+            style={[
+              styles.readAllButton,
+              (notifications.length === 0 || loading) && { opacity: 0.5 },
+            ]}
+            onPress={markAllAsRead}
+            disabled={notifications.length === 0 || loading}
+          >
+            <MaterialIcons name="done-all" size={16} color="#2563EB" />
+            <Text style={styles.readAllButtonText}>Tümünü okundu say</Text>
+          </Pressable>
         </View>
 
-        {/* FILTERS ALT ALTA */}
-        <View style={styles.filtersColumn}>
-          <View style={styles.filterIcon}>
-            <MaterialIcons name="tune" size={18} color="#9CA3AF" />
-          </View>
+        <View style={styles.filtersWrap}>
+          <Pressable style={styles.sortButton} onPress={toggleSort}>
+            <MaterialIcons
+              name={sortBy === "NEWEST" ? "swap-vert" : "sort"}
+              size={18}
+              color="#2563EB"
+            />
+          </Pressable>
 
-          <Chip label="Hepsi" active={filter === "ALL"} onPress={() => setFilter("ALL")} />
-          <Chip label="Okunmadı" active={filter === "UNREAD"} onPress={() => setFilter("UNREAD")} />
-          <Chip label="Uyarılar" active={filter === "ALERTS"} onPress={() => setFilter("ALERTS")} />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsScroll}
+          >
+            <Chip label="Hepsi" active={filter === "ALL"} onPress={() => setFilter("ALL")} />
+            <Chip
+              label="Okunmadı"
+              active={filter === "UNREAD"}
+              onPress={() => setFilter("UNREAD")}
+            />
+            <Chip
+              label="Uyarılar"
+              active={filter === "ALERTS"}
+              onPress={() => setFilter("ALERTS")}
+            />
+          </ScrollView>
         </View>
 
-        {filtered.length === 0 ? (
+        {filteredAndSorted.length === 0 ? (
           <View style={styles.empty}>
-            <MaterialIcons name="notifications-none" size={44} color="#CBD5E1" />
+            <View style={styles.emptyIconBox}>
+              <MaterialIcons name="notifications-none" size={34} color="#CBD5E1" />
+            </View>
             <Text style={styles.emptyTitle}>Hiç bildirim yok</Text>
             <Text style={styles.emptyDesc}>Şu an gösterilecek bir şey yok.</Text>
           </View>
         ) : (
           <FlatList
-            data={filtered}
+            data={filteredAndSorted}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            showsVerticalScrollIndicator={false}
           />
         )}
-
-        {notifications.length > 0 && (
-          <Pressable style={styles.readAll} onPress={markAllAsRead}>
-            <Text style={styles.readAllText}>Tümünü okundu yap</Text>
-          </Pressable>
-        )}
-
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#F5F7FB" },
-  container: { flex: 1, padding: 20 },
+  safe: {
+    flex: 1,
+    backgroundColor: "#F5F7FB",
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
 
-  headerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  headerCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    marginBottom: 14,
+  },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   iconBox: {
-    width: 44,
-    height: 44,
+    width: 46,
+    height: 46,
     borderRadius: 14,
     backgroundColor: "#EAF1FF",
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 12,
   },
-  headerTitle: { fontSize: 22, fontWeight: "900" },
-  headerSub: { fontSize: 12, color: "#94A3B8", marginTop: 2 },
+  headerTextArea: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#0F172A",
+  },
+  headerSub: {
+    fontSize: 13,
+    color: "#94A3B8",
+    marginTop: 2,
+  },
 
-  filtersColumn: {
-    marginTop: 15,
-    gap: 10,
+  readAllButton: {
+    marginTop: 14,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#EFF6FF",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  filterIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: "#fff",
+  readAllButtonText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#2563EB",
+  },
+
+  filtersWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  sortButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 10,
+  },
+  chipsScroll: {
+    gap: 8,
+    paddingRight: 8,
+  },
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chipPassive: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E2E8F0",
+  },
+  chipActive: {
+    backgroundColor: "#2563EB",
+    borderColor: "#2563EB",
+  },
+  chipTextPassive: {
+    color: "#475569",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  chipTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 14,
   },
 
-  chip: {
-    width: "100%",
-    paddingVertical: 12,
-    borderRadius: 14,
-    alignItems: "center",
+  listContent: {
+    paddingTop: 6,
+    paddingBottom: 24,
+  },
+  card: {
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1,
   },
-  chipPassive: { backgroundColor: "#fff", borderColor: "#E2E8F0" },
-  chipActive: { backgroundColor: "#2563EB", borderColor: "#2563EB" },
-  chipTextPassive: { color: "#475569", fontWeight: "700" },
-  chipTextActive: { color: "#fff", fontWeight: "700" },
-
-  card: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 16,
-    marginTop: 10,
+  cardUnread: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#DBEAFE",
   },
-  row: { flexDirection: "row", alignItems: "center" },
-  title: { fontWeight: "700", fontSize: 14 },
-  msg: { marginTop: 4, color: "#555" },
+  cardRead: {
+    backgroundColor: "#F8FAFC",
+    borderColor: "#E5E7EB",
+  },
+  cardTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  cardTextArea: {
+    flex: 1,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginRight: 8,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: "#2563EB",
+  },
+  msg: {
+    fontSize: 14,
+    color: "#475569",
+    lineHeight: 20,
+  },
+  doneButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 10,
+  },
 
-  empty: { flex: 1, alignItems: "center", justifyContent: "center" },
-  emptyTitle: { fontSize: 18, fontWeight: "800", marginTop: 10 },
-  emptyDesc: { color: "#94A3B8", marginTop: 4 },
+  empty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingBottom: 40,
+  },
+  emptyIconBox: {
+    width: 74,
+    height: 74,
+    borderRadius: 22,
+    backgroundColor: "#F8FAFC",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+  emptyDesc: {
+    marginTop: 6,
+    fontSize: 14,
+    color: "#94A3B8",
+    textAlign: "center",
+  },
 
-  readAll: {
-    position: "absolute",
-    bottom: 20,
-    left: 20,
-    right: 20,
-    backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 12,
+  center: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
   },
-  readAllText: { color: "#2563EB", fontWeight: "700" },
-
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
