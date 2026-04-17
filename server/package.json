@@ -18,10 +18,12 @@
     "dotenv": "^16.6.1",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^8.0.5",
     "nodemon": "^3.1.0",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "kill-port": "^2.0.1",
     "prisma": "^5.12.0"
   }
 }
