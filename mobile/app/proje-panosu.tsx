@@ -111,6 +111,38 @@ export default function ProjePanosuScreen() {
         }
     };
 
+    const handleDeleteProject = async () => {
+        Alert.alert(
+            "Projeyi Sil",
+            "Bu projeyi silmek istediğinize emin misiniz? Tüm görevler silinecek.",
+            [
+                { text: "İptal", style: "cancel" },
+                {
+                    text: "Sil",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const token = await AsyncStorage.getItem("token");
+                            const res = await fetch(`${API_URL}/api/project/${projectId}`, {
+                                method: "DELETE",
+                                headers: { Authorization: `Bearer ${token}` },
+                            });
+                            if (res.ok) {
+                                Alert.alert("Başarılı", "Proje silindi.");
+                                router.back();
+                            } else {
+                                const data = await res.json();
+                                Alert.alert("Hata", data.error || "Proje silinemedi.");
+                            }
+                        } catch (e) {
+                            Alert.alert("Hata", "Sunucuya bağlanılamadı.");
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
     const handleAddTask = async () => {
         if (!newTitle.trim() || !selectedMember || !newDesc.trim()) {
             Alert.alert("Hata", "Tüm alanları doldurun ve bir kişi seçin.");
@@ -145,19 +177,35 @@ export default function ProjePanosuScreen() {
         }
     };
 
-    const handleComplete = async (task: Task) => {
-        try {
-            const token = await AsyncStorage.getItem("token");
-            await fetch(`${API_URL}/api/tasks/${task.id}/complete`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ action: task.isCompleted ? "NONE" : "COMPLETED" }),
-            });
-            fetchBoard();
-        } catch (e) {
-            Alert.alert("Hata", "Durum güncellenemedi.");
+   const handleComplete = async (task: Task) => {
+    try {
+        const token = await AsyncStorage.getItem("token");
+        const isNowCompleted = !task.isCompleted;
+
+        await fetch(`${API_URL}/api/tasks/${task.id}/complete`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ action: isNowCompleted ? "COMPLETED" : "NONE" }),
+        });
+
+        if (isNowCompleted) {
+            const completedCol = columns.find(c =>
+                (c.title || c.name || "").toLowerCase().includes("tamamland")
+            );
+            if (completedCol && completedCol.id !== task.columnId) {
+                await fetch(`${API_URL}/api/project/task/${task.id}/move`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ columnId: completedCol.id }),
+                });
+            }
         }
-    };
+
+        fetchBoard();
+    } catch (e) {
+        Alert.alert("Hata", "Durum güncellenemedi.");
+    }
+};
 
     const getColName = (col: Column) => col.name || col.title || "";
     const isCompletedColumn = (col: Column) => getColName(col).toLowerCase().includes("tamamland");
@@ -201,6 +249,10 @@ export default function ProjePanosuScreen() {
                                         <Pressable style={styles.resimBtn} onPress={() => setShowBgPicker(true)}>
                                             <MaterialIcons name="image" size={16} color="#6B7280" />
                                             <Text style={styles.resimBtnText}>RESİM</Text>
+                                        </Pressable>
+                                        <Pressable style={styles.silBtn} onPress={handleDeleteProject}>
+                                            <MaterialIcons name="delete" size={16} color="#EF4444" />
+                                            <Text style={styles.silBtnText}>SİL</Text>
                                         </Pressable>
                                     </>
                                 )}
@@ -489,6 +541,8 @@ const styles = StyleSheet.create({
     raporBtnText: { fontSize: 11, fontWeight: '700', color: '#2563EB' },
     resimBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F3F4F6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
     resimBtnText: { fontSize: 11, fontWeight: '700', color: '#6B7280' },
+    silBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEE2E2', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+    silBtnText: { fontSize: 11, fontWeight: '700', color: '#EF4444' },
     searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, height: 40, marginBottom: 10, borderWidth: 1, borderColor: '#E5E7EB' },
     searchInput: { flex: 1, marginLeft: 8, fontSize: 13, color: '#111827' },
     filterGroup: { flexDirection: 'row', backgroundColor: '#F3F4F6', borderRadius: 20, padding: 4, alignSelf: 'flex-start' },
