@@ -167,6 +167,10 @@ export default function ProfileScreen() {
   const [authenticatorEnabled, setAuthenticatorEnabled] = useState(false);
   const [sms2FAEnabled, setSms2FAEnabled] = useState(true);
 
+  const [reviewModal, setReviewModal] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+
   const [tempName, setTempName] = useState(userName);
   const [tempEmail, setTempEmail] = useState(userEmail);
   const [tempUsername, setTempUsername] = useState(userUsername);
@@ -304,6 +308,11 @@ export default function ProfileScreen() {
         setUserProfileRole(data?.profileRole || "");
         setUserLocation(data?.location || "");
         setNotifEnabled(data?.notificationEnabled ?? true);
+        if (data?.profileImage) {
+          setProfileImage(API_URL.replace("/api", "") + data.profileImage);
+        } else {
+          setProfileImage(null);
+        }
         const firstOrganization = data?.myOrganizations?.[0];
 
         setUserRole(firstOrganization?.role || "MEMBER");
@@ -398,7 +407,73 @@ export default function ProfileScreen() {
     Alert.alert("Hata", "Bildirim ayarı kaydedilemedi.");
   }
 };
+  const uploadImage = async (uri: string) => {
+  try {
+    const token = await AsyncStorage.getItem("token");
 
+    if (!token) {
+      Alert.alert("Hata", "Oturum bulunamadı.");
+      return;
+    }
+
+    const formData = new FormData();
+
+    formData.append("image", {
+      uri,
+      name: "profile.jpg",
+      type: "image/jpeg",
+    } as any);
+
+    const res = await fetch(`${API_URL}/users/profile-image`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = await res.json().catch(() => null);
+
+    console.log("UPLOAD RESPONSE:", data);
+
+    if (!res.ok) {
+      Alert.alert("Hata", data?.message || "Fotoğraf yüklenemedi.");
+      return;
+    }
+
+    setProfileImage(API_URL.replace("/api", "") + data.profileImage);
+  } catch (err) {
+    console.log("Upload error:", err);
+    Alert.alert("Hata", "Fotoğraf yüklenemedi.");
+  }
+};
+  const deleteImage = async () => {
+  try {
+    const token = await AsyncStorage.getItem("token");
+
+    if (!token) return;
+
+    const res = await fetch(`${API_URL}/users/profile-image`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json().catch(() => null);
+
+    console.log("DELETE RESPONSE:", data);
+
+    if (!res.ok) {
+      Alert.alert("Hata", data?.message || "Silinemedi");
+      return;
+    }
+
+    setProfileImage(null);
+  } catch (err) {
+    console.log("Delete error:", err);
+  }
+};
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -418,7 +493,9 @@ export default function ProfileScreen() {
     });
 
     if (!result.canceled) {
-      setProfileImage(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setProfileImage(uri);
+      uploadImage(uri);
     }
   };
 
@@ -574,8 +651,48 @@ export default function ProfileScreen() {
       Alert.alert("Hata", "Sunucu hatası");
     }
   };
+  const sendReview = async () => {
+  try {
+    if (rating === 0) {
+      Alert.alert("Hata", "Lütfen puan ver.");
+      return;
+    }
+
+    const token = await AsyncStorage.getItem("token");
+
+    const res = await fetch(`${API_URL}/reviews`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        rating,
+        comment,
+      }),
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      Alert.alert("Hata", data?.message || "Gönderilemedi");
+      return;
+    }
+
+    Alert.alert("Başarılı ⭐", "Değerlendirmen kaydedildi");
+
+    setReviewModal(false);
+    setRating(0);
+    setComment("");
+
+  } catch (err) {
+    console.log("Review error:", err);
+    Alert.alert("Hata", "Sunucuya bağlanılamadı");
+  }
+};
 
   const handleLogout = async () => {
+    
     Alert.alert("Çıkış Yap", "Çıkış yapmak istediğinize emin misiniz?", [
       { text: "İptal", style: "cancel" },
       {
@@ -790,25 +907,22 @@ export default function ProfileScreen() {
           icon: "help",
           label: "Yardım & Destek",
           color: "#8B5CF6",
-          onPress: () =>
-            Alert.alert("Yardım & Destek", "support@ndmsoftware.com"),
+          onPress: () => router.push("/help-support"),
         },
         {
           icon: "description",
           label: "Gizlilik Politikası",
           color: "#6B7280",
-          onPress: () =>
-            Alert.alert("Gizlilik Politikası", "Verileriniz güvende."),
+          onPress: () => router.push("/privacy"),
         },
         {
           icon: "star",
           label: "Uygulamayı Değerlendir",
           color: "#F59E0B",
-          onPress: () =>
-            Alert.alert(
-              "Teşekkürler ⭐",
-              "Geri bildiriminiz için teşekkür ederiz."
-            ),
+          onPress: () => {
+            Alert.alert("Test", "Değerlendir butonu çalışıyor");
+            setReviewModal(true);
+},
         },
       ],
     },
@@ -824,7 +938,11 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.profileCard}>
-          <Pressable onPress={pickImage} style={styles.avatarContainer}>
+          <Pressable
+            onLongPress={deleteImage} // 🔥 uzun basınca sil
+            onPress={pickImage}       // 🔥 normal basınca seç
+           style={styles.avatarContainer}
+          >
             <View style={styles.avatarLarge}>
               {profileImage ? (
                 <Image source={{ uri: profileImage }} style={styles.avatarImg} />
@@ -1392,6 +1510,70 @@ export default function ProfileScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+      <Modal visible={reviewModal} animationType="slide" transparent>
+  <View style={{
+    flex:1,
+    backgroundColor:"rgba(0,0,0,0.5)",
+    justifyContent:"center",
+    padding:20
+  }}>
+    <View style={{
+      backgroundColor:"#fff",
+      borderRadius:16,
+      padding:20
+    }}>
+      
+      <Text style={{fontSize:18,fontWeight:"bold",marginBottom:10}}>
+        Uygulamayı Değerlendir ⭐
+      </Text>
+
+      <View style={{flexDirection:"row",marginBottom:16}}>
+        {[1,2,3,4,5].map((star)=>(
+          <Pressable key={star} onPress={()=>setRating(star)}>
+            <MaterialIcons
+              name={star <= rating ? "star" : "star-border"}
+              size={32}
+              color="#F59E0B"
+            />
+          </Pressable>
+        ))}
+      </View>
+
+      <TextInput
+        placeholder="Yorum yaz (opsiyonel)"
+        value={comment}
+        onChangeText={setComment}
+        style={{
+          borderWidth:1,
+          borderColor:"#ddd",
+          borderRadius:10,
+          padding:10,
+          marginBottom:16
+        }}
+        multiline
+      />
+
+      <View style={{flexDirection:"row",gap:10}}>
+        
+        <Pressable
+          style={{flex:1,padding:12,backgroundColor:"#ddd",borderRadius:10}}
+          onPress={()=>setReviewModal(false)}
+        >
+          <Text style={{textAlign:"center"}}>İptal</Text>
+        </Pressable>
+
+        <Pressable
+          style={{flex:1,padding:12,backgroundColor:"#2563EB",borderRadius:10}}
+          onPress={sendReview}
+        >
+          <Text style={{textAlign:"center",color:"#fff"}}>Gönder</Text>
+        </Pressable>
+
+      </View>
+
+    </View>
+  </View>
+</Modal>
     </SafeAreaView>
   );
 }

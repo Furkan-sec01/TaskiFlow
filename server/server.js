@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 
+
 const authRoutes = require("./src/routes/authRoutes");
 const projectRoutes = require("./src/routes/projectRoutes");
 const userRoutes = require("./src/routes/userRoutes");
@@ -10,10 +11,14 @@ const notificRoutes = require("./src/routes/notificationRoutes");
 const columnRoutes = require("./src/routes/columnRoutes");
 const taskRoutes = require("./src/routes/taskRoutes");
 const paymentRoutes = require("./src/routes/paymentRoutes");
+const reviewRoutes = require("./src/routes/reviewRoutes");
+const supportRoutes = require("./src/routes/supportRoutes");
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/uploads", express.static("uploads"));
+
 
 app.use("/api/auth", authRoutes);
 app.use("/api/project", projectRoutes);
@@ -24,6 +29,8 @@ app.use("/api/column", columnRoutes);
 app.use("/api/task", taskRoutes)
 app.use("/api/tasks", taskRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/support", supportRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "TaskiFlow Backend çalışıyor! 🚀" });

@@ -1,6 +1,8 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const bcrypt = require("bcryptjs");
+const fs = require("fs");
+const path = require("path");
 
 exports.getMe = async (req, res) => {
   try {
@@ -23,6 +25,7 @@ exports.getMe = async (req, res) => {
         department: true,
         profileRole: true,
         location: true,
+        profileImage: true, // 🔥 EKLENDİ
         status: true,
         createdAt: true,
         organizations: {
@@ -43,7 +46,6 @@ exports.getMe = async (req, res) => {
       return res.status(404).json({ error: "Kullanıcı bulunamadı." });
     }
 
-    // 🔥 İSTATİSTİKLER
     const projectCount = await prisma.project.count({
       where: {
         OR: [
@@ -147,6 +149,7 @@ exports.updateProfile = async (req, res) => {
     if (department !== undefined && typeof department !== "string") {
       return res.status(400).json({ error: "Departman metin olmalıdır." });
     }
+
     if (profileRole !== undefined && typeof profileRole !== "string") {
       return res.status(400).json({ error: "Rol metin olmalıdır." });
     }
@@ -154,7 +157,8 @@ exports.updateProfile = async (req, res) => {
     if (location !== undefined && typeof location !== "string") {
       return res.status(400).json({ error: "Konum metin olmalıdır." });
     }
-    if (notificationEnabled !== undefined &&typeof notificationEnabled !== "boolean") {
+
+    if (notificationEnabled !== undefined && typeof notificationEnabled !== "boolean") {
       return res.status(400).json({ error: "Bildirim ayarı boolean olmalıdır." });
     }
 
@@ -236,6 +240,7 @@ exports.updateProfile = async (req, res) => {
         department: true,
         profileRole: true,
         location: true,
+        profileImage: true,
         status: true,
         createdAt: true,
       },
@@ -286,18 +291,12 @@ exports.changePassword = async (req, res) => {
     const newPasswordTrimmed = newPassword.trim();
     const confirmPasswordTrimmed = confirmPassword.trim();
 
-    if (
-      !currentPasswordTrimmed ||
-      !newPasswordTrimmed ||
-      !confirmPasswordTrimmed
-    ) {
+    if (!currentPasswordTrimmed || !newPasswordTrimmed || !confirmPasswordTrimmed) {
       return res.status(400).json({ error: "Tüm alanlar doldurulmalıdır." });
     }
 
     if (newPasswordTrimmed.length < 6) {
-      return res
-        .status(400)
-        .json({ error: "Yeni şifre en az 6 karakter olmalıdır." });
+      return res.status(400).json({ error: "Yeni şifre en az 6 karakter olmalıdır." });
     }
 
     if (newPasswordTrimmed !== confirmPasswordTrimmed) {
@@ -306,21 +305,11 @@ exports.changePassword = async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        password: true,
-      },
+      select: { id: true, email: true, password: true },
     });
 
     if (!user) {
       return res.status(404).json({ error: "Kullanıcı bulunamadı." });
-    }
-
-    if (!user.password) {
-      return res
-        .status(400)
-        .json({ error: "Bu kullanıcı için şifre bilgisi bulunamadı." });
     }
 
     const isMatch = await bcrypt.compare(currentPasswordTrimmed, user.password);
@@ -329,28 +318,72 @@ exports.changePassword = async (req, res) => {
       return res.status(400).json({ error: "Mevcut şifre yanlış." });
     }
 
-    const sameAsOld = await bcrypt.compare(newPasswordTrimmed, user.password);
-
-    if (sameAsOld) {
-      return res
-        .status(400)
-        .json({ error: "Yeni şifre mevcut şifre ile aynı olamaz." });
-    }
-
     const hashedPassword = await bcrypt.hash(newPasswordTrimmed, 10);
 
     await prisma.user.update({
       where: { id: userId },
-      data: {
-        password: hashedPassword,
-      },
+      data: { password: hashedPassword },
     });
 
     return res.json({ message: "Şifre başarıyla güncellendi." });
   } catch (error) {
     console.error("ChangePassword Hatası:", error);
-    return res
-      .status(500)
-      .json({ error: "Sunucu hatası. Lütfen daha sonra tekrar deneyin." });
+    return res.status(500).json({ error: "Sunucu hatası." });
+  }
+};
+
+// 📸 FOTO YÜKLE
+exports.uploadProfileImage = async (req, res) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+
+    if (!req.file) {
+      return res.status(400).json({ message: "Dosya yok" });
+    }
+
+    const imageUrl = `/uploads/${req.file.filename}`;
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { profileImage: imageUrl },
+    });
+
+    res.json({
+      message: "Fotoğraf yüklendi",
+      profileImage: imageUrl,
+    });
+  } catch (err) {
+    console.log("Upload error:", err);
+    res.status(500).json({ message: "Sunucu hatası" });
+  }
+};
+
+// 🗑️ FOTO SİL
+exports.deleteProfileImage = async (req, res) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { profileImage: true },
+    });
+
+    if (user?.profileImage) {
+      const filePath = path.join(__dirname, "..", "..", user.profileImage);
+
+      fs.unlink(filePath, (err) => {
+        if (err) console.log("Dosya silinemedi:", err);
+      });
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { profileImage: null },
+    });
+
+    res.json({ message: "Fotoğraf tamamen silindi" });
+  } catch (err) {
+    console.log("Delete error:", err);
+    res.status(500).json({ message: "Sunucu hatası" });
   }
 };
