@@ -16,7 +16,7 @@ const getUserId = (req) => {
 const planPrices = {
   FREE: 0,
   PRO: 99,
-  BUSINESS: 499,
+  BUSINESS: 299,
 };
 
 const getPlanFromAmount = (amount) => {

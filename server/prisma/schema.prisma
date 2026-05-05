@@ -8,46 +8,64 @@ datasource db {
 }
 
 model Organization {
-  id            String                @id @default(uuid())
+  id            String              @id @default(uuid())
   name          String
   ownerId       String
   members       User_Organization[]
   projects      Project[]
   notifications Notification[]
-  createdAt     DateTime              @default(now())
+  createdAt     DateTime            @default(now())
 }
 
 model User {
-  id                  String              @id @default(uuid())
-  email               String              @unique
-  name                String?
-  password            String?
-  status              String              @default("active")
-  verificationToken   String?             @unique
+  id                String  @id @default(uuid())
+  email             String  @unique
+  name              String?
+  password          String?
+  status            String  @default("active")
+  verificationToken String? @unique
+  emailVerified     Boolean @default(false)
 
-  username            String?             @unique
+  username            String? @unique
   phone               String?
   bio                 String?
   department          String?
   profileRole         String?
-  notificationEnabled Boolean             @default(true)
+  notificationEnabled Boolean @default(true)
   location            String?
   profileImage        String?
 
-  organizations       User_Organization[]
-  ownedProjects       Project[]           @relation("ProjectOwner")
-  memberProjects      User_Project[]
-  ownedTasks          Task[]              @relation("TaskOwner")
-  assignedTasks       Task[]              @relation("TaskAssignee")
-  notifications       Notification[]
-  appReviews          AppReview[]
-  supportTickets      SupportTicket[]
+  organizations  User_Organization[]
+  ownedProjects  Project[]           @relation("ProjectOwner")
+  memberProjects User_Project[]
+  ownedTasks     Task[]              @relation("TaskOwner")
+  assignedTasks  Task[]              @relation("TaskAssignee")
+  notifications  Notification[]
+  appReviews     AppReview[]
+  supportTickets SupportTicket[]
+  sessions       UserSession[]
+  documents      Document[]
 
-  subscriptions       Subscription[]
-  payments            Payment[]
-  billingProfile      BillingProfile?
+  subscriptions  Subscription[]
+  payments       Payment[]
+  billingProfile BillingProfile?
 
-  createdAt           DateTime            @default(now())
+  createdAt DateTime @default(now())
+}
+
+model UserSession {
+  id         String   @id @default(uuid())
+  userId     String
+  token      String?  @unique
+  device     String?
+  location   String?
+  ipAddress  String?
+  userAgent  String?
+  isCurrent  Boolean  @default(false)
+  lastActive DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model User_Organization {
@@ -72,6 +90,7 @@ model Project {
   members      User_Project[]
   tasks        Task[]
   columns      Column[]
+  documents    Document[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -139,45 +158,45 @@ model Subscription {
   startDate DateTime  @default(now())
   endDate   DateTime?
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Payment {
-  id              String   @id @default(uuid())
+  id              String  @id @default(uuid())
   userId          String
   amount          Float
   plan            String?
-  currency        String   @default("TRY")
-  status          String   @default("PENDING")
+  currency        String  @default("TRY")
+  status          String  @default("PENDING")
   provider        String?
   iyzicoPaymentId String?
   conversationId  String?
   description     String?
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model BillingProfile {
-  id          String   @id @default(uuid())
-  userId      String   @unique
+  id          String  @id @default(uuid())
+  userId      String  @unique
   fullName    String?
   companyName String?
   taxNumber   String?
   taxOffice   String?
   address     String?
   city        String?
-  country     String?  @default("Türkiye")
+  country     String? @default("Türkiye")
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AppReview {
@@ -187,7 +206,7 @@ model AppReview {
   comment   String?
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model SupportTicket {
@@ -200,5 +219,23 @@ model SupportTicket {
   status    String   @default("OPEN")
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Document {
+  id           String   @id @default(uuid())
+  title        String
+  originalName String?
+  type         String
+  mimeType     String?
+  size         String?
+  fileUrl      String
+  filePath     String?
+  projectId    String?
+  userId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 }

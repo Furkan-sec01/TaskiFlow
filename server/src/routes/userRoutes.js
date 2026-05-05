@@ -4,12 +4,30 @@ const userController = require("../controllers/userController");
 const authenticateToken = require("../middleware/authMiddleware");
 const upload = require("../middleware/upload");
 
+router.get("/verify-email/:token", userController.verifyEmail);
+
 router.use(authenticateToken);
 
-// GET /api/users/me
+// 👤 PROFİL
 router.get("/me", userController.getMe);
 router.put("/profile", userController.updateProfile);
 
+// 🔐 ŞİFRE DEĞİŞTİR
+router.put("/change-password", userController.changePassword);
+
+// 📧 E-POSTA DOĞRULAMA
+router.post("/send-verification", userController.sendEmailVerification);
+
+
+// 📱 OTURUMLAR
+router.get("/sessions", userController.getSessions);
+router.delete("/sessions/:id", userController.deleteSession);
+router.delete("/sessions", userController.deleteOtherSessions);
+
+// ❌ HESAP SİL
+router.delete("/delete-account", userController.deleteAccount);
+
+// 📸 FOTOĞRAF
 router.post(
   "/profile-image",
   upload.single("image"),
@@ -21,5 +39,5 @@ router.delete(
   userController.deleteProfileImage
 );
 
-module.exports = router;
+// ⚠️ TEK EXPORT OLACAK
 module.exports = router;

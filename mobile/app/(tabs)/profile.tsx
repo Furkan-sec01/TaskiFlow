@@ -141,6 +141,11 @@ export default function ProfileScreen() {
   const [notifEnabled, setNotifEnabled] = useState(true);
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
   const [userUsername, setUserUsername] = useState("");
   const [userPhone, setUserPhone] = useState("");
   const [userBio, setUserBio] = useState("");
@@ -188,26 +193,7 @@ export default function ProfileScreen() {
   const [newPass, setNewPass] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
 
-  const [sessions, setSessions] = useState([
-    {
-      id: 1,
-      device: "Windows · Chrome",
-      location: "İstanbul, TR · Şu an aktif",
-      current: true,
-    },
-    {
-      id: 2,
-      device: "iPhone · Safari",
-      location: "İstanbul, TR · 2 saat önce",
-      current: false,
-    },
-    {
-      id: 3,
-      device: "MacBook · Firefox",
-      location: "Ankara, TR · 3 gün önce",
-      current: false,
-    },
-  ]);
+  const [sessions, setSessions] = useState<any[]>([]);
 
   const fetchPlan = async () => {
     try {
@@ -243,11 +229,34 @@ export default function ProfileScreen() {
       console.log("Plan alınamadı:", err);
     }
   };
+  const fetchSessions = async () => {
+  try {
+    const token = await AsyncStorage.getItem("token");
+    if (!token) return;
+
+    const res = await fetch(`${API_URL}/users/sessions`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json().catch(() => []);
+
+    console.log("SESSIONS:", data);
+
+    if (res.ok) {
+      setSessions(data);
+    }
+  } catch (err) {
+    console.log("Session alınamadı:", err);
+  }
+};
 
 // 🔥 EN KRİTİK
   useFocusEffect(
     useCallback(() => {
       fetchPlan();
+      fetchSessions();
    }, [])
   );
   
@@ -705,46 +714,89 @@ export default function ProfileScreen() {
       },
     ]);
   };
+  const handleSendEmailVerification = async () => {
+  try {
+    const token = await AsyncStorage.getItem("token");
+    if (!token) return;
 
-  const handleEndSession = (id: number) => {
-    setSessions((prev) => prev.filter((item) => item.id !== id));
-    Alert.alert("Oturum Sonlandırıldı", "Seçilen cihazın oturumu kapatıldı.");
-  };
+    const res = await fetch(`${API_URL}/users/send-verification`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  const handleEndAllSessions = () => {
-    Alert.alert(
-      "Tüm Oturumları Sonlandır",
-      "Bu cihaz dışındaki tüm oturumlar kapatılacak. Devam edilsin mi?",
-      [
-        { text: "İptal", style: "cancel" },
-        {
-          text: "Sonlandır",
-          style: "destructive",
-          onPress: () => {
-            setSessions((prev) => prev.filter((item) => item.current));
-            Alert.alert("Başarılı", "Diğer tüm oturumlar kapatıldı.");
-          },
-        },
-      ]
-    );
-  };
+    const data = await res.json().catch(() => null);
 
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      "Hesabı Sil",
-      "Bu işlem geri alınamaz. Hesabı silmek istediğinize emin misiniz?",
-      [
-        { text: "İptal", style: "cancel" },
-        {
-          text: "Hesabı Sil",
-          style: "destructive",
-          onPress: () =>
-            Alert.alert("Bilgi", "Bu işlem backend bağlanınca aktif edilebilir."),
-        },
-      ]
-    );
-  };
+    console.log("EMAIL VERIFY RESPONSE:", data);
 
+    if (!res.ok) {
+      Alert.alert("Hata", data?.error || "Mail gönderilemedi");
+      return;
+    }
+
+    Alert.alert("Başarılı ✅", "Doğrulama maili gönderildi");
+  } catch (err) {
+    console.log("Email error:", err);
+    Alert.alert("Hata", "Sunucuya bağlanılamadı");
+  }
+};
+
+  const handleEndSession = async (id: string) => {
+  try {
+    const token = await AsyncStorage.getItem("token");
+    if (!token) return;
+
+    const res = await fetch(`${API_URL}/users/sessions/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      Alert.alert("Hata", data?.error || "Oturum sonlandırılamadı.");
+      return;
+    }
+
+    setSessions((prev) => prev.filter((item: any) => item.id !== id));
+    Alert.alert("Başarılı", data?.message || "Oturum sonlandırıldı.");
+  } catch (err) {
+    console.log("Session delete error:", err);
+    Alert.alert("Hata", "Sunucuya bağlanılamadı.");
+  }
+};
+
+  const handleEndAllSessions = async () => {
+  try {
+    const token = await AsyncStorage.getItem("token");
+    if (!token) return;
+
+    const res = await fetch(`${API_URL}/users/sessions`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      Alert.alert("Hata", data?.error || "Tüm oturumlar kapatılamadı.");
+      return;
+    }
+
+    fetchSessions(); // 🔥 yeniden çek
+    Alert.alert("Başarılı", data?.message || "Tüm oturumlar kapatıldı.");
+  } catch (err) {
+    console.log("Delete all sessions error:", err);
+    Alert.alert("Hata", "Sunucuya bağlanılamadı.");
+  }
+};
+  
+  
   const handleCancelSubscription = () => {
     Alert.alert(
       "Aboneliği İptal Et",
@@ -1412,11 +1464,20 @@ export default function ProfileScreen() {
                   >
                     {emailVerified ? "Aktif" : "Doğrulanmadı"}
                   </Text>
-                  <Switch
-                    value={emailVerified}
-                    onValueChange={setEmailVerified}
-                    trackColor={{ true: "#2563EB", false: "#D1D5DB" }}
-                  />
+                  <Pressable
+  style={{
+    backgroundColor: "#2563EB",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginTop: 6,
+  }}
+  onPress={handleSendEmailVerification}
+>
+  <Text style={{ color: "#fff", fontSize: 12 }}>
+    Doğrulama Maili Gönder
+  </Text>
+</Pressable>
                 </View>
               </View>
             </SecurityAccordionItem>
@@ -1499,7 +1560,7 @@ export default function ProfileScreen() {
 
                 <Pressable
                   style={styles.dangerOutlineBtn}
-                  onPress={handleDeleteAccount}
+                  onPress={() => setDeleteModalVisible(true)}
                 >
                   <Text style={styles.dangerOutlineBtnText}>Hesabı sil</Text>
                 </Pressable>
@@ -1508,8 +1569,113 @@ export default function ProfileScreen() {
 
             <View style={{ height: 24 }} />
           </ScrollView>
+
+
+
         </SafeAreaView>
       </Modal>
+      <Modal visible={deleteModalVisible} transparent animationType="fade">
+  <View style={{
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    padding: 20,
+  }}>
+    <View style={{
+      backgroundColor: "#fff",
+      borderRadius: 16,
+      padding: 20,
+    }}>
+      <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}>
+        Hesabı Sil
+      </Text>
+
+      <TextInput
+        placeholder="Şifrenizi girin"
+        secureTextEntry
+        value={deletePassword}
+        onChangeText={setDeletePassword}
+        style={{
+          borderWidth: 1,
+          borderColor: "#ddd",
+          borderRadius: 10,
+          padding: 10,
+          marginBottom: 16,
+        }}
+      />
+
+      <Pressable
+        style={{ backgroundColor: "#DC2626", padding: 12, borderRadius: 10 }}
+        onPress={async () => {
+  if (deletingAccount) return;
+
+  if (!deletePassword.trim()) {
+    Alert.alert("Hata", "Şifrenizi girin");
+    return;
+  }
+
+  try {
+    setDeletingAccount(true);
+
+    const token = await AsyncStorage.getItem("token");
+
+    if (!token) {
+      Alert.alert("Hata", "Oturum bulunamadı");
+      return;
+    }
+
+    const res = await fetch(`${API_URL}/users/delete-account`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        password: deletePassword.trim(),
+      }),
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      Alert.alert("Hata", data?.error || data?.message || "Hesap silinemedi");
+      return;
+    }
+
+    setDeleteModalVisible(false);
+    setDeletePassword("");
+
+    await AsyncStorage.removeItem("token");
+
+    Alert.alert("Başarılı", data?.message || "Hesap silindi");
+
+    router.replace("/welcome");
+  } catch (error) {
+    console.log("Hesap silme hatası:", error);
+    Alert.alert("Hata", "Sunucu hatası");
+  } finally {
+    setDeletingAccount(false);
+  }
+}}
+    
+      >
+        <Text style={{ color: "#fff", textAlign: "center" }}>
+          {deletingAccount ? "Siliniyor..." : "Hesabı Sil"}
+        </Text>
+      </Pressable>
+
+      <Pressable
+        style={{ marginTop: 10 }}
+        onPress={() => {
+          setDeleteModalVisible(false);
+          setDeletePassword("");
+        }}
+      >
+        <Text style={{ textAlign: "center" }}>İptal</Text>
+      </Pressable>
+    </View>
+  </View>
+</Modal>
       <Modal visible={reviewModal} animationType="slide" transparent>
   <View style={{
     flex:1,
