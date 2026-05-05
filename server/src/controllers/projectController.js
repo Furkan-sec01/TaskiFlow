@@ -25,7 +25,7 @@ exports.getProjects = async (req, res) => {
                     select: { columns: true }
                 }
             },
-            orderBy: { createdAt: "desc" }
+            orderBy: { updatedAt: "desc" }
         });
         res.json(projects);
     } catch (error) {
@@ -67,11 +67,11 @@ exports.createProject = async (req, res) => {
                 status: "ACTIVE"
             },
             orderBy: {
-                createdAt: "desc"
+                updatedAt: "desc"
             }
         });
 
-        const currentPlan = subscription?.plan || "FREE";
+        const currentPlan = String(subscription?.plan || "FREE").toUpperCase();
         const projectLimit = PLAN_PROJECT_LIMITS[currentPlan] || 2;
 
         const userProjectCount = await prisma.project.count({

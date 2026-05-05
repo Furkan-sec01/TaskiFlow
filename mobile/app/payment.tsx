@@ -38,8 +38,8 @@ const PLAN_MAP: Record<
   },
   enterprise: {
     name: "Şirketler",
-    priceMonthly: 499,
-    priceYearly: 4999,
+    priceMonthly: 299,
+    priceYearly: 2999,
     backendPlan: "BUSINESS",
   },
 };

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,10 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 type PlanId = "starter" | "pro" | "enterprise";
 type Period = "monthly" | "yearly";
 
-const PLAN_MAP: Record<PlanId, { name: string; priceMonthly: number; priceYearly: number }> = {
+const PLAN_MAP: Record<
+  PlanId,
+  { name: string; priceMonthly: number; priceYearly: number }
+> = {
   starter: { name: "Başlangıç", priceMonthly: 0, priceYearly: 0 },
   pro: { name: "Profesyonel", priceMonthly: 99, priceYearly: 999 },
   enterprise: { name: "Şirketler", priceMonthly: 0, priceYearly: 0 },
@@ -33,10 +36,21 @@ export default function PaymentSuccess() {
       const p = Number(amountParam);
       return Number.isFinite(p) ? p : 0;
     }
-    return period === "yearly" ? plan.priceYearly : plan.priceMonthly;
+    return period === "yearly"
+      ? plan.priceYearly
+      : plan.priceMonthly;
   }, [amountParam, period, plan.priceMonthly, plan.priceYearly]);
 
   const periodText = period === "yearly" ? "Yıllık" : "Aylık";
+
+  // 🔥 PROFESYONEL: 2 saniye sonra otomatik yönlendirme
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.replace("/genel-bakis");
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -46,8 +60,9 @@ export default function PaymentSuccess() {
         </View>
 
         <Text style={styles.title}>Ödeme Başarılı</Text>
+
         <Text style={styles.subtitle}>
-          Planınız başarıyla aktifleştirildi.
+          Planınız başarıyla aktifleştirildi. Yönlendiriliyorsunuz...
         </Text>
 
         <View style={styles.card}>
@@ -64,48 +79,33 @@ export default function PaymentSuccess() {
           <View style={[styles.row, { marginTop: 8 }]}>
             <Text style={styles.totalLabel}>Ödenen Tutar</Text>
             <Text style={styles.totalValue}>
-              {price === 0 ? "Özel Fiyatlandırma" : `₺${price}`}
+              {price === 0
+                ? "Özel Fiyatlandırma"
+                : `₺${price}`}
             </Text>
           </View>
 
           <View style={styles.divider} />
 
           <Text style={styles.info}>
-            Fatura ve ödeme bilgileri e-posta adresinize iletilecektir.
+            Fatura ve ödeme bilgileri e-posta adresinize
+            iletilecektir.
           </Text>
         </View>
 
-        <View style={{ width: "100%", gap: 10 }}>
-          <Pressable
-            style={[styles.btn, styles.primary]}
-            onPress={() => router.replace("/login")}
-          >
-            <Text style={[styles.btnText, styles.primaryText]}>
-              Devam Et (Giriş Yap)
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.btn, styles.secondary]}
-            onPress={() => router.replace("/plans")}
-          >
-            <Text style={[styles.btnText, styles.secondaryText]}>
-              Planlara Dön
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.btn, styles.ghost]}
-            onPress={() => router.push("/contact")}
-          >
-            <Text style={[styles.btnText, styles.ghostText]}>
-              Yardım / İletişim
-            </Text>
-          </Pressable>
-        </View>
+        {/* İstersen buton da kalsın */}
+        <Pressable
+          style={[styles.btn, styles.primary]}
+          onPress={() => router.replace("/genel-bakis")}
+        >
+          <Text style={[styles.btnText, styles.primaryText]}>
+            Hemen Devam Et
+          </Text>
+        </Pressable>
 
         <Text style={styles.footerNote}>
-          Herhangi bir sorunuz olursa iletişim sayfasından bize ulaşabilirsiniz.
+          Herhangi bir sorunuz olursa iletişim sayfasından
+          bize ulaşabilirsiniz.
         </Text>
       </View>
     </SafeAreaView>
@@ -142,9 +142,20 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  icon: { fontSize: 40, fontWeight: "900", color: "#16A34A" },
 
-  title: { fontSize: 26, fontWeight: "900", color: "#111827", textAlign: "center" },
+  icon: {
+    fontSize: 40,
+    fontWeight: "900",
+    color: "#16A34A",
+  },
+
+  title: {
+    fontSize: 26,
+    fontWeight: "900",
+    color: "#111827",
+    textAlign: "center",
+  },
+
   subtitle: {
     marginTop: 8,
     fontSize: 13,
@@ -165,16 +176,41 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8 },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
+  },
+
   muted: { color: "#6B7280", fontWeight: "700" },
   bold: { color: "#111827", fontWeight: "900" },
 
-  totalLabel: { color: "#111827", fontWeight: "900", fontSize: 14 },
-  totalValue: { color: "#2563EB", fontWeight: "900", fontSize: 16 },
+  totalLabel: {
+    color: "#111827",
+    fontWeight: "900",
+    fontSize: 14,
+  },
 
-  divider: { height: 1, backgroundColor: "#E5E7EB", marginTop: 12, marginBottom: 10 },
+  totalValue: {
+    color: "#2563EB",
+    fontWeight: "900",
+    fontSize: 16,
+  },
 
-  info: { fontSize: 12, color: "#374151", fontWeight: "700", lineHeight: 18 },
+  divider: {
+    height: 1,
+    backgroundColor: "#E5E7EB",
+    marginTop: 12,
+    marginBottom: 10,
+  },
+
+  info: {
+    fontSize: 12,
+    color: "#374151",
+    fontWeight: "700",
+    lineHeight: 18,
+  },
 
   btn: {
     width: "100%",
@@ -183,14 +219,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primary: { backgroundColor: "#2563EB" },
-  secondary: { borderWidth: 1, borderColor: "#E5E7EB" },
-  ghost: { backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#E5E7EB" },
 
-  btnText: { fontSize: 15, fontWeight: "900" },
+  primary: { backgroundColor: "#2563EB" },
+
+  btnText: {
+    fontSize: 15,
+    fontWeight: "900",
+  },
+
   primaryText: { color: "#fff" },
-  secondaryText: { color: "#111827" },
-  ghostText: { color: "#111827" },
 
   footerNote: {
     marginTop: 14,

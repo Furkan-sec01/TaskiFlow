@@ -21,8 +21,10 @@ const planPrices = {
 
 const getPlanFromAmount = (amount) => {
   const val = Number(amount);
-  if (val >= 99 && val < 200) return "PRO";
-  if (val >= 499) return "BUSINESS";
+
+  if (val >= 299) return "BUSINESS";
+  if (val >= 99) return "PRO";
+
   return "FREE";
 };
 
@@ -48,12 +50,14 @@ const getBillingOverview = async (req, res) => {
     const userId = getUserId(req);
 
     if (!userId) {
-      return res.status(401).json({ message: "Yetkisiz işlem. Kullanıcı bulunamadı." });
+      return res.status(401).json({
+        message: "Yetkisiz işlem. Kullanıcı bulunamadı.",
+      });
     }
 
     await expireOldPendingPayments(userId);
 
-    let subscription = await prisma.subscription.findFirst({
+    const subscription = await prisma.subscription.findFirst({
       where: {
         userId,
         status: "ACTIVE",
@@ -62,16 +66,6 @@ const getBillingOverview = async (req, res) => {
         updatedAt: "desc",
       },
     });
-
-    if (!subscription) {
-      return res.json({
-        subscription: {
-          plan: "FREE",
-        },
-        billingProfile: null,
-        payments: [],
-      });
-    }
 
     const billingProfile = await prisma.billingProfile.findUnique({
       where: { userId },
@@ -83,13 +77,18 @@ const getBillingOverview = async (req, res) => {
     });
 
     return res.json({
-      subscription,
+      subscription: subscription || {
+        plan: "FREE",
+        status: "ACTIVE",
+      },
       billingProfile,
       payments,
     });
   } catch (error) {
     console.error("Billing overview hatası:", error);
-    return res.status(500).json({ message: "Ödeme bilgileri alınamadı." });
+    return res.status(500).json({
+      message: "Ödeme bilgileri alınamadı.",
+    });
   }
 };
 
@@ -98,7 +97,9 @@ const updateBillingProfile = async (req, res) => {
     const userId = getUserId(req);
 
     if (!userId) {
-      return res.status(401).json({ message: "Yetkisiz işlem. Kullanıcı bulunamadı." });
+      return res.status(401).json({
+        message: "Yetkisiz işlem. Kullanıcı bulunamadı.",
+      });
     }
 
     const {
@@ -140,7 +141,9 @@ const updateBillingProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("Fatura profili güncelleme hatası:", error);
-    return res.status(500).json({ message: "Fatura bilgileri güncellenemedi." });
+    return res.status(500).json({
+      message: "Fatura bilgileri güncellenemedi.",
+    });
   }
 };
 
@@ -149,7 +152,9 @@ const changeSubscriptionPlan = async (req, res) => {
     const userId = getUserId(req);
 
     if (!userId) {
-      return res.status(401).json({ message: "Yetkisiz işlem. Kullanıcı bulunamadı." });
+      return res.status(401).json({
+        message: "Yetkisiz işlem. Kullanıcı bulunamadı.",
+      });
     }
 
     const { plan } = req.body;
@@ -157,7 +162,9 @@ const changeSubscriptionPlan = async (req, res) => {
     const allowedPlans = ["FREE", "PRO", "BUSINESS"];
 
     if (!allowedPlans.includes(plan)) {
-      return res.status(400).json({ message: "Geçersiz plan seçimi." });
+      return res.status(400).json({
+        message: "Geçersiz plan seçimi.",
+      });
     }
 
     if (plan !== "FREE") {
@@ -199,6 +206,7 @@ const changeSubscriptionPlan = async (req, res) => {
         currency: "TRY",
         status: "PAID",
         provider: "manual",
+        plan: "FREE",
         description: "FREE plan aboneliği",
       },
     });
@@ -210,7 +218,9 @@ const changeSubscriptionPlan = async (req, res) => {
     });
   } catch (error) {
     console.error("Plan değiştirme hatası:", error);
-    return res.status(500).json({ message: "Plan değiştirilemedi." });
+    return res.status(500).json({
+      message: "Plan değiştirilemedi.",
+    });
   }
 };
 
@@ -219,23 +229,37 @@ const initialize3DSPayment = async (req, res) => {
     const userId = getUserId(req);
 
     if (!userId) {
-      return res.status(401).json({ message: "Yetkisiz işlem. Kullanıcı bulunamadı." });
+      return res.status(401).json({
+        message: "Yetkisiz işlem. Kullanıcı bulunamadı.",
+      });
     }
 
     const { plan, card, email } = req.body;
 
     if (!["PRO", "BUSINESS"].includes(plan)) {
-      return res.status(400).json({ message: "3D ödeme sadece ücretli planlar için başlatılır." });
+      return res.status(400).json({
+        message: "3D ödeme sadece ücretli planlar için başlatılır.",
+      });
     }
 
     const price = planPrices[plan];
 
     if (!price || price <= 0) {
-      return res.status(400).json({ message: "Geçersiz plan fiyatı." });
+      return res.status(400).json({
+        message: "Geçersiz plan fiyatı.",
+      });
     }
 
-    if (!card?.name || !card?.number || !card?.expMonth || !card?.expYear || !card?.cvc) {
-      return res.status(400).json({ message: "Kart bilgileri eksik." });
+    if (
+      !card?.name ||
+      !card?.number ||
+      !card?.expMonth ||
+      !card?.expYear ||
+      !card?.cvc
+    ) {
+      return res.status(400).json({
+        message: "Kart bilgileri eksik.",
+      });
     }
 
     const user = await prisma.user.findUnique({
@@ -250,7 +274,9 @@ const initialize3DSPayment = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ message: "Kullanıcı bulunamadı." });
+      return res.status(404).json({
+        message: "Kullanıcı bulunamadı.",
+      });
     }
 
     const paymentRecord = await prisma.payment.create({
@@ -262,7 +288,7 @@ const initialize3DSPayment = async (req, res) => {
         provider: "iyzico",
         conversationId: "",
         description: `${plan} plan aboneliği`,
-        plan: plan,
+        plan,
       },
     });
 
@@ -273,7 +299,10 @@ const initialize3DSPayment = async (req, res) => {
       },
     });
 
-    const buyerNameParts = (user.name || card.name || "Test User").trim().split(" ");
+    const buyerNameParts = (user.name || card.name || "Test User")
+      .trim()
+      .split(" ");
+
     const buyerName = buyerNameParts[0] || "Test";
     const buyerSurname = buyerNameParts.slice(1).join(" ") || "User";
 
@@ -378,7 +407,10 @@ const initialize3DSPayment = async (req, res) => {
         });
       }
 
-      const decodedHtml = Buffer.from(result.threeDSHtmlContent, "base64").toString("utf8");
+      const decodedHtml = Buffer.from(
+        result.threeDSHtmlContent,
+        "base64"
+      ).toString("utf8");
 
       return res.json({
         message: "3D Secure ödeme başlatıldı.",
@@ -389,7 +421,9 @@ const initialize3DSPayment = async (req, res) => {
     });
   } catch (error) {
     console.error("3D ödeme başlatma hatası:", error);
-    return res.status(500).json({ message: "Ödeme başlatılamadı." });
+    return res.status(500).json({
+      message: "Ödeme başlatılamadı.",
+    });
   }
 };
 
@@ -446,11 +480,29 @@ const complete3DSPayment = async (req, res) => {
         return res.send("Ödeme tamamlanamadı.");
       }
 
+      const selectedPlan = payment.plan || getPlanFromAmount(payment.amount);
+
+      console.log("ESKİ PLAN:", payment.plan);
+      console.log("YENİ PLAN:", selectedPlan);
+
+      if (!["PRO", "BUSINESS"].includes(selectedPlan)) {
+        await prisma.payment.update({
+          where: { id: conversationId },
+          data: {
+            status: "FAILED",
+            iyzicoPaymentId: paymentId,
+          },
+        });
+
+        return res.send("Geçersiz plan");
+      }
+
       await prisma.payment.update({
         where: { id: conversationId },
         data: {
           status: "PAID",
           iyzicoPaymentId: paymentId,
+          plan: selectedPlan,
         },
       });
 
@@ -459,28 +511,28 @@ const complete3DSPayment = async (req, res) => {
         orderBy: { createdAt: "desc" },
       });
 
-      console.log("PLAN:", payment.plan);
+      let subscription;
 
       if (existingSub) {
-        await prisma.subscription.update({
+        subscription = await prisma.subscription.update({
           where: { id: existingSub.id },
           data: {
-            
-            
-            plan: payment.plan || getPlanFromAmount(payment.amount),
+            plan: selectedPlan,
             status: "ACTIVE",
             endDate: null,
           },
         });
       } else {
-        await prisma.subscription.create({
+        subscription = await prisma.subscription.create({
           data: {
             userId: payment.userId,
-            plan: payment.plan || getPlanFromAmount(payment.amount),
+            plan: selectedPlan,
             status: "ACTIVE",
           },
         });
       }
+
+      console.log("ABONELİK GÜNCELLENDİ:", subscription);
 
       return res.send("OK");
     });
@@ -495,7 +547,9 @@ const cancelSubscription = async (req, res) => {
     const userId = getUserId(req);
 
     if (!userId) {
-      return res.status(401).json({ message: "Yetkisiz işlem. Kullanıcı bulunamadı." });
+      return res.status(401).json({
+        message: "Yetkisiz işlem. Kullanıcı bulunamadı.",
+      });
     }
 
     const subscription = await prisma.subscription.findFirst({
@@ -503,18 +557,26 @@ const cancelSubscription = async (req, res) => {
       orderBy: { createdAt: "desc" },
     });
 
-    if (!subscription) {
-      return res.status(404).json({ message: "Abonelik bulunamadı." });
-    }
+    let updatedSubscription;
 
-    const updatedSubscription = await prisma.subscription.update({
-      where: { id: subscription.id },
-      data: {
-        plan: "FREE",
-        status: "CANCELED",
-        endDate: new Date(),
-      },
-    });
+    if (subscription) {
+      updatedSubscription = await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: {
+          plan: "FREE",
+          status: "ACTIVE",
+          endDate: null,
+        },
+      });
+    } else {
+      updatedSubscription = await prisma.subscription.create({
+        data: {
+          userId,
+          plan: "FREE",
+          status: "ACTIVE",
+        },
+      });
+    }
 
     const payment = await prisma.payment.create({
       data: {
@@ -523,6 +585,7 @@ const cancelSubscription = async (req, res) => {
         currency: "TRY",
         status: "PAID",
         provider: "manual",
+        plan: "FREE",
         description: "Abonelik iptal edildi. FREE plana geçildi.",
       },
     });
@@ -534,7 +597,9 @@ const cancelSubscription = async (req, res) => {
     });
   } catch (error) {
     console.error("Abonelik iptal hatası:", error);
-    return res.status(500).json({ message: "Abonelik iptal edilemedi." });
+    return res.status(500).json({
+      message: "Abonelik iptal edilemedi.",
+    });
   }
 };
 
@@ -543,7 +608,9 @@ const getPaymentHistory = async (req, res) => {
     const userId = getUserId(req);
 
     if (!userId) {
-      return res.status(401).json({ message: "Yetkisiz işlem. Kullanıcı bulunamadı." });
+      return res.status(401).json({
+        message: "Yetkisiz işlem. Kullanıcı bulunamadı.",
+      });
     }
 
     await expireOldPendingPayments(userId);
@@ -556,7 +623,9 @@ const getPaymentHistory = async (req, res) => {
     return res.json(payments);
   } catch (error) {
     console.error("Ödeme geçmişi hatası:", error);
-    return res.status(500).json({ message: "Ödeme geçmişi alınamadı." });
+    return res.status(500).json({
+      message: "Ödeme geçmişi alınamadı.",
+    });
   }
 };
 
