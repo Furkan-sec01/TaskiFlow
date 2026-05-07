@@ -36,7 +36,11 @@ export default function Plans() {
       features: ["Sınırsız Görev", "2 Proje", "50 MB Depolama", "Temel Destek"],
       buttonText: "Ücretsiz Başla",
       variant: "ghost",
-      action: () => router.push("/register"),
+      action: () =>
+  router.push({
+    pathname: "/payment",
+    params: { planId: "starter", period: "monthly" },
+  }),
     },
     {
       id: "pro",

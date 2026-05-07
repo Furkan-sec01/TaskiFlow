@@ -10,19 +10,38 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_URL } from "@/constants/api";
 
 type PlanId = "starter" | "pro" | "enterprise";
 type Period = "monthly" | "yearly";
+type BackendPlan = "FREE" | "PRO" | "BUSINESS";
 
 const PLAN_MAP: Record<
   PlanId,
-  { name: string; priceMonthly: number; priceYearly: number }
+  { name: string; priceMonthly: number; priceYearly: number; backendPlan: BackendPlan }
 > = {
-  starter: { name: "Başlangıç", priceMonthly: 0, priceYearly: 0 },
-  pro: { name: "Profesyonel", priceMonthly: 99, priceYearly: 999 },
-  enterprise: { name: "Şirketler", priceMonthly: 0, priceYearly: 0 },
+  starter: {
+    name: "Başlangıç",
+    priceMonthly: 0,
+    priceYearly: 0,
+    backendPlan: "FREE",
+  },
+  pro: {
+    name: "Profesyonel",
+    priceMonthly: 99,
+    priceYearly: 999,
+    backendPlan: "PRO",
+  },
+  enterprise: {
+    name: "Şirketler",
+    priceMonthly: 499,
+    priceYearly: 4999,
+    backendPlan: "BUSINESS",
+  },
 };
 
 function onlyDigits(s: string) {
@@ -60,40 +79,146 @@ export default function Payment() {
   const [expiry, setExpiry] = useState("");
   const [cvv, setCvv] = useState("");
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const validate = () => {
-    if (onlyDigits(cardNumber).length !== 16) {
+    if (price > 0 && onlyDigits(cardNumber).length !== 16) {
       Alert.alert("Hata", "Kart numarası 16 haneli olmalıdır.");
       return false;
     }
-    if (cardName.trim().length < 3) {
+
+    if (price > 0 && cardName.trim().length < 3) {
       Alert.alert("Hata", "Kart üzerindeki adı giriniz.");
       return false;
     }
-    if (expiry.length !== 5) {
+
+    if (price > 0 && expiry.length !== 5) {
       Alert.alert("Hata", "Son kullanma tarihi MM/YY formatında olmalıdır.");
       return false;
     }
-    if (onlyDigits(cvv).length !== 3) {
+
+    if (price > 0 && onlyDigits(cvv).length !== 3) {
       Alert.alert("Hata", "CVV 3 haneli olmalıdır.");
       return false;
     }
+
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
     if (!emailOk) {
       Alert.alert("Hata", "Geçerli bir e-posta adresi giriniz.");
       return false;
     }
+
     return true;
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!validate()) return;
 
-    // UI akışı (backend daha sonra)
-    router.replace({
-      pathname: "/payment-success",
-      params: { planId, period, amount: String(price) },
-    });
+    try {
+      setLoading(true);
+
+      const token = await AsyncStorage.getItem("token");
+
+      if (!token) {
+        Alert.alert("Oturum Hatası", "Lütfen tekrar giriş yapınız.");
+        router.replace("/login");
+        return;
+      }
+
+      if (price === 0) {
+        const response = await fetch(`${API_URL}/payments/change-plan`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            plan: plan.backendPlan,
+          }),
+        });
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          Alert.alert("Hata", data?.message || "Plan güncellenemedi.");
+          return;
+        }
+
+        router.replace({
+          pathname: "/payment-success",
+          params: {
+            planId,
+            period,
+            amount: String(price),
+          },
+        });
+
+        return;
+      }
+
+      const cleanCardNumber = onlyDigits(cardNumber);
+      const cleanCvv = onlyDigits(cvv);
+
+      const [expMonthRaw, expYearShortRaw] = expiry.split("/");
+
+      const expMonth = expMonthRaw?.trim();
+      const expYearShort = expYearShortRaw?.trim();
+
+      if (!expMonth || !expYearShort) {
+        Alert.alert("Hata", "Son kullanma tarihi geçersiz.");
+        return;
+      }
+
+      const expYear = `20${expYearShort}`;
+
+      const response = await fetch(`${API_URL}/payments/initialize-3ds`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          plan: plan.backendPlan,
+          email: email.trim().toLowerCase(),
+          card: {
+            name: cardName.trim(),
+            number: cleanCardNumber,
+            expMonth,
+            expYear,
+            cvc: cleanCvv,
+          },
+        }),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        Alert.alert("Hata", data?.message || "3D Secure ödeme başlatılamadı.");
+        return;
+      }
+
+      if (!data?.htmlContent) {
+        Alert.alert("Hata", "3D Secure ekranı alınamadı.");
+        return;
+      }
+
+      router.push({
+        pathname: "/three-ds",
+        params: {
+          html: data.htmlContent,
+          paymentId: data.conversationId || data.paymentId,
+          planId,
+          period,
+          amount: String(price),
+        },
+      });
+    } catch (error) {
+      console.log("Ödeme hatası:", error);
+      Alert.alert("Bağlantı Hatası", "Sunucuya bağlanılamadı.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -107,7 +232,6 @@ export default function Payment() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
           <View style={styles.headerRow}>
             <Pressable onPress={() => router.back()} style={styles.backBtn}>
               <Text style={styles.backText}>←</Text>
@@ -116,88 +240,100 @@ export default function Payment() {
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>Ödeme Bilgileri</Text>
               <Text style={styles.subtitle}>
-                {plan.name} • {periodText} •{" "}
+                {plan.name} • {periodText}{" "}
                 <Text style={{ fontWeight: "900", color: "#2563EB" }}>
-                  {price === 0 ? "Özel Fiyatlandırma" : `₺${price}`}
+                  {price === 0 ? "Ücretsiz" : `₺${price}`}
                 </Text>
               </Text>
             </View>
           </View>
 
-          {/* Order Summary */}
           <View style={styles.summaryCard}>
             <Text style={styles.summaryTitle}>Sipariş Özeti</Text>
+
             <View style={styles.row}>
               <Text style={styles.muted}>Plan</Text>
               <Text style={styles.bold}>{plan.name}</Text>
             </View>
+
             <View style={styles.row}>
               <Text style={styles.muted}>Periyot</Text>
               <Text style={styles.bold}>{periodText}</Text>
             </View>
+
             <View style={[styles.row, { marginTop: 6 }]}>
               <Text style={styles.totalLabel}>Toplam</Text>
               <Text style={styles.totalValue}>
-                {price === 0 ? "Özel Fiyatlandırma" : `₺${price}`}
+                {price === 0 ? "Ücretsiz" : `₺${price}`}
               </Text>
             </View>
           </View>
 
-          {/* Form */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Kart Bilgileri</Text>
 
-            <Text style={styles.label}>Kart Numarası</Text>
-            <TextInput
-              style={styles.input}
-              value={cardNumber}
-              onChangeText={(t) => setCardNumber(formatCardNumber(t))}
-              placeholder="1234 5678 9012 3456"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="number-pad"
-              maxLength={19}
-            />
-
-            <Text style={[styles.label, { marginTop: 12 }]}>
-              Kart Üzerindeki Ad Soyad
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={cardName}
-              onChangeText={setCardName}
-              placeholder="AD SOYAD"
-              placeholderTextColor="#9CA3AF"
-              autoCapitalize="characters"
-            />
-
-            <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.label}>Son Kullanma</Text>
+            {price === 0 ? (
+              <View style={styles.infoBox}>
+                <Text style={styles.infoText}>
+                  Bu plan için kart bilgisi alınmayacaktır. Devam ettiğinizde
+                  plan bilginiz backend tarafında güncellenecektir.
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.label}>Kart Numarası</Text>
                 <TextInput
                   style={styles.input}
-                  value={expiry}
-                  onChangeText={(t) => setExpiry(formatExpiry(t))}
-                  placeholder="MM/YY"
+                  value={cardNumber}
+                  onChangeText={(t) => setCardNumber(formatCardNumber(t))}
+                  placeholder="1234 5678 9012 3456"
                   placeholderTextColor="#9CA3AF"
                   keyboardType="number-pad"
-                  maxLength={5}
+                  maxLength={19}
                 />
-              </View>
 
-              <View style={{ width: 110 }}>
-                <Text style={styles.label}>CVV</Text>
+                <Text style={[styles.label, { marginTop: 12 }]}>
+                  Kart Üzerindeki Ad Soyad
+                </Text>
                 <TextInput
                   style={styles.input}
-                  value={cvv}
-                  onChangeText={(t) => setCvv(onlyDigits(t).slice(0, 3))}
-                  placeholder="123"
+                  value={cardName}
+                  onChangeText={setCardName}
+                  placeholder="AD SOYAD"
                   placeholderTextColor="#9CA3AF"
-                  keyboardType="number-pad"
-                  maxLength={3}
-                  secureTextEntry
+                  autoCapitalize="characters"
                 />
-              </View>
-            </View>
+
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Son Kullanma</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={expiry}
+                      onChangeText={(t) => setExpiry(formatExpiry(t))}
+                      placeholder="MM/YY"
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType="number-pad"
+                      maxLength={5}
+                    />
+                  </View>
+
+                  <View style={{ width: 110 }}>
+                    <Text style={styles.label}>CVV</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={cvv}
+                      onChangeText={(t) => setCvv(onlyDigits(t).slice(0, 3))}
+                      placeholder="123"
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType="number-pad"
+                      maxLength={3}
+                      secureTextEntry
+                    />
+                  </View>
+                </View>
+              </>
+            )}
 
             <Text style={[styles.label, { marginTop: 12 }]}>
               E-posta (Fatura / Bilgilendirme)
@@ -213,14 +349,23 @@ export default function Payment() {
               autoCorrect={false}
             />
 
-            <Pressable style={styles.payBtn} onPress={submit}>
-              <Text style={styles.payText}>
-                {price === 0 ? "Devam Et" : `₺${price} Ödemeyi Tamamla`}
-              </Text>
+            <Pressable
+              style={[styles.payBtn, loading && styles.disabledBtn]}
+              onPress={submit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.payText}>
+                  {price === 0 ? "Devam Et" : `₺${price} 3D Secure ile Öde`}
+                </Text>
+              )}
             </Pressable>
 
             <Text style={styles.hint}>
-              Ödeme işlemi güvenli bağlantı üzerinden gerçekleştirilir.
+              Kart bilgileri veritabanına kaydedilmez. Ödeme işlemi 3D Secure
+              doğrulaması ile güvenli şekilde tamamlanır.
             </Text>
           </View>
 
@@ -309,6 +454,20 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
 
+  infoBox: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  infoText: {
+    color: "#1E40AF",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+
   payBtn: {
     marginTop: 14,
     height: 50,
@@ -316,6 +475,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#2563EB",
     alignItems: "center",
     justifyContent: "center",
+  },
+  disabledBtn: {
+    opacity: 0.7,
   },
   payText: { color: "#fff", fontSize: 15, fontWeight: "900" },
 

@@ -22,6 +22,13 @@ type NotificationItem = {
   type?: string;
   isRead?: boolean;
   createdAt?: string;
+
+  organization?: {
+    name?: string;
+  };
+  organizationName?: string;
+  teamName?: string;
+  workspaceName?: string;
 };
 
 type FilterKey = "ALL" | "UNREAD" | "ALERTS";
@@ -106,6 +113,17 @@ export default function BildirimlerScreen() {
     setRefreshing(false);
   };
 
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => n.isRead === false).length,
+    [notifications]
+  );
+
+  const allReadText = useMemo(() => {
+    return unreadCount > 0
+      ? `${unreadCount} okunmamış bildirim`
+      : "Tüm bildirimler okundu";
+  }, [unreadCount]);
+
   const filteredAndSorted = useMemo(() => {
     let list = [...notifications];
 
@@ -140,16 +158,31 @@ export default function BildirimlerScreen() {
     return list;
   }, [notifications, filter, sortBy]);
 
-  const unreadCount = useMemo(
-    () => notifications.filter((n) => n.isRead === false).length,
-    [notifications]
-  );
+  const formatDate = (date?: string) => {
+    if (!date) return "";
 
-  const allReadText = useMemo(() => {
-    return unreadCount > 0
-      ? `${unreadCount} okunmamış bildirim var`
-      : "Tüm bildirimler okundu";
-  }, [unreadCount]);
+    const d = new Date(date);
+
+    if (Number.isNaN(d.getTime())) return "";
+
+    return d.toLocaleString("tr-TR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getWorkspaceName = (item: NotificationItem) => {
+    return (
+      item.organization?.name ||
+      item.organizationName ||
+      item.teamName ||
+      item.workspaceName ||
+      ""
+    );
+  };
 
   const markAsRead = async (id: string) => {
     if (!token) return;
@@ -186,6 +219,38 @@ export default function BildirimlerScreen() {
     }
   };
 
+  const respondInvite = async (
+    notificationId: string,
+    action: "ACCEPT" | "REJECT"
+  ) => {
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${API_URL}/notifications/respond-invite`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ notificationId, action }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        Alert.alert(
+          "Başarılı",
+          action === "ACCEPT" ? "Ekibe katıldınız!" : "Davet reddedildi."
+        );
+        fetchNotifications();
+      } else {
+        Alert.alert("Hata", data.error || "İşlem başarısız.");
+      }
+    } catch (e) {
+      Alert.alert("Hata", "Sunucuya bağlanılamadı.");
+    }
+  };
+
   const toggleSort = () => {
     setSortBy((prev) => (prev === "NEWEST" ? "UNREAD_FIRST" : "NEWEST"));
   };
@@ -193,10 +258,12 @@ export default function BildirimlerScreen() {
   const Chip = ({
     label,
     active,
+    badge,
     onPress,
   }: {
     label: string;
     active: boolean;
+    badge?: number;
     onPress: () => void;
   }) => (
     <Pressable
@@ -206,68 +273,90 @@ export default function BildirimlerScreen() {
       <Text style={active ? styles.chipTextActive : styles.chipTextPassive}>
         {label}
       </Text>
+
+      {!!badge && badge > 0 && (
+        <View style={active ? styles.badgeActive : styles.badgePassive}>
+          <Text style={active ? styles.badgeTextActive : styles.badgeTextPassive}>
+            {badge}
+          </Text>
+        </View>
+      )}
     </Pressable>
   );
 
-  const respondInvite = async (notificationId: string, action: "ACCEPT" | "REJECT") => {
-  if (!token) return;
-  try {
-    const res = await fetch(`${API_URL}/notifications/respond-invite`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ notificationId, action }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      Alert.alert("Başarılı", action === "ACCEPT" ? "Ekibe katıldınız!" : "Davet reddedildi.");
-      fetchNotifications();
-    } else {
-      Alert.alert("Hata", data.error || "İşlem başarısız.");
-    }
-  } catch (e) {
-    Alert.alert("Hata", "Sunucuya bağlanılamadı.");
-  }
-};
+  const renderItem = ({ item }: { item: NotificationItem }) => {
+    const workspaceName = getWorkspaceName(item);
+    const isInvite = item.type === "INVITE";
 
-const renderItem = ({ item }: { item: NotificationItem }) => (
-  <Pressable
-    style={[styles.card, item.isRead ? styles.cardRead : styles.cardUnread]}
-    onPress={() => { if (!item.isRead) markAsRead(item.id); }}
-  >
-    <View style={styles.cardTopRow}>
-      <View style={styles.cardTextArea}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>{item.title}</Text>
-          {!item.isRead && <View style={styles.unreadDot} />}
-        </View>
-        <Text style={styles.msg}>{item.message}</Text>
-
-        {item.type === "INVITE" && !item.isRead && (
-          <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
-            <Pressable
-              style={{ backgroundColor: "#2563EB", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 }}
-              onPress={() => respondInvite(item.id, "ACCEPT")}
-            >
-              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>Kabul Et</Text>
-            </Pressable>
-            <Pressable
-              style={{ backgroundColor: "#FEE2E2", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 }}
-              onPress={() => respondInvite(item.id, "REJECT")}
-            >
-              <Text style={{ color: "#DC2626", fontWeight: "800", fontSize: 13 }}>Reddet</Text>
-            </Pressable>
+    return (
+      <Pressable
+        style={[styles.card, item.isRead ? styles.cardRead : styles.cardUnread]}
+        onPress={() => {
+          if (!item.isRead) markAsRead(item.id);
+        }}
+      >
+        <View style={styles.cardTopRow}>
+          <View style={isInvite ? styles.inviteIconBox : styles.taskIconBox}>
+            <MaterialIcons
+              name={isInvite ? "groups" : "check-circle-outline"}
+              size={24}
+              color={isInvite ? "#2563EB" : "#16A34A"}
+            />
           </View>
-        )}
-      </View>
 
-      {!item.isRead && item.type !== "INVITE" && (
-        <Pressable style={styles.doneButton} onPress={() => markAsRead(item.id)}>
-          <MaterialIcons name="done" size={18} color="#2563EB" />
-        </Pressable>
-      )}
-    </View>
-  </Pressable>
-);
+          <View style={styles.cardTextArea}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.title}>{item.title}</Text>
+
+              <View style={styles.rightInfo}>
+                {!!item.createdAt && (
+                  <Text style={styles.dateText}>{formatDate(item.createdAt)}</Text>
+                )}
+
+                {!item.isRead && <View style={styles.unreadDot} />}
+              </View>
+            </View>
+
+            <Text style={styles.msg}>{item.message}</Text>
+
+            {isInvite && !!workspaceName && (
+              <View style={styles.workspaceBox}>
+                <MaterialIcons name="groups" size={15} color="#2563EB" />
+                <Text style={styles.workspaceLabel}>Davet edildiğin ekip:</Text>
+                <Text style={styles.workspaceName}>{workspaceName}</Text>
+              </View>
+            )}
+
+            {isInvite && !item.isRead && (
+              <View style={styles.inviteActions}>
+                <Pressable
+                  style={styles.acceptButton}
+                  onPress={() => respondInvite(item.id, "ACCEPT")}
+                >
+                  <MaterialIcons name="check" size={16} color="#FFFFFF" />
+                  <Text style={styles.acceptText}>Katıl</Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.rejectButton}
+                  onPress={() => respondInvite(item.id, "REJECT")}
+                >
+                  <MaterialIcons name="close" size={16} color="#334155" />
+                  <Text style={styles.rejectText}>Reddet</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+
+          {!item.isRead && !isInvite && (
+            <Pressable style={styles.doneButton} onPress={() => markAsRead(item.id)}>
+              <MaterialIcons name="done" size={18} color="#2563EB" />
+            </Pressable>
+          )}
+        </View>
+      </Pressable>
+    );
+  };
 
   if (firstLoading) {
     return (
@@ -280,10 +369,10 @@ const renderItem = ({ item }: { item: NotificationItem }) => (
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <View style={styles.headerCard}>
-          <View style={styles.headerTop}>
+        <View style={styles.headerRow}>
+          <View style={styles.headerLeft}>
             <View style={styles.iconBox}>
-              <MaterialIcons name="notifications-none" size={22} color="#2563EB" />
+              <MaterialIcons name="notifications-none" size={24} color="#2563EB" />
             </View>
 
             <View style={styles.headerTextArea}>
@@ -300,17 +389,17 @@ const renderItem = ({ item }: { item: NotificationItem }) => (
             onPress={markAllAsRead}
             disabled={notifications.length === 0 || loading}
           >
-            <MaterialIcons name="done-all" size={16} color="#2563EB" />
-            <Text style={styles.readAllButtonText}>Tümünü okundu say</Text>
+            <MaterialIcons name="done-all" size={16} color="#FFFFFF" />
+            <Text style={styles.readAllButtonText}>Tümünü Okundu Say</Text>
           </Pressable>
         </View>
 
         <View style={styles.filtersWrap}>
           <Pressable style={styles.sortButton} onPress={toggleSort}>
             <MaterialIcons
-              name={sortBy === "NEWEST" ? "swap-vert" : "sort"}
-              size={18}
-              color="#2563EB"
+              name={sortBy === "NEWEST" ? "filter-list" : "sort"}
+              size={20}
+              color="#64748B"
             />
           </Pressable>
 
@@ -320,11 +409,14 @@ const renderItem = ({ item }: { item: NotificationItem }) => (
             contentContainerStyle={styles.chipsScroll}
           >
             <Chip label="Hepsi" active={filter === "ALL"} onPress={() => setFilter("ALL")} />
+
             <Chip
               label="Okunmadı"
               active={filter === "UNREAD"}
+              badge={unreadCount}
               onPress={() => setFilter("UNREAD")}
             />
+
             <Chip
               label="Uyarılar"
               active={filter === "ALERTS"}
@@ -366,25 +458,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: 12,
   },
 
-  headerCard: {
+  headerRow: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: 22,
     padding: 16,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     marginBottom: 14,
   },
-  headerTop: {
+  headerLeft: {
     flexDirection: "row",
     alignItems: "center",
   },
   iconBox: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 15,
     backgroundColor: "#EAF1FF",
     alignItems: "center",
     justifyContent: "center",
@@ -400,54 +492,56 @@ const styles = StyleSheet.create({
   },
   headerSub: {
     fontSize: 13,
-    color: "#94A3B8",
+    color: "#64748B",
     marginTop: 2,
   },
-
   readAllButton: {
     marginTop: 14,
     alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#EFF6FF",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    gap: 7,
+    backgroundColor: "#2563EB",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
   },
   readAllButtonText: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#2563EB",
+    color: "#FFFFFF",
   },
 
   filtersWrap: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   sortButton: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 10,
+    marginRight: 9,
   },
   chipsScroll: {
     gap: 8,
     paddingRight: 8,
   },
   chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    minHeight: 38,
+    paddingHorizontal: 15,
+    paddingVertical: 9,
     borderRadius: 16,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: 7,
   },
   chipPassive: {
     backgroundColor: "#FFFFFF",
@@ -459,13 +553,41 @@ const styles = StyleSheet.create({
   },
   chipTextPassive: {
     color: "#475569",
-    fontWeight: "700",
+    fontWeight: "800",
     fontSize: 14,
   },
   chipTextActive: {
     color: "#FFFFFF",
-    fontWeight: "700",
+    fontWeight: "800",
     fontSize: 14,
+  },
+  badgePassive: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 99,
+    backgroundColor: "#EAF1FF",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+  badgeActive: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 99,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+  badgeTextPassive: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#2563EB",
+  },
+  badgeTextActive: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#2563EB",
   },
 
   listContent: {
@@ -473,14 +595,14 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   card: {
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 14,
-    marginBottom: 10,
+    marginBottom: 12,
     borderWidth: 1,
   },
   cardUnread: {
     backgroundColor: "#FFFFFF",
-    borderColor: "#DBEAFE",
+    borderColor: "#2563EB",
   },
   cardRead: {
     backgroundColor: "#F8FAFC",
@@ -490,19 +612,48 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
   },
+  taskIconBox: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    backgroundColor: "#DCFCE7",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  inviteIconBox: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    backgroundColor: "#DBEAFE",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
   cardTextArea: {
     flex: 1,
   },
-  titleRow: {
+  cardHeaderRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 8,
     marginBottom: 6,
   },
   title: {
+    flex: 1,
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "900",
     color: "#0F172A",
-    marginRight: 8,
+  },
+  rightInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  dateText: {
+    fontSize: 11,
+    color: "#64748B",
   },
   unreadDot: {
     width: 8,
@@ -514,6 +665,63 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#475569",
     lineHeight: 20,
+  },
+  workspaceBox: {
+    marginTop: 12,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    borderRadius: 13,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  workspaceLabel: {
+    fontSize: 12,
+    color: "#2563EB",
+    fontWeight: "700",
+  },
+  workspaceName: {
+    fontSize: 12,
+    color: "#0F172A",
+    fontWeight: "900",
+  },
+  inviteActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 14,
+  },
+  acceptButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#111827",
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+  },
+  acceptText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  rejectButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+  },
+  rejectText: {
+    color: "#334155",
+    fontSize: 13,
+    fontWeight: "900",
   },
   doneButton: {
     width: 34,
@@ -551,10 +759,10 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     textAlign: "center",
   },
-
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#F5F7FB",
   },
 });

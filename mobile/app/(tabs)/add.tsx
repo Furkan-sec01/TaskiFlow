@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://192.168.1.128:5000/api";
+const API_URL = "http://192.168.43.19:5000/api";
 
 const STATUS_OPTIONS = [
     { label: "Yapılacak", color: "#F59E0B" },

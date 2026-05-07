@@ -145,19 +145,23 @@ export default function ProjePanosuScreen() {
         }
     };
 
-    const handleComplete = async (task: Task) => {
-        try {
-            const token = await AsyncStorage.getItem("token");
-            await fetch(`${API_URL}/api/tasks/${task.id}/complete`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ action: task.isCompleted ? "NONE" : "COMPLETED" }),
-            });
-            fetchBoard();
-        } catch (e) {
-            Alert.alert("Hata", "Durum güncellenemedi.");
-        }
-    };
+   const handleComplete = async (task: Task) => {
+    try {
+        const token = await AsyncStorage.getItem("token");
+        const response = await fetch(`${API_URL}/api/tasks/${task.id}/complete`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ action: task.isCompleted ? "NONE" : "COMPLETED" }),
+        });
+        const data = await response.json();
+        console.log("Complete status:", response.status);
+        console.log("Complete response:", JSON.stringify(data));
+        fetchBoard();
+    } catch (e) {
+        console.log("Complete hatası:", e);
+        Alert.alert("Hata", "Durum güncellenemedi.");
+    }
+};
 
     const getColName = (col: Column) => col.name || col.title || "";
     const isCompletedColumn = (col: Column) => getColName(col).toLowerCase().includes("tamamland");
@@ -187,24 +191,28 @@ export default function ProjePanosuScreen() {
                 <SafeAreaView style={styles.safe}>
                     <View style={styles.header}>
                         <View style={styles.headerRow1}>
-                            <Pressable onPress={() => router.back()} style={styles.backBtn}>
-                                <Text style={styles.backBtnText}>← Geri Dön</Text>
-                            </Pressable>
-                            <Text style={styles.headerTitle}>{projectTitle.toUpperCase()}</Text>
-                            <View style={styles.headerActions}>
-                                {showRaporParam !== "true" && (
-                                    <>
-                                        <Pressable style={styles.raporBtn} onPress={() => setShowRapor(!showRapor)}>
-                                            <MaterialIcons name="bar-chart" size={16} color="#2563EB" />
-                                            <Text style={styles.raporBtnText}>RAPOR</Text>
-                                        </Pressable>
-                                        <Pressable style={styles.resimBtn} onPress={() => setShowBgPicker(true)}>
-                                            <MaterialIcons name="image" size={16} color="#6B7280" />
-                                            <Text style={styles.resimBtnText}>RESİM</Text>
-                                        </Pressable>
-                                    </>
-                                )}
-                            </View>
+                           <Pressable onPress={() => router.back()} style={styles.backBtn}>
+    <MaterialIcons name="arrow-back" size={20} color="#6B7280" />
+</Pressable>
+<Text style={styles.headerTitle}>{projectTitle.toUpperCase()}</Text>
+<View style={styles.headerActions}>
+    {showRaporParam !== "true" && (
+        <>
+            <Pressable style={styles.actionBtn} onPress={() => setShowRapor(!showRapor)}>
+                <MaterialIcons name="bar-chart" size={14} color="#2563EB" />
+                <Text style={styles.actionBtnText}>RAPOR</Text>
+            </Pressable>
+            <Pressable style={styles.actionBtn} onPress={() => setShowBgPicker(true)}>
+                <MaterialIcons name="image" size={14} color="#6B7280" />
+                <Text style={styles.actionBtnText}>RESİM</Text>
+            </Pressable>
+            <Pressable style={styles.actionBtn} onPress={() => router.push({ pathname: "/documents", params: { projectId } })}>
+                <MaterialIcons name="attach-file" size={14} color="#6B7280" />
+                <Text style={styles.actionBtnText}>BELGE</Text>
+            </Pressable>
+        </>
+    )}
+</View>
                         </View>
 
                         {showRaporParam !== "true" && (
@@ -481,14 +489,13 @@ const styles = StyleSheet.create({
     safe: { flex: 1, backgroundColor: 'rgba(255,255,255,0.35)' },
     header: { paddingHorizontal: 16, paddingTop: Platform.OS === 'android' ? 40 : 10, backgroundColor: 'rgba(255,255,255,0.88)', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingBottom: 12 },
     headerRow1: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-    backBtn: {},
-    backBtnText: { color: '#6B7280', fontSize: 13, fontWeight: '600' },
+ backBtn: { padding: 4 },
     headerTitle: { fontSize: 16, fontWeight: '900', color: '#111827', letterSpacing: 1, flex: 1, textAlign: 'center' },
     headerActions: { flexDirection: 'row', gap: 8 },
-    raporBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-    raporBtnText: { fontSize: 11, fontWeight: '700', color: '#2563EB' },
-    resimBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F3F4F6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-    resimBtnText: { fontSize: 11, fontWeight: '700', color: '#6B7280' },
+   raporBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+raporBtnText: { fontSize: 11, fontWeight: '700', color: '#2563EB' },
+resimBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F3F4F6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+resimBtnText: { fontSize: 11, fontWeight: '700', color: '#6B7280' },
     searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, height: 40, marginBottom: 10, borderWidth: 1, borderColor: '#E5E7EB' },
     searchInput: { flex: 1, marginLeft: 8, fontSize: 13, color: '#111827' },
     filterGroup: { flexDirection: 'row', backgroundColor: '#F3F4F6', borderRadius: 20, padding: 4, alignSelf: 'flex-start' },

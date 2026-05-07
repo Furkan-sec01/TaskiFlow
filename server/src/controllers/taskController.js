@@ -213,7 +213,6 @@ exports.toggleTimer = async (req, res)=>{
         res.status(500).json({ error: "Zaman güncellenirken bir hata oluştu." });
     }
 }
-
 exports.completeTask = async (req, res) => {
     const { taskId } = req.params;
     const { action } = req.body; // "COMPLETED" veya "NONE"
@@ -221,33 +220,77 @@ exports.completeTask = async (req, res) => {
 
     try {
         const task = await prisma.task.findUnique({
-            where: { id: taskId }
+            where: { id: taskId },
+            include: { project: true }
         });
 
         if (!task) {
             return res.status(404).json({ error: "Görev bulunamadı." });
         }
 
-        if (userId !== task.assigneeId && userId !== task.ownerId) {
+        // Yetki kontrolü - assignee, owner veya proje sahibi olabilir
+        const isAuthorized = userId === task.assigneeId || 
+                             userId === task.ownerId || 
+                             userId === task.project?.ownerId;
+
+        if (!isAuthorized) {
             return res.status(403).json({
                 error: "Bu görevin durumunu değiştirme yetkiniz yok."
             });
         }
 
-        
         const isDone = action === "COMPLETED";
-        
+
+        let targetColumnId = task.columnId;
+
+        if (isDone) {
+            // "Tamamlandı" kolonunu bul
+            const completedColumn = await prisma.column.findFirst({
+    where: {
+        projectId: task.projectId,
+        OR: [
+            { title: { contains: "Tamamland" } },
+            { title: { contains: "tamamland" } },
+            { title: { contains: "done" } },
+            { title: { contains: "completed" } },
+        ]
+    }
+});
+            if (completedColumn) {
+                targetColumnId = completedColumn.id;
+            }
+        } else {
+            // Geri alınırsa "Yapılacak" kolonuna taşı
+            const todoColumn = await prisma.column.findFirst({
+                where: {
+                    projectId: task.projectId,
+                   OR: [
+    { title: { contains: "Tamamla" } },
+    { title: { contains: "tamamla" } },
+    { title: { contains: "Done" } },
+    { title: { contains: "done" } },
+    { title: { contains: "completed" } },
+]
+                }
+            });
+
+            if (todoColumn) {
+                targetColumnId = todoColumn.id;
+            }
+        }
+
         const updatedTask = await prisma.task.update({
             where: { id: taskId },
             data: {
                 isCompleted: isDone,
-                completedAt: isDone ? new Date() : null 
+                completedAt: isDone ? new Date() : null,
+                columnId: targetColumnId
             }
         });
 
-        return res.status(200).json({ 
-            message: isDone ? "Görev tamamlandı olarak işaretlendi." : "Görev durumu geri alındı.", 
-            task: updatedTask 
+        return res.status(200).json({
+            message: isDone ? "Görev tamamlandı olarak işaretlendi." : "Görev durumu geri alındı.",
+            task: updatedTask
         });
 
     } catch (error) {

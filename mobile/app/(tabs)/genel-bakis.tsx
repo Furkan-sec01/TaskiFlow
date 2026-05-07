@@ -45,6 +45,7 @@ export default function GenelBakisScreen() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
     const [userName, setUserName] = useState("Kullanıcı");
+    const [userPlan, setUserPlan] = useState<"FREE" | "PRO" | "BUSINESS">("FREE");
     const [orgId, setOrgId] = useState<string | null>(null);
     const [members, setMembers] = useState<Member[]>([]);
     const [membersLoading, setMembersLoading] = useState(true);
@@ -62,12 +63,31 @@ export default function GenelBakisScreen() {
                 const user = JSON.parse(userData);
                 setUserName(user.name || user.email || "Kullanıcı");
             }
+
             const token = await AsyncStorage.getItem("token");
+
+            const billingRes = await fetch(`${API_URL}/payments/overview`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            const billingData = await billingRes.json();
+
+            const plan = String(billingData?.subscription?.plan || "FREE").toUpperCase();
+                if (plan === "BUSINESS") {
+                    setUserPlan("BUSINESS");
+                } else if (plan === "PRO") {
+                    setUserPlan("PRO");
+                } else {
+                    setUserPlan("FREE");
+                }
+
             const res = await fetch(`${API_URL}/organizations`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
+
             const data = await res.json();
             let foundOrgId = null;
+
             if (Array.isArray(data) && data.length > 0) {
                 foundOrgId = data[0].id;
                 setOrgId(data[0].id);
@@ -75,6 +95,7 @@ export default function GenelBakisScreen() {
                 foundOrgId = data.id;
                 setOrgId(data.id);
             }
+
             if (foundOrgId) fetchMembers(foundOrgId, token!);
         } catch (e) {
             console.log("Org yükleme hatası:", e);
@@ -106,14 +127,25 @@ export default function GenelBakisScreen() {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();
+
             if (Array.isArray(data)) {
-                const projectsWithProgress = data.map((p: any) => {
-                    const tasks = p.tasks || p.columns?.flatMap((c: any) => c.tasks || []) || [];
-                    const total = tasks.length;
-                    const done = tasks.filter((t: any) => t.isCompleted === true).length;
-                    const progress = total > 0 ? Math.round((done / total) * 100) : 0;
-                    return { ...p, progress };
-                });
+                const projectsWithProgress = await Promise.all(data.map(async (p: any) => {
+                    try {
+                        const boardRes = await fetch(`${API_URL}/project/${p.id}/board`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                        });
+                        const boardData = await boardRes.json();
+                        const tasks = boardData.columns?.flatMap((c: any) => c.tasks || []) || [];
+                        console.log("Görevler:", JSON.stringify(tasks));
+                        const total = tasks.length;
+                        const done = tasks.filter((t: any) => t.isCompleted === true).length;
+                        const progress = total > 0 ? Math.round((done / total) * 100) : 0;
+                        return { ...p, progress };
+                    } catch {
+                        return { ...p, progress: 0 };
+                    }
+                }));
+
                 setProjects(projectsWithProgress);
             }
         } catch (e) {
@@ -124,70 +156,104 @@ export default function GenelBakisScreen() {
     };
 
     const handleCreateProject = async () => {
-    if (!projectName.trim()) return;
-    if (!projectDesc.trim()) { Alert.alert("Hata", "Açıklama zorunludur."); return; }
-    if (!orgId) { Alert.alert("Hata", "Organizasyon bulunamadı."); return; }
-    try {
-        const token = await AsyncStorage.getItem("token");
-        const res = await fetch(`${API_URL}/project`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ title: projectName, description: projectDesc, organizationId: orgId }),
-        });
-        const newProject = await res.json();
-        if (newProject.project?.id || newProject.id) {
-            const p = newProject.project || newProject;
-            const defaultColumns = ["Yapılacak", "Devam Ediyor", "Tamamlandı"];
-            for (const colName of defaultColumns) {
-                await fetch(`${API_URL}/column/create/${p.id}`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({ title: colName }),
-                });
-            }
-            setProjects([...projects, { ...p, progress: 0 }]);
-            setProjectName("");
-            setProjectDesc("");
-            setModalVisible(false);
-            Alert.alert("Başarılı ✅", "Proje ve kolonlar oluşturuldu!");
-        } else {
-            Alert.alert("Hata", newProject.error || "Proje oluşturulamadı.");
+        const projectLimit =
+            userPlan === "BUSINESS" ? Infinity :
+            userPlan === "PRO" ? 10 : 2;
+
+        if (projects.length >= projectLimit) {
+            Alert.alert(
+                "Limit Doldu 🚫",
+                userPlan === "PRO"
+                    ? "PRO planda en fazla 10 proje oluşturabilirsiniz."
+                    : "Ücretsiz planda en fazla 2 proje oluşturabilirsiniz. Devam etmek için planınızı yükseltin.",
+                userPlan === "PRO"
+                    ? [{ text: "Tamam" }]
+                    : [
+                        { text: "Vazgeç", style: "cancel" },
+                        {
+                            text: "Ödeme Sayfasına Git",
+                            onPress: () => {
+                                setModalVisible(false);
+                                router.push("/plans");
+                            },
+                        },
+                    ]
+            );
+            return;
         }
-    } catch (e) {
-        Alert.alert("Hata", "Sunucuya bağlanılamadı.");
-    }
-};
+
+        if (!projectName.trim()) return;
+        if (!projectDesc.trim()) { Alert.alert("Hata", "Açıklama zorunludur."); return; }
+        try {
+    const token = await AsyncStorage.getItem("token");
+    const res = await fetch(`${API_URL}/project`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ title: projectName, description: projectDesc, organizationId: orgId || null }),
+    });
+            const newProject = await res.json();
+
+            if (newProject.project?.id || newProject.id) {
+                const p = newProject.project || newProject;
+                const defaultColumns = ["Yapılacak", "Devam Ediyor", "Tamamlandı"];
+for (const colName of defaultColumns) {
+    const colRes = await fetch(`${API_URL}/column/create/${p.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ title: colName }),
+    });
+    const colData = await colRes.json();
+    console.log(`Kolon "${colName}" sonucu:`, JSON.stringify(colData));
+}
+                setProjects([...projects, { ...p, progress: 0 }]);
+                setProjectName("");
+                setProjectDesc("");
+                setModalVisible(false);
+                Alert.alert("Başarılı ✅", "Proje ve kolonlar oluşturuldu!");
+            } else {
+                Alert.alert("Hata", newProject.error || "Proje oluşturulamadı.");
+            }
+        } catch (e) {
+            Alert.alert("Hata", "Sunucuya bağlanılamadı.");
+        }
+    };
 
     const handleAddMember = async () => {
-    if (!newMemberEmail.trim()) return;
-    if (!orgId) { Alert.alert("Hata", "Organizasyon bulunamadı."); return; }
-    try {
-        setAddingMember(true);
-        const token = await AsyncStorage.getItem("token");
-        const res = await fetch(`${API_URL}/organizations/invite`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-           body: JSON.stringify({ email: newMemberEmail.trim(), orgId: orgId }),
-        });
-        const data = await res.json();
-        if (res.ok) {
-            Alert.alert("Başarılı", `${newMemberEmail} organizasyona eklendi!`);
-            setNewMemberEmail("");
-            setAddMemberModal(false);
-            fetchMembers(orgId, token!);
-        } else {
-            Alert.alert("Hata", data.error || "Üye eklenemedi.");
+        if (!newMemberEmail.trim()) return;
+        if (!orgId) { Alert.alert("Hata", "Organizasyon bulunamadı."); return; }
+
+        try {
+            setAddingMember(true);
+            const token = await AsyncStorage.getItem("token");
+            const res = await fetch(`${API_URL}/organizations/invite`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ email: newMemberEmail.trim(), orgId: orgId }),
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                Alert.alert("Başarılı", `${newMemberEmail} organizasyona davet edildi!`);
+                setNewMemberEmail("");
+                setAddMemberModal(false);
+                fetchMembers(orgId, token!);
+            } else {
+                Alert.alert("Hata", data.error || "Üye eklenemedi.");
+            }
+        } catch (e) {
+            Alert.alert("Hata", "Sunucuya bağlanılamadı.");
+        } finally {
+            setAddingMember(false);
         }
-    } catch (e) {
-    console.log("Üye ekleme hatası:", e);
-    Alert.alert("Hata", "Sunucuya bağlanılamadı.");
-}
-        setAddingMember(false);
-    
-};
+    };
+
     const filteredProjects = projects.filter((p) =>
         (p.title || p.name || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const activeProjects = filteredProjects.filter(p => (p.progress || 0) < 100);
+    const completedProjects = projects.filter(p => (p.progress || 0) >= 100);
 
     const getProgressColor = (progress: number) => {
         if (progress >= 75) return "#10B981";
@@ -274,19 +340,19 @@ export default function GenelBakisScreen() {
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Kayıtlı Projeler</Text>
                     <View style={styles.line} />
-                    <Text style={styles.sectionCount}>{filteredProjects.length} TOPLAM</Text>
+                    <Text style={styles.sectionCount}>{activeProjects.length} TOPLAM</Text>
                 </View>
 
                 {loading ? (
                     <ActivityIndicator size="large" color="#2563EB" style={{ marginVertical: 40 }} />
-                ) : filteredProjects.length === 0 ? (
+                ) : activeProjects.length === 0 ? (
                     <View style={styles.emptyProjectsCard}>
                         <MaterialIcons name="web-asset" size={48} color="#D1D5DB" />
                         <Text style={styles.emptyText}>Görüntülenecek proje bulunamadı.</Text>
                     </View>
                 ) : (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.projectsList}>
-                        {filteredProjects.map((proj) => {
+                        {activeProjects.map((proj) => {
                             const progressColor = getProgressColor(proj.progress || 0);
                             return (
                                 <Pressable
@@ -337,6 +403,52 @@ export default function GenelBakisScreen() {
                             );
                         })}
                     </ScrollView>
+                )}
+
+                {completedProjects.length > 0 && (
+                    <>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Tamamlanan Projeler</Text>
+                            <View style={styles.line} />
+                            <Text style={styles.sectionCount}>{completedProjects.length} TOPLAM</Text>
+                        </View>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.projectsList}>
+                            {completedProjects.map((proj) => (
+                                <Pressable
+                                    key={proj.id}
+                                    style={[styles.projectCard, { borderWidth: 2, borderColor: "#10B981" }]}
+                                    onPress={() => router.push({ pathname: "/proje-panosu", params: { projectId: proj.id } })}
+                                >
+                                    <View style={styles.projectCardTop}>
+                                        <View style={[styles.projectIconBox, { backgroundColor: "#10B981" }]}>
+                                            <MaterialIcons name="check-circle" size={24} color="#fff" />
+                                        </View>
+                                        <View style={[styles.statusBadge, { backgroundColor: "#DCFCE7" }]}>
+                                            <Text style={[styles.statusBadgeText, { color: "#16A34A" }]}>TAMAMLANDI</Text>
+                                        </View>
+                                    </View>
+                                    <Text style={styles.projectName}>{proj.title || proj.name}</Text>
+                                    {proj.description ? <Text style={styles.projectDesc} numberOfLines={1}>{proj.description}</Text> : null}
+                                    <View style={styles.progressSection}>
+                                        <View style={styles.progressLabelRow}>
+                                            <Text style={styles.progressLabel}>İlerleme</Text>
+                                            <Text style={[styles.progressPercent, { color: "#10B981" }]}>%100</Text>
+                                        </View>
+                                        <View style={styles.progressBarBg}>
+                                            <View style={[styles.progressBarFill, { width: "100%", backgroundColor: "#10B981" }]} />
+                                        </View>
+                                    </View>
+                                    <View style={styles.projectCardBottom}>
+                                        <View style={styles.dateRow}>
+                                            <MaterialIcons name="calendar-today" size={12} color="#9CA3AF" />
+                                            <Text style={styles.dateText}>{formatDate(proj.createdAt)}</Text>
+                                        </View>
+                                        <Text style={[styles.openFileText, { color: "#10B981" }]}>Dosyayı Aç {">"}</Text>
+                                    </View>
+                                </Pressable>
+                            ))}
+                        </ScrollView>
+                    </>
                 )}
 
                 <View style={styles.statsLayout}>

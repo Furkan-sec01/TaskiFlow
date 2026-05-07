@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, ActivityIndic
 import { MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://192.168.1.128:5000";
+const API_URL = "http://192.168.43.19:5000";
 
 const PROJECT_CONTEXT = {
   name: "PROJ-Alpha", sprint: "Sprint 7", totalTasks: 16, done: 7,

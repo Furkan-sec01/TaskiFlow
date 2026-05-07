@@ -17,7 +17,6 @@ import { useRouter } from "expo-router";
 import { API_URL } from "@/constants/api";
 import { Eye, EyeOff } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
 export default function LoginScreen() {
   const router = useRouter();
 

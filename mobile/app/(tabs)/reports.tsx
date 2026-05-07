@@ -10,7 +10,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 60) / 2;
-const API_URL = "http://192.168.1.128:5000";
+const API_URL = "http://192.168.43.19:5000";
 
 const COLORS = [
     { border: "#3B82F6" }, { border: "#EC4899" }, { border: "#10B981" },
