@@ -16,7 +16,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://192.168.43.19:5000/api";
+const API_URL = "http://192.168.1.128:5000/api";
 
 interface Member {
     id: string;
@@ -156,110 +156,67 @@ export default function GenelBakisScreen() {
     };
 
     const handleCreateProject = async () => {
-    const projectLimit =
-        userPlan === "BUSINESS" ? Infinity :
-        userPlan === "PRO" ? 10 : 2;
+        const projectLimit =
+            userPlan === "BUSINESS" ? Infinity :
+            userPlan === "PRO" ? 10 : 2;
 
-    if (projects.length >= projectLimit) {
-        if (userPlan === "PRO") {
+        if (projects.length >= projectLimit) {
             Alert.alert(
-                "Business Plan Gerekli 🚀",
-                "PRO planda en fazla 10 proje oluşturabilirsiniz. Daha fazla proje için Business plana geçmelisiniz.",
-                [
-                    { text: "Vazgeç", style: "cancel" },
-                    {
-                        text: "Business'a Geç",
-                        onPress: () => {
-                            setModalVisible(false);
-                            router.push({
-                                pathname: "/payment",
-                                params: {
-                                    planId: "enterprise",
-                                    period: "monthly",
-                                    amount: "299",
-                                },
-                            });
+                "Limit Doldu 🚫",
+                userPlan === "PRO"
+                    ? "PRO planda en fazla 10 proje oluşturabilirsiniz."
+                    : "Ücretsiz planda en fazla 2 proje oluşturabilirsiniz. Devam etmek için planınızı yükseltin.",
+                userPlan === "PRO"
+                    ? [{ text: "Tamam" }]
+                    : [
+                        { text: "Vazgeç", style: "cancel" },
+                        {
+                            text: "Ödeme Sayfasına Git",
+                            onPress: () => {
+                                setModalVisible(false);
+                                router.push("/plans");
+                            },
                         },
-                    },
-                ]
+                    ]
             );
             return;
         }
 
-        Alert.alert(
-            "Limit Doldu 🚫",
-            "Ücretsiz planda en fazla 2 proje oluşturabilirsiniz. Devam etmek için planınızı yükseltin.",
-            [
-                { text: "Vazgeç", style: "cancel" },
-                {
-                    text: "Ödeme Sayfasına Git",
-                    onPress: () => {
-                        setModalVisible(false);
-                        router.push("/plans");
-                    },
-                },
-            ]
-        );
-        return;
-    }
+        if (!projectName.trim()) return;
+        if (!projectDesc.trim()) { Alert.alert("Hata", "Açıklama zorunludur."); return; }
+        try {
+    const token = await AsyncStorage.getItem("token");
+    const res = await fetch(`${API_URL}/project`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ title: projectName, description: projectDesc, organizationId: orgId || null }),
+    });
+            const newProject = await res.json();
 
-    if (!projectName.trim()) return;
-
-    if (!projectDesc.trim()) {
-        Alert.alert("Hata", "Açıklama zorunludur.");
-        return;
-    }
-
-    if (!orgId) {
-        Alert.alert("Hata", "Organizasyon bulunamadı.");
-        return;
-    }
-
-    try {
-        const token = await AsyncStorage.getItem("token");
-
-        const res = await fetch(`${API_URL}/project`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-                title: projectName,
-                description: projectDesc,
-                organizationId: orgId,
-            }),
-        });
-
-        const newProject = await res.json();
-
-        if (newProject.project?.id || newProject.id) {
-            const p = newProject.project || newProject;
-            const defaultColumns = ["Yapılacak", "Devam Ediyor", "Tamamlandı"];
-
-            for (const colName of defaultColumns) {
-                await fetch(`${API_URL}/column/create/${p.id}`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({ title: colName }),
-                });
+            if (newProject.project?.id || newProject.id) {
+                const p = newProject.project || newProject;
+                const defaultColumns = ["Yapılacak", "Devam Ediyor", "Tamamlandı"];
+for (const colName of defaultColumns) {
+    const colRes = await fetch(`${API_URL}/column/create/${p.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ title: colName }),
+    });
+    const colData = await colRes.json();
+    console.log(`Kolon "${colName}" sonucu:`, JSON.stringify(colData));
+}
+                setProjects([...projects, { ...p, progress: 0 }]);
+                setProjectName("");
+                setProjectDesc("");
+                setModalVisible(false);
+                Alert.alert("Başarılı ✅", "Proje ve kolonlar oluşturuldu!");
+            } else {
+                Alert.alert("Hata", newProject.error || "Proje oluşturulamadı.");
             }
-
-            setProjects([...projects, { ...p, progress: 0 }]);
-            setProjectName("");
-            setProjectDesc("");
-            setModalVisible(false);
-            Alert.alert("Başarılı ✅", "Proje ve kolonlar oluşturuldu!");
-        } else {
-            Alert.alert("Hata", newProject.error || "Proje oluşturulamadı.");
+        } catch (e) {
+            Alert.alert("Hata", "Sunucuya bağlanılamadı.");
         }
-    } catch (e) {
-        Alert.alert("Hata", "Sunucuya bağlanılamadı.");
-    }
-};
+    };
 
     const handleAddMember = async () => {
         if (!newMemberEmail.trim()) return;
