@@ -80,3 +80,19 @@ exports.deleteColumn = async (req, res) => {
         res.status(500).json({ error: "Sütun silinirken sunucu hatası oluştu." });
     }
 }
+exports.moveTask = async (req, res) => {
+    const { taskId } = req.params;
+    const { columnId } = req.body;
+
+    try {
+        const task = await prisma.task.update({
+            where: { id: taskId },
+            data: { columnId: columnId }
+        });
+
+        res.status(200).json({ message: "Görev taşındı.", task });
+    } catch (error) {
+        console.error("moveTask Hatası:", error);
+        res.status(500).json({ error: "Görev taşınırken hata oluştu." });
+    }
+};

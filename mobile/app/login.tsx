@@ -17,7 +17,6 @@ import { useRouter } from "expo-router";
 import { API_URL } from "@/constants/api";
 import { Eye, EyeOff } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Device from "expo-device";
 export default function LoginScreen() {
   const router = useRouter();
 
@@ -40,11 +39,6 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      console.log("DEVICE DEBUG:", {
-  brand: Device.brand,
-  modelName: Device.modelName,
-  deviceName: Device.deviceName,
-});
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
@@ -53,7 +47,6 @@ export default function LoginScreen() {
         body: JSON.stringify({
           email: email.trim(),
           password: password.trim(),
-          deviceName: Device.modelName || Device.deviceName || `${Device.brand || "Android"} Cihaz`,
         }),
       });
 

@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://192.168.43.19:5000/api";
+const API_URL = "http://192.168.1.128:5000/api";
 
 const STATUS_OPTIONS = [
     { label: "Yapılacak", color: "#F59E0B" },
@@ -43,7 +43,6 @@ export default function AddTaskScreen() {
         try {
             const token = await AsyncStorage.getItem("token");
 
-            // Projeleri çek
             const projRes = await fetch(`${API_URL}/project`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -53,7 +52,6 @@ export default function AddTaskScreen() {
                 if (projData.length > 0) setSelectedProjectId(projData[0].id);
             }
 
-            // Organizasyonu ve üyeleri çek
             const orgRes = await fetch(`${API_URL}/organizations`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -75,25 +73,21 @@ export default function AddTaskScreen() {
     };
 
     const handleSave = async () => {
-        console.log("handleSave çalıştı, proje:", selectedProjectId);
         if (!taskName.trim()) { Alert.alert("Hata", "Görev adı boş olamaz."); return; }
         if (!selectedProjectId) { Alert.alert("Hata", "Proje seçmelisiniz."); return; }
 
         try {
             setSaving(true);
             const token = await AsyncStorage.getItem("token");
-console.log("Kolonlar çekiliyor:", `${API_URL}/column/project/${selectedProjectId}`);
-            // Önce projenin kolonlarını çek
-           const colRes = await fetch(`${API_URL}/project/${selectedProjectId}/board`,  {
+
+            const colRes = await fetch(`${API_URL}/project/${selectedProjectId}/board`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const colData = await colRes.json();
-            console.log("Board data:", JSON.stringify(colData));
-            const columns = Array.isArray(colData) ? colData : colData.columns || colData.board?.columns || [];
+            const columns = Array.isArray(colData) ? colData : colData.columns || [];
 
             let columnId = null;
             if (columns.length > 0) {
-                // Seçilen duruma göre kolon bul
                 const statusMap: Record<string, string[]> = {
                     "Yapılacak": ["yapılacak", "todo", "to do", "to-do"],
                     "Devam Ediyor": ["devam", "progress", "in progress", "doing"],
@@ -106,16 +100,22 @@ console.log("Kolonlar çekiliyor:", `${API_URL}/column/project/${selectedProject
                 columnId = matchedCol?.id || columns[0]?.id;
             }
 
-            if (!columnId) { Alert.alert("Hata", "Proje kolonları bulunamadı. Önce projeyi açıp kolon ekleyin."); return; }
+            if (!columnId) {
+                Alert.alert("Hata", "Proje kolonları bulunamadı. Önce projeyi açıp kolon ekleyin.");
+                return;
+            }
 
-            const res = await fetch(`${API_URL}/task`, {
+            const assigneeMail = members.find(m => m.id === selectedAssigneeId)?.email || "";
+
+            const res = await fetch(`${API_URL}/tasks/create/${selectedProjectId}/${columnId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({
                     title: taskName.trim(),
                     description: taskDesc.trim(),
-                    columnId,
-                    assignedTo: selectedAssigneeId || undefined,
+                    assigneeMail,
+                    priority: "ORTA",
+                    date: new Date().toISOString(),
                 }),
             });
 
@@ -133,8 +133,6 @@ console.log("Kolonlar çekiliyor:", `${API_URL}/column/project/${selectedProject
             setSaving(false);
         }
     };
-
-    const selectedProject = projects.find(p => p.id === selectedProjectId);
 
     if (loading) {
         return (
@@ -181,18 +179,22 @@ console.log("Kolonlar çekiliyor:", `${API_URL}/column/project/${selectedProject
                 />
 
                 <Text style={styles.label}>Proje</Text>
-                <View style={styles.chipsRow}>
-                    {projects.map((p, i) => (
-                        <Pressable
-                            key={p.id}
-                            style={[styles.projectChip, selectedProjectId === p.id && { backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length], borderColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }]}
-                            onPress={() => { setSelectedProjectId(p.id); setSelectedAssigneeId(null); }}
-                        >
-                            <View style={[styles.projectDot, { backgroundColor: selectedProjectId === p.id ? "#fff" : AVATAR_COLORS[i % AVATAR_COLORS.length] }]} />
-                            <Text style={[styles.projectChipText, selectedProjectId === p.id && { color: "#fff" }]}>{p.title || p.name}</Text>
-                        </Pressable>
-                    ))}
-                </View>
+                {projects.length === 0 ? (
+                    <Text style={{ color: "#9CA3AF", fontSize: 13 }}>Henüz proje yok.</Text>
+                ) : (
+                    <View style={styles.chipsRow}>
+                        {projects.map((p, i) => (
+                            <Pressable
+                                key={p.id}
+                                style={[styles.projectChip, selectedProjectId === p.id && { backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length], borderColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }]}
+                                onPress={() => { setSelectedProjectId(p.id); setSelectedAssigneeId(null); }}
+                            >
+                                <View style={[styles.projectDot, { backgroundColor: selectedProjectId === p.id ? "#fff" : AVATAR_COLORS[i % AVATAR_COLORS.length] }]} />
+                                <Text style={[styles.projectChipText, selectedProjectId === p.id && { color: "#fff" }]}>{p.title || p.name}</Text>
+                            </Pressable>
+                        ))}
+                    </View>
+                )}
 
                 <Text style={styles.label}>Kişi Ata</Text>
                 <View style={styles.chipsRow}>

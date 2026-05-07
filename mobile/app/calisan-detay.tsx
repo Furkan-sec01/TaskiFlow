@@ -7,7 +7,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://192.168.43.19:5000";
+const API_URL = "http://192.168.1.128:5000";
 
 const AVATAR_COLORS = ["#2563EB", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
@@ -15,8 +15,10 @@ const PRIORITY_MAP: Record<string, { label: string; color: string; bg: string }>
   HIGH:   { label: "Yüksek", color: "#EF4444", bg: "#FEE2E2" },
   MEDIUM: { label: "Orta",   color: "#F59E0B", bg: "#FEF3C7" },
   LOW:    { label: "Düşük",  color: "#10B981", bg: "#D1FAE5" },
+  YÜKSEK: { label: "Yüksek", color: "#EF4444", bg: "#FEE2E2" },
+  ORTA:   { label: "Orta",   color: "#F59E0B", bg: "#FEF3C7" },
+  DÜŞÜK:  { label: "Düşük",  color: "#10B981", bg: "#D1FAE5" },
 };
-
 export default function CalisanDetayScreen() {
   const router = useRouter();
   const { memberId, memberName, memberEmail, memberRole } = useLocalSearchParams<{
@@ -31,13 +33,14 @@ export default function CalisanDetayScreen() {
 
   useEffect(() => { fetchMemberTasks(); }, []);
 
-  const fetchMemberTasks = async () => {
+const fetchMemberTasks = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/tasks?assigneeId=${memberId}`, {
+      const res = await fetch(`${API_URL}/api/users/${memberId}/tasks`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
+      console.log("Status:", res.status, "Data:", JSON.stringify(data));
       if (Array.isArray(data)) setTasks(data);
     } catch (e) {
       console.log("Görev yükleme hatası:", e);

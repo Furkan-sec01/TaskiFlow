@@ -7,5 +7,5 @@ router.use(authenticateToken);
 
 router.post("/create/:projectId", colController.createColumn);
 router.delete("/delete/:projectId/:columnId", colController.deleteColumn);
-
+router.patch("/task/:taskId/move", colController.moveTask);
 module.exports = router;

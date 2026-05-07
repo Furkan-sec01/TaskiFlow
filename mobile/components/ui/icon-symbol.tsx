@@ -52,6 +52,13 @@ const MAPPING = {
   'doc.text.fill': 'description',
   'rectangle.portrait.and.arrow.right': 'logout',
   'building.2.fill': 'business',
+
+  // Eksik ikonlar
+  'sparkles': 'auto-awesome',
+  'chart.bar.fill': 'bar-chart',
+  'camera.fill': 'camera-alt',
+  'checkmark.circle': 'check-circle',
+  'rectangle.portrait.and.arrow.right': 'logout',
 } as IconMapping;
 
 /**
