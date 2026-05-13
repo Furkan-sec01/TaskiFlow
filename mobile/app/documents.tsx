@@ -1,525 +1,215 @@
-import React, { useMemo, useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  TextInput,
-  Pressable,
+  View, Text, StyleSheet, SafeAreaView, ScrollView,
+  TextInput, Pressable, ActivityIndicator, Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as DocumentPicker from "expo-document-picker";
 
-type FileType = "PDF" | "Excel" | "Sunu" | "Word" | "Görsel";
-
-type FileItem = {
-  id: string;
-  title: string;
-  type: FileType;
-  size: string;
-  project: string;
-  updatedAt: string;
-  owner: string;
-};
-
-const SAMPLE_FILES: FileItem[] = [
-  {
-    id: "1",
-    title: "Q1 2024 Report",
-    type: "PDF",
-    size: "2.4 MB",
-    project: "Rapor",
-    updatedAt: "2 saat önce",
-    owner: "Finans",
-  },
-  {
-    id: "2",
-    title: "Proje Planı",
-    type: "Excel",
-    size: "1.1 MB",
-    project: "Proje",
-    updatedAt: "1 gün önce",
-    owner: "Operasyon",
-  },
-  {
-    id: "3",
-    title: "Sunum Taslağı",
-    type: "Sunu",
-    size: "5.0 MB",
-    project: "Sunum",
-    updatedAt: "3 gün önce",
-    owner: "Yönetim",
-  },
-  {
-    id: "4",
-    title: "Sözleşme v2",
-    type: "Word",
-    size: "340 KB",
-    project: "Hukuk",
-    updatedAt: "1 hafta önce",
-    owner: "Legal",
-  },
-  {
-    id: "5",
-    title: "Logo Görselleri",
-    type: "Görsel",
-    size: "1.2 MB",
-    project: "Tasarım",
-    updatedAt: "2 hafta önce",
-    owner: "Design",
-  },
-  {
-    id: "6",
-    title: "Bütçe Tablosu",
-    type: "Excel",
-    size: "920 KB",
-    project: "Bütçe",
-    updatedAt: "1 gün önce",
-    owner: "Finans",
-  },
-];
+const API_URL = "http://192.168.1.128:5000/api";
 
 export default function DocumentsScreen() {
+  const { projectId } = useLocalSearchParams<{ projectId: string }>();
+  const router = useRouter();
+  const [documents, setDocuments] = useState<any[]>([]);
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
 
-  const filteredFiles = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return SAMPLE_FILES;
+  useEffect(() => { fetchDocuments(); }, []);
 
-    return SAMPLE_FILES.filter(
-      (item) =>
-        item.title.toLowerCase().includes(q) ||
-        item.type.toLowerCase().includes(q) ||
-        item.project.toLowerCase().includes(q) ||
-        item.owner.toLowerCase().includes(q)
-    );
-  }, [search]);
+  const fetchDocuments = async () => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem("token");
+      const url = projectId
+        ? `${API_URL}/documents?projectId=${projectId}`
+        : `${API_URL}/documents`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (Array.isArray(data)) setDocuments(data);
+    } catch (e) {
+      console.log("Belge yükleme hatası:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleCardPress = (id: string) => {
-    setActiveCardId((prev) => (prev === id ? null : id));
+  const handleUpload = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*",
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+
+      const file = result.assets[0];
+      setUploading(true);
+
+      const token = await AsyncStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", {
+        uri: file.uri,
+        name: file.name,
+        type: file.mimeType || "application/octet-stream",
+      } as any);
+      formData.append("title", file.name);
+      if (projectId) formData.append("projectId", projectId as string);
+
+     const res = await fetch(`${API_URL}/documents/upload`, {
+  method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        Alert.alert("Başarılı ✅", "Belge yüklendi.");
+        fetchDocuments();
+      } else {
+        Alert.alert("Hata", data.error || "Yüklenemedi.");
+      }
+    } catch (e) {
+      Alert.alert("Hata", "Dosya seçilemedi.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async (docId: string) => {
+    Alert.alert("Belgeyi Sil", "Bu belgeyi silmek istiyor musunuz?", [
+      { text: "İptal", style: "cancel" },
+      {
+        text: "Sil", style: "destructive",
+        onPress: async () => {
+          try {
+            const token = await AsyncStorage.getItem("token");
+            await fetch(`${API_URL}/documents/${docId}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            fetchDocuments();
+          } catch (e) {
+            Alert.alert("Hata", "Silinemedi.");
+          }
+        }
+      }
+    ]);
+  };
+
+  const filtered = documents.filter(d =>
+    d.title?.toLowerCase().includes(search.toLowerCase()) ||
+    d.originalName?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const getFileMeta = (type: string) => {
+    if (type?.includes("pdf")) return { icon: "picture-as-pdf" as const, color: "#EF4444", bg: "#FEE2E2" };
+    if (type?.includes("sheet") || type?.includes("excel") || type?.includes("csv")) return { icon: "table-chart" as const, color: "#22C55E", bg: "#DCFCE7" };
+    if (type?.includes("presentation") || type?.includes("powerpoint")) return { icon: "slideshow" as const, color: "#F59E0B", bg: "#FEF3C7" };
+    if (type?.includes("word") || type?.includes("document")) return { icon: "description" as const, color: "#3B82F6", bg: "#DBEAFE" };
+    if (type?.includes("image")) return { icon: "image" as const, color: "#A855F7", bg: "#F3E8FF" };
+    return { icon: "insert-drive-file" as const, color: "#64748B", bg: "#E2E8F0" };
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.pageTitle}>Documents</Text>
-        <Text style={styles.pageSubtitle}>
-          Dosyaları görüntüle, seç ve daha sonra istediğin yere bağla.
-        </Text>
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <MaterialIcons name="arrow-back" size={22} color="#111827" />
+        </Pressable>
+        <Text style={styles.headerTitle}>Belgeler</Text>
+      </View>
 
-        {/* Search + filters */}
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.topBar}>
           <View style={styles.searchBox}>
-            <MaterialIcons name="search" size={20} color="#94A3B8" />
+            <MaterialIcons name="search" size={18} color="#9CA3AF" />
             <TextInput
               value={search}
               onChangeText={setSearch}
               placeholder="Belge ara..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#9CA3AF"
               style={styles.searchInput}
             />
           </View>
-
-          <Pressable style={styles.filterButton}>
-            <Text style={styles.filterButtonText}>Tümü</Text>
-          </Pressable>
-
-          <Pressable style={styles.iconButton}>
-            <MaterialIcons name="grid-view" size={20} color="#475569" />
-          </Pressable>
         </View>
 
-        {/* Upload area */}
-        <Pressable style={styles.uploadBox}>
-          <View style={styles.uploadIconWrapper}>
-            <MaterialIcons name="cloud-upload" size={28} color="#3B82F6" />
+        <Pressable style={styles.uploadBox} onPress={handleUpload} disabled={uploading}>
+          <View style={styles.uploadIcon}>
+            <MaterialIcons name="cloud-upload" size={28} color="#2563EB" />
           </View>
-          <Text style={styles.uploadTitle}>Dosyaları buraya sürükleyin veya seçin</Text>
-          <Text style={styles.uploadSubtitle}>
-            PDF, Word, Excel, Sunu, Görseller desteklenir
-          </Text>
+          {uploading
+            ? <ActivityIndicator color="#2563EB" />
+            : <Text style={styles.uploadTitle}>Dosya Yükle</Text>
+          }
+          <Text style={styles.uploadSub}>PDF, Word, Excel, Görsel</Text>
         </Pressable>
 
-        {/* Cards */}
-        <View style={styles.grid}>
-          {filteredFiles.map((item) => {
-            const isActive = activeCardId === item.id;
-            const fileMeta = getFileMeta(item.type);
-
+        {loading ? (
+          <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
+        ) : filtered.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <MaterialIcons name="folder-open" size={40} color="#D1D5DB" />
+            <Text style={styles.emptyText}>Henüz belge yok</Text>
+          </View>
+        ) : (
+          filtered.map((doc) => {
+            const meta = getFileMeta(doc.mimeType || doc.type || "");
+            const isActive = activeCardId === doc.id;
             return (
-              <View key={item.id} style={styles.cardWrapper}>
+              <View key={doc.id} style={styles.cardWrap}>
                 <Pressable
-                  onPress={() => handleCardPress(item.id)}
                   style={[styles.card, isActive && styles.cardActive]}
+                  onPress={() => setActiveCardId(isActive ? null : doc.id)}
                 >
-                  <View style={styles.cardTopRow}>
-                    <View
-                      style={[
-                        styles.fileIconBox,
-                        { backgroundColor: fileMeta.softColor },
-                      ]}
-                    >
-                      <MaterialIcons
-                        name={fileMeta.icon}
-                        size={20}
-                        color={fileMeta.color}
-                      />
+                  <View style={styles.cardTop}>
+                    <View style={[styles.fileIcon, { backgroundColor: meta.bg }]}>
+                      <MaterialIcons name={meta.icon} size={20} color={meta.color} />
                     </View>
-
-                    <Pressable
-                      style={styles.moreButton}
-                      onPress={() => handleCardPress(item.id)}
-                    >
-                      <MaterialIcons name="more-horiz" size={20} color="#64748B" />
+                    <Pressable onPress={() => handleDelete(doc.id)}>
+                      <MaterialIcons name="delete-outline" size={20} color="#EF4444" />
                     </Pressable>
                   </View>
-
-                  <Text style={styles.cardTitle} numberOfLines={1}>
-                    {item.title}
-                  </Text>
-
-                  <Text style={styles.cardType}>
-                    {item.type} • {item.size}
-                  </Text>
-
-                  <View style={styles.cardFooter}>
-                    <Text style={styles.cardProject}>{item.project}</Text>
-                    <View style={styles.statusDot} />
-                  </View>
+                  <Text style={styles.cardTitle} numberOfLines={1}>{doc.title || doc.originalName}</Text>
+                  <Text style={styles.cardMeta}>{doc.size || ""} · {doc.project?.title || ""}</Text>
+                  <Text style={styles.cardDate}>{new Date(doc.createdAt).toLocaleDateString("tr-TR")}</Text>
                 </Pressable>
-
-                {isActive && (
-                  <View style={styles.expandedPanel}>
-                    <View style={styles.expandedRow}>
-                      <Text style={styles.expandedLabel}>Dosya adı</Text>
-                      <Text style={styles.expandedValue}>{item.title}</Text>
-                    </View>
-
-                    <View style={styles.expandedRow}>
-                      <Text style={styles.expandedLabel}>Tür</Text>
-                      <Text style={styles.expandedValue}>{item.type}</Text>
-                    </View>
-
-                    <View style={styles.expandedRow}>
-                      <Text style={styles.expandedLabel}>Boyut</Text>
-                      <Text style={styles.expandedValue}>{item.size}</Text>
-                    </View>
-
-                    <View style={styles.expandedRow}>
-                      <Text style={styles.expandedLabel}>Sahibi</Text>
-                      <Text style={styles.expandedValue}>{item.owner}</Text>
-                    </View>
-
-                    <View style={styles.expandedRow}>
-                      <Text style={styles.expandedLabel}>Güncelleme</Text>
-                      <Text style={styles.expandedValue}>{item.updatedAt}</Text>
-                    </View>
-
-                    <View style={styles.actionRow}>
-                      <Pressable style={styles.primaryAction}>
-                        <MaterialIcons name="visibility" size={18} color="#FFFFFF" />
-                        <Text style={styles.primaryActionText}>Aç</Text>
-                      </Pressable>
-
-                      <Pressable style={styles.secondaryAction}>
-                        <MaterialIcons name="download" size={18} color="#334155" />
-                        <Text style={styles.secondaryActionText}>İndir</Text>
-                      </Pressable>
-
-                      <Pressable style={styles.secondaryAction}>
-                        <MaterialIcons name="share" size={18} color="#334155" />
-                        <Text style={styles.secondaryActionText}>Paylaş</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                )}
               </View>
             );
-          })}
-        </View>
+          })
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function getFileMeta(type: FileType) {
-  switch (type) {
-    case "PDF":
-      return {
-        icon: "picture-as-pdf" as const,
-        color: "#EF4444",
-        softColor: "#FEE2E2",
-      };
-    case "Excel":
-      return {
-        icon: "table-chart" as const,
-        color: "#22C55E",
-        softColor: "#DCFCE7",
-      };
-    case "Sunu":
-      return {
-        icon: "slideshow" as const,
-        color: "#F59E0B",
-        softColor: "#FEF3C7",
-      };
-    case "Word":
-      return {
-        icon: "description" as const,
-        color: "#3B82F6",
-        softColor: "#DBEAFE",
-      };
-    case "Görsel":
-      return {
-        icon: "image" as const,
-        color: "#A855F7",
-        softColor: "#F3E8FF",
-      };
-    default:
-      return {
-        icon: "insert-drive-file" as const,
-        color: "#64748B",
-        softColor: "#E2E8F0",
-      };
-  }
-}
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginBottom: 6,
-  },
-  pageSubtitle: {
-    fontSize: 14,
-    color: "#64748B",
-    marginBottom: 18,
-  },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  searchBox: {
-    flex: 1,
-    height: 46,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    color: "#0F172A",
-    fontSize: 14,
-  },
-  filterButton: {
-    height: 46,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    backgroundColor: "#2563EB",
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 10,
-  },
-  filterButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 13,
-  },
-  iconButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 10,
-  },
-  uploadBox: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    borderColor: "#BFDBFE",
-    paddingVertical: 26,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 18,
-  },
-  uploadIconWrapper: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: "#EFF6FF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 10,
-  },
-  uploadTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#0F172A",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  uploadSubtitle: {
-    fontSize: 13,
-    color: "#64748B",
-    textAlign: "center",
-  },
-  grid: {
-    gap: 14,
-  },
-  cardWrapper: {
-    width: "100%",
-  },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  cardActive: {
-    borderColor: "#3B82F6",
-    backgroundColor: "#F8FBFF",
-    shadowColor: "#3B82F6",
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-  cardTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  fileIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  moreButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardTitle: {
-    marginTop: 14,
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  cardType: {
-    marginTop: 6,
-    fontSize: 13,
-    color: "#64748B",
-  },
-  cardFooter: {
-    marginTop: 14,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  cardProject: {
-    fontSize: 12,
-    color: "#94A3B8",
-    fontWeight: "600",
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#FACC15",
-  },
-  expandedPanel: {
-    marginTop: 10,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#DBEAFE",
-    borderRadius: 16,
-    padding: 14,
-  },
-  expandedRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 7,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-  },
-  expandedLabel: {
-    fontSize: 13,
-    color: "#64748B",
-    fontWeight: "600",
-  },
-  expandedValue: {
-    fontSize: 13,
-    color: "#0F172A",
-    fontWeight: "700",
-    maxWidth: "58%",
-    textAlign: "right",
-  },
-  actionRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 16,
-  },
-  primaryAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#2563EB",
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-  },
-  primaryActionText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    marginLeft: 6,
-  },
-  secondaryAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-  },
-  secondaryActionText: {
-    color: "#334155",
-    fontWeight: "700",
-    marginLeft: 6,
-  },
+  safe: { flex: 1, backgroundColor: "#F8FAFC" },
+  header: { flexDirection: "row", alignItems: "center", padding: 16, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F3F4F6" },
+  backBtn: { marginRight: 12 },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: "#111827" },
+  content: { padding: 16, paddingBottom: 40 },
+  topBar: { marginBottom: 14 },
+  searchBox: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 12, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: "#E5E7EB" },
+  searchInput: { flex: 1, marginLeft: 8, fontSize: 14, color: "#111827" },
+  uploadBox: { backgroundColor: "#fff", borderRadius: 16, borderWidth: 1.5, borderStyle: "dashed", borderColor: "#BFDBFE", padding: 24, alignItems: "center", marginBottom: 20 },
+  uploadIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center", marginBottom: 8 },
+  uploadTitle: { fontSize: 15, fontWeight: "700", color: "#111827", marginBottom: 4 },
+  uploadSub: { fontSize: 12, color: "#9CA3AF" },
+  emptyBox: { alignItems: "center", marginTop: 40, gap: 8 },
+  emptyText: { fontSize: 14, color: "#9CA3AF" },
+  cardWrap: { marginBottom: 12 },
+  card: { backgroundColor: "#fff", borderRadius: 16, padding: 14, borderWidth: 1, borderColor: "#E5E7EB" },
+  cardActive: { borderColor: "#2563EB", backgroundColor: "#F8FBFF" },
+  cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  fileIcon: { width: 42, height: 42, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  cardTitle: { fontSize: 15, fontWeight: "700", color: "#111827" },
+  cardMeta: { fontSize: 12, color: "#9CA3AF", marginTop: 4 },
+  cardDate: { fontSize: 11, color: "#D1D5DB", marginTop: 4 },
 });
