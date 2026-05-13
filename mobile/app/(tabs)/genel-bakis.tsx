@@ -355,11 +355,40 @@ for (const colName of defaultColumns) {
                         {activeProjects.map((proj) => {
                             const progressColor = getProgressColor(proj.progress || 0);
                             return (
-                                <Pressable
-                                    key={proj.id}
-                                    style={styles.projectCard}
-                                    onPress={() => router.push({ pathname: "/proje-panosu", params: { projectId: proj.id } })}
-                                >
+                               <Pressable
+    key={proj.id}
+    style={styles.projectCard}
+    onPress={() => router.push({ pathname: "/proje-panosu", params: { projectId: proj.id } })}
+    onLongPress={() => {
+        Alert.alert(
+            "Projeyi Sil",
+            `"${proj.title || proj.name}" projesini ve tüm içeriğini silmek istiyor musunuz?`,
+            [
+                { text: "İptal", style: "cancel" },
+                {
+                    text: "Sil", style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const token = await AsyncStorage.getItem("token");
+                            const res = await fetch(`${API_URL}/project/${proj.id}`, {
+                                method: "DELETE",
+                                headers: { Authorization: `Bearer ${token}` },
+                            });
+                            if (res.ok) {
+                                setProjects(prev => prev.filter(p => p.id !== proj.id));
+                                Alert.alert("Başarılı ✅", "Proje silindi.");
+                            } else {
+                                Alert.alert("Hata", "Proje silinemedi.");
+                            }
+                        } catch (e) {
+                            Alert.alert("Hata", "Sunucuya bağlanılamadı.");
+                        }
+                    }
+                }
+            ]
+        );
+    }}
+>
                                     <View style={styles.projectCardTop}>
                                         <View style={styles.projectIconBox}>
                                             <MaterialIcons name="folder" size={24} color="#fff" />

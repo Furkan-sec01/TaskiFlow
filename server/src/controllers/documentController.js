@@ -40,22 +40,25 @@ const mapDocumentsWithProjectNames = async (documents) => {
 
 exports.getDocuments = async (req, res) => {
   const userId = req.user.id || req.user.userId;
+  const { projectId } = req.query;
 
   try {
+    const where = projectId 
+      ? { userId, projectId } 
+      : { userId };
+
     const documents = await prisma.document.findMany({
-      where: { userId },
+      where,
       orderBy: { createdAt: "desc" },
     });
 
     const result = await mapDocumentsWithProjectNames(documents);
-
     res.json(result);
   } catch (error) {
     console.log("Get Documents Hatası:", error);
     res.status(500).json({ error: "Belgeler getirilemedi" });
   }
 };
-
 exports.uploadDocument = async (req, res) => {
   const userId = req.user.id || req.user.userId;
 

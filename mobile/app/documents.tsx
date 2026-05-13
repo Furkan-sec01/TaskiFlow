@@ -7,6 +7,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as DocumentPicker from "expo-document-picker";
+import { Linking } from "react-native";
 
 const API_URL = "http://192.168.1.128:5000/api";
 
@@ -166,7 +167,13 @@ export default function DocumentsScreen() {
               <View key={doc.id} style={styles.cardWrap}>
                 <Pressable
                   style={[styles.card, isActive && styles.cardActive]}
-                  onPress={() => setActiveCardId(isActive ? null : doc.id)}
+                  onPress={() => {
+    setActiveCardId(isActive ? null : doc.id);
+    if (!isActive && doc.fileUrl) {
+        const url = `http://192.168.1.128:5000${doc.fileUrl}`;
+        Linking.openURL(url);
+    }
+}}
                 >
                   <View style={styles.cardTop}>
                     <View style={[styles.fileIcon, { backgroundColor: meta.bg }]}>
