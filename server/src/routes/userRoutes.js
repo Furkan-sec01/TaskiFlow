@@ -19,7 +19,7 @@ router.put("/change-password", userController.changePassword);
 
 // 📧 E-POSTA DOĞRULAMA
 router.post("/send-verification", userController.sendEmailVerification);
-
+router.post("/logout", userController.logout);
 
 // 📱 OTURUMLAR
 router.get("/sessions", userController.getSessions);

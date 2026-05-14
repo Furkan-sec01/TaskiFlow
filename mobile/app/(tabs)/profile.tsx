@@ -254,11 +254,12 @@ export default function ProfileScreen() {
 
 // 🔥 EN KRİTİK
   useFocusEffect(
-    useCallback(() => {
-      fetchPlan();
-      fetchSessions();
-   }, [])
-  );
+  useCallback(() => {
+    fetchPlan();
+    fetchSessions();
+    fetchUser();
+  }, [])
+);
   
   useEffect(() => {
     const loadPreferences = async () => {
@@ -274,7 +275,7 @@ export default function ProfileScreen() {
     loadPreferences();
   }, []);
 
-  useEffect(() => {
+  /////////
     const fetchUser = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
@@ -317,6 +318,7 @@ export default function ProfileScreen() {
         setUserProfileRole(data?.profileRole || "");
         setUserLocation(data?.location || "");
         setNotifEnabled(data?.notificationEnabled ?? true);
+        setEmailVerified(data?.emailVerified ?? false);
         if (data?.profileImage) {
           setProfileImage(API_URL.replace("/api", "") + data.profileImage);
         } else {
@@ -344,8 +346,7 @@ export default function ProfileScreen() {
       }
     };
 
-    fetchUser();
-  }, []);
+    
 
   const showComingSoon = (title: string) => {
     Alert.alert(title, "Bu alan şimdilik hazırlanıyor.");
@@ -700,20 +701,47 @@ export default function ProfileScreen() {
   }
 };
 
-  const handleLogout = async () => {
-    
-    Alert.alert("Çıkış Yap", "Çıkış yapmak istediğinize emin misiniz?", [
-      { text: "İptal", style: "cancel" },
-      {
-        text: "Çıkış Yap",
-        style: "destructive",
-        onPress: async () => {
+const handleLogout = async () => {
+
+  Alert.alert("Çıkış Yap", "Çıkış yapmak istediğinize emin misiniz?", [
+    { text: "İptal", style: "cancel" },
+
+    {
+      text: "Çıkış Yap",
+      style: "destructive",
+
+      onPress: async () => {
+        try {
+          const token = await AsyncStorage.getItem("token");
+
+          if (token) {
+            await fetch(`${API_URL}/users/logout`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            });
+          }
+
           await AsyncStorage.removeItem("token");
+
           router.replace("/welcome");
-        },
+
+        } catch (error) {
+
+          console.log("Logout error:", error);
+
+          await AsyncStorage.removeItem("token");
+
+          router.replace("/welcome");
+        }
       },
-    ]);
-  };
+    },
+  ]);
+};
+
+
   const handleSendEmailVerification = async () => {
   try {
     const token = await AsyncStorage.getItem("token");

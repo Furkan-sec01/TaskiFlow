@@ -414,9 +414,8 @@ exports.sendEmailVerification = async (req, res) => {
       },
     });
 
-    const verificationUrl = `${req.protocol}://${req.get(
-      "host"
-    )}/api/users/verify-email/${token}`;
+    const verificationUrl =
+  `${process.env.BASE_URL}/api/users/verify-email/${token}`;
 
     await transporter.sendMail({
       from: `"TaskiFlow" <${process.env.MAIL_USER}>`,
@@ -758,15 +757,44 @@ exports.deleteProfileImage = async (req, res) => {
       data: { profileImage: null },
     });
 
-res.json({ message: "Fotoğraf tamamen silindi" });
+    res.json({ message: "Fotoğraf tamamen silindi" });
   } catch (err) {
     console.log("Delete error:", err);
     res.status(500).json({ message: "Sunucu hatası" });
   }
 };
+exports.logout = async (req, res) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    const currentToken = getBearerToken(req);
 
+    if (!userId || !currentToken) {
+      return res.status(401).json({
+        error: "Yetkisiz erişim.",
+      });
+    }
+
+    await prisma.userSession.deleteMany({
+      where: {
+        userId,
+        token: currentToken,
+      },
+    });
+
+    return res.json({
+      message: "Çıkış yapıldı.",
+    });
+  } catch (error) {
+    console.error("Logout Hatası:", error);
+
+    return res.status(500).json({
+      error: "Çıkış yapılamadı.",
+    });
+  }
+};
 exports.getUserTasks = async (req, res) => {
   const { userId } = req.params;
+
   try {
     const tasks = await prisma.task.findMany({
       where: { assigneeId: userId },
@@ -776,6 +804,7 @@ exports.getUserTasks = async (req, res) => {
       },
       orderBy: { createdAt: "desc" },
     });
+
     res.json(tasks);
   } catch (error) {
     console.error("getUserTasks Hatası:", error);

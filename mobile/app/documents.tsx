@@ -9,7 +9,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as DocumentPicker from "expo-document-picker";
 import { Linking } from "react-native";
 
-const API_URL = "http://192.168.1.128:5000/api";
+const API_URL = "http://192.168.43.19:5000/api";
 
 export default function DocumentsScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();

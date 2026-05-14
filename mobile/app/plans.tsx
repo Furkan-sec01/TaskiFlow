@@ -13,8 +13,8 @@ import { useRouter } from "expo-router";
 type Plan = {
   id: "starter" | "pro" | "enterprise";
   name: string;
-  priceText: string; // "₺0" | "₺99" | "Özel"
-  periodText: string; // "/ay" | "" ...
+  priceText: string;
+  periodText: string;
   desc: string;
   features: string[];
   buttonText: string;
@@ -33,14 +33,19 @@ export default function Plans() {
       priceText: "₺0",
       periodText: "/ay",
       desc: "Bireysel kullanım ve küçük projeler için ideal.",
-      features: ["Sınırsız Görev", "2 Proje", "50 MB Depolama", "Temel Destek"],
+      features: [
+        "Sınırsız Görev",
+        "2 Proje",
+        "50 MB Depolama",
+        "Temel Destek",
+      ],
       buttonText: "Ücretsiz Başla",
       variant: "ghost",
       action: () =>
-  router.push({
-    pathname: "/payment",
-    params: { planId: "starter", period: "monthly" },
-  }),
+        router.push({
+          pathname: "/payment",
+          params: { planId: "starter", period: "monthly" },
+        }),
     },
     {
       id: "pro",
@@ -64,11 +69,13 @@ export default function Plans() {
           params: { planId: "pro", period: "monthly" },
         }),
     },
+
+    // 🔥 BUSINESS DÜZELTİLDİ
     {
       id: "enterprise",
       name: "Şirketler",
-      priceText: "Özel",
-      periodText: "",
+      priceText: "₺299",
+      periodText: "/ay",
       desc: "Büyük organizasyonlar için tam kontrol ve özel çözümler.",
       features: [
         "Sınırsız Her Şey",
@@ -77,9 +84,16 @@ export default function Plans() {
         "7/24 Canlı Destek",
         "Yönetici Paneli",
       ],
-      buttonText: "İletişime Geç",
+      buttonText: "Business'a Geç",
       variant: "purple",
-      action: () => router.push("/contact"),
+      action: () =>
+        router.push({
+          pathname: "/payment",
+          params: {
+            planId: "enterprise",
+            period: "monthly",
+          },
+        }),
     },
   ];
 
@@ -89,7 +103,6 @@ export default function Plans() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <Text style={styles.backText}>←</Text>
@@ -98,13 +111,11 @@ export default function Plans() {
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>Planınızı Seçin</Text>
             <Text style={styles.subtitle}>
-              Şeffaf fiyatlandırma. Gizli ücret yok. İstediğiniz zaman iptal
-              edebilir veya paketinizi değiştirebilirsiniz.
+              Şeffaf fiyatlandırma. İstediğiniz zaman iptal edebilirsiniz.
             </Text>
           </View>
         </View>
 
-        {/* Cards */}
         <View style={{ gap: 14 }}>
           {plans.map((p) => (
             <View
@@ -138,13 +149,17 @@ export default function Plans() {
                     <View
                       style={[
                         styles.checkDot,
-                        p.popular ? styles.checkDotBlue : styles.checkDotGreen,
+                        p.popular
+                          ? styles.checkDotBlue
+                          : styles.checkDotGreen,
                       ]}
                     >
                       <Text
                         style={[
                           styles.checkText,
-                          p.popular ? styles.checkTextBlue : styles.checkTextGreen,
+                          p.popular
+                            ? styles.checkTextBlue
+                            : styles.checkTextGreen,
                         ]}
                       >
                         ✓
@@ -178,35 +193,6 @@ export default function Plans() {
             </View>
           ))}
         </View>
-
-        {/* Trust Badges */}
-        <View style={styles.badgeWrap}>
-          <View style={styles.badge}>
-            <View style={[styles.badgeIcon, styles.badgeGreen]}>
-              <Text style={styles.badgeIconText}>🛡️</Text>
-            </View>
-            <Text style={styles.badgeTitle}>256-bit SSL</Text>
-            <Text style={styles.badgeDesc}>Bankacılık düzeyinde şifreleme</Text>
-          </View>
-
-          <View style={styles.badge}>
-            <View style={[styles.badgeIcon, styles.badgeYellow]}>
-              <Text style={styles.badgeIconText}>⚡</Text>
-            </View>
-            <Text style={styles.badgeTitle}>Anında Aktivasyon</Text>
-            <Text style={styles.badgeDesc}>Satın aldıktan sonra hemen başlayın</Text>
-          </View>
-
-          <View style={styles.badge}>
-            <View style={[styles.badgeIcon, styles.badgeBlue]}>
-              <Text style={styles.badgeIconText}>✅</Text>
-            </View>
-            <Text style={styles.badgeTitle}>14 Gün İade</Text>
-            <Text style={styles.badgeDesc}>Koşulsuz iade garantisi</Text>
-          </View>
-        </View>
-
-        <View style={{ height: 22 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -214,9 +200,13 @@ export default function Plans() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#fff" },
-  content: { padding: 16, paddingBottom: 18 },
+  content: { padding: 16 },
 
-  headerRow: { flexDirection: "row", gap: 10, alignItems: "flex-start", marginBottom: 12 },
+  headerRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 12,
+  },
   backBtn: {
     width: 42,
     height: 42,
@@ -226,9 +216,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backText: { fontSize: 18, fontWeight: "900", color: "#111827" },
-  title: { fontSize: 22, fontWeight: "900", color: "#111827" },
-  subtitle: { marginTop: 6, fontSize: 13, color: "#6B7280", lineHeight: 18 },
+  backText: { fontSize: 18, fontWeight: "900" },
+
+  title: { fontSize: 22, fontWeight: "900" },
+  subtitle: { marginTop: 6, fontSize: 13, color: "#6B7280" },
 
   card: {
     borderWidth: 1,
@@ -236,38 +227,28 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 14,
     backgroundColor: "#fff",
-    ...Platform.select({
-      android: { elevation: 1 },
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.04,
-        shadowRadius: 14,
-        shadowOffset: { width: 0, height: 8 },
-      },
-    }),
   },
+
   cardPopularBorder: { borderColor: "#2563EB", borderWidth: 2 },
   cardPurpleBorder: { borderColor: "#7C3AED", borderWidth: 2 },
 
   popularBadge: {
-    alignSelf: "flex-start",
     backgroundColor: "#2563EB",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    padding: 4,
     borderRadius: 999,
     marginBottom: 10,
   },
-  popularBadgeText: { color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 0.6 },
+  popularBadgeText: { color: "#fff", fontSize: 11 },
 
-  planName: { fontSize: 16, fontWeight: "900", color: "#111827" },
+  planName: { fontSize: 16, fontWeight: "900" },
 
-  priceRow: { flexDirection: "row", alignItems: "flex-end", marginTop: 8 },
-  price: { fontSize: 32, fontWeight: "900", color: "#111827" },
-  period: { marginLeft: 6, marginBottom: 5, fontSize: 13, color: "#6B7280", fontWeight: "800" },
+  priceRow: { flexDirection: "row", marginTop: 8 },
+  price: { fontSize: 28, fontWeight: "900" },
+  period: { marginLeft: 4 },
 
-  desc: { marginTop: 8, fontSize: 13, color: "#6B7280", lineHeight: 18 },
+  desc: { marginTop: 8, fontSize: 13 },
 
-  featureList: { marginTop: 12, gap: 10 },
+  featureList: { marginTop: 10 },
   featureRow: { flexDirection: "row", alignItems: "center" },
   checkDot: {
     width: 20,
@@ -275,14 +256,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 10,
+    marginRight: 8,
   },
   checkDotGreen: { backgroundColor: "#DCFCE7" },
   checkDotBlue: { backgroundColor: "#DBEAFE" },
+
   checkText: { fontSize: 12, fontWeight: "900" },
   checkTextGreen: { color: "#16A34A" },
   checkTextBlue: { color: "#2563EB" },
-  featureText: { color: "#111827", fontWeight: "800", fontSize: 13, flex: 1 },
+
+  featureText: { fontSize: 13 },
 
   cta: {
     marginTop: 14,
@@ -293,38 +276,9 @@ const styles = StyleSheet.create({
   },
   ctaPrimary: { backgroundColor: "#2563EB" },
   ctaPurple: { backgroundColor: "#7C3AED" },
-  ctaGhost: { backgroundColor: "#F3F4F6", borderWidth: 1, borderColor: "#E5E7EB" },
+  ctaGhost: { backgroundColor: "#F3F4F6" },
 
-  ctaText: { fontSize: 15, fontWeight: "900" },
+  ctaText: { fontWeight: "900" },
   ctaTextPrimary: { color: "#fff" },
   ctaTextGhost: { color: "#111827" },
-
-  badgeWrap: {
-    marginTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-    paddingTop: 14,
-    gap: 12,
-  },
-  badge: {
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 18,
-    padding: 14,
-    backgroundColor: "#fff",
-  },
-  badgeIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  badgeGreen: { backgroundColor: "#ECFDF5" },
-  badgeYellow: { backgroundColor: "#FFFBEB" },
-  badgeBlue: { backgroundColor: "#EFF6FF" },
-  badgeIconText: { fontSize: 18 },
-  badgeTitle: { fontSize: 14, fontWeight: "900", color: "#111827" },
-  badgeDesc: { marginTop: 4, fontSize: 12, color: "#6B7280", fontWeight: "700" },
 });
