@@ -7,7 +7,7 @@ import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://192.168.43.19:5000/api";
+const API_URL = "http://192.168.1.128:5000/api";
 const AVATAR_COLORS = ["#2563EB", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
 export default function WorkspaceDetail() {

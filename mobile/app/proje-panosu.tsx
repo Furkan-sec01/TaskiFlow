@@ -10,7 +10,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width } = Dimensions.get("window");
 const COLUMN_WIDTH = width * 0.75;
-const API_URL = "http://192.168.43.19:5000";
+const API_URL = "http://192.168.1.128:5000";
 
 const BACKGROUNDS = [
     'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=2000',

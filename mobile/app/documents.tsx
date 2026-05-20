@@ -9,7 +9,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as DocumentPicker from "expo-document-picker";
 import { Linking } from "react-native";
 
-const API_URL = "http://192.168.43.19:5000/api";
+const API_URL = "http://192.168.1.128:5000/api";
 
 export default function DocumentsScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
@@ -63,8 +63,8 @@ export default function DocumentsScreen() {
       formData.append("title", file.name);
       if (projectId) formData.append("projectId", projectId as string);
 
-     const res = await fetch(`${API_URL}/documents/upload`, {
-  method: "POST",
+      const res = await fetch(`${API_URL}/documents/upload`, {
+        method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
@@ -102,6 +102,11 @@ export default function DocumentsScreen() {
         }
       }
     ]);
+  };
+
+  const handleDownload = (fileUrl: string) => {
+    const url = `http://192.168.1.128:5000${fileUrl}`;
+    Linking.openURL(url);
   };
 
   const filtered = documents.filter(d =>
@@ -168,20 +173,25 @@ export default function DocumentsScreen() {
                 <Pressable
                   style={[styles.card, isActive && styles.cardActive]}
                   onPress={() => {
-    setActiveCardId(isActive ? null : doc.id);
-    if (!isActive && doc.fileUrl) {
-        const url = `http://192.168.1.128:5000${doc.fileUrl}`;
-        Linking.openURL(url);
-    }
-}}
+                    setActiveCardId(isActive ? null : doc.id);
+                    if (!isActive && doc.fileUrl) {
+                      const url = `http://192.168.1.128:5000${doc.fileUrl}`;
+                      Linking.openURL(url);
+                    }
+                  }}
                 >
                   <View style={styles.cardTop}>
                     <View style={[styles.fileIcon, { backgroundColor: meta.bg }]}>
                       <MaterialIcons name={meta.icon} size={20} color={meta.color} />
                     </View>
-                    <Pressable onPress={() => handleDelete(doc.id)}>
-                      <MaterialIcons name="delete-outline" size={20} color="#EF4444" />
-                    </Pressable>
+                    <View style={styles.cardActions}>
+                      <Pressable onPress={() => handleDownload(doc.fileUrl)} style={styles.actionBtn}>
+                        <MaterialIcons name="file-download" size={20} color="#2563EB" />
+                      </Pressable>
+                      <Pressable onPress={() => handleDelete(doc.id)} style={styles.actionBtn}>
+                        <MaterialIcons name="delete-outline" size={20} color="#EF4444" />
+                      </Pressable>
+                    </View>
                   </View>
                   <Text style={styles.cardTitle} numberOfLines={1}>{doc.title || doc.originalName}</Text>
                   <Text style={styles.cardMeta}>{doc.size || ""} · {doc.project?.title || ""}</Text>
@@ -216,6 +226,8 @@ const styles = StyleSheet.create({
   cardActive: { borderColor: "#2563EB", backgroundColor: "#F8FBFF" },
   cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
   fileIcon: { width: 42, height: 42, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  cardActions: { flexDirection: "row", alignItems: "center", gap: 12 },
+  actionBtn: { padding: 4 },
   cardTitle: { fontSize: 15, fontWeight: "700", color: "#111827" },
   cardMeta: { fontSize: 12, color: "#9CA3AF", marginTop: 4 },
   cardDate: { fontSize: 11, color: "#D1D5DB", marginTop: 4 },

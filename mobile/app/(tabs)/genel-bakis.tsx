@@ -16,7 +16,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://192.168.43.19:5000/api";
+const API_URL = "http://192.168.1.128:5000/api";
 
 interface Member {
     id: string;
