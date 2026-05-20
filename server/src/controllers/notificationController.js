@@ -88,6 +88,71 @@ exports.respondToInvıte = async (req, res) => {
     }
 };
 
+
+
+exports.respondToTask = async (req, res) => {
+    const { notificationId, action } = req.body;
+    const currentUserId = req.user.id || req.user.userId;
+
+    try {
+        const notification = await prisma.notification.findUnique({
+            where: { id: notificationId },
+        });
+
+        if (!notification || notification.type !== "TASK") {
+            return res.status(404).json({ error: "Geçerli bir görev bildirimi bulunamadı." });
+        }
+
+        if (action === "ACCEPT") {
+            await prisma.$transaction(async (tx) => {
+               if (!notification.taskId) {
+    throw new Error("Bu bildirimde görev bilgisi yok. Lütfen yeni bir görev atayın.");
+}
+
+const task = await tx.task.findUnique({
+    where: { id: notification.taskId },
+});
+
+                if (task) {
+                    const isAlreadyMember = await tx.user_Project.findUnique({
+                        where: {
+                            userId_projectId: {
+                                userId: currentUserId,
+                                projectId: task.projectId,
+                            }
+                        }
+                    });
+
+                    if (!isAlreadyMember) {
+                        await tx.user_Project.create({
+                            data: {
+                                userId: currentUserId,
+                                projectId: task.projectId,
+                            }
+                        });
+                    }
+                }
+
+                await tx.notification.delete({
+                    where: { id: notificationId }
+                });
+            });
+
+        } else if (action === "REJECT") {
+            await prisma.notification.delete({
+                where: { id: notificationId }
+            });
+        }
+
+        return res.json({
+            message: action === "ACCEPT" ? "Görev kabul edildi!" : "Görev reddedildi.",
+        });
+
+    } catch (error) {
+        console.error("respondToTask hatası:", error);
+        res.status(500).json({ error: "Görev yanıtlanırken bir sunucu hatası oluştu." });
+    }
+};
 exports.markAsRead = async (req, res) => {
   try {
     await prisma.notification.update({

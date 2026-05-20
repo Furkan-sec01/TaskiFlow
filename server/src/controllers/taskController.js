@@ -58,32 +58,31 @@ exports.createTask = async (req, res) => {
             return res.status(400).json({error: "Görev ekleme yetkiniz yok."});
         }
 
-        await prisma.task.create({
-            data: {
-                title: title,
-                ownerId: user.id,
-                assigneeId: assignee.id,
-                priority: priority,
-                dueDate: new Date(date),
-                description: description,
-                columnId: columnId,
-                projectId: projectId,
-                totalTime: 0,
-                isTracking: false,
-                lastStartedAt: null
-            }
-        });
+        const newTask = await prisma.task.create({
+    data: {
+        title: title,
+        ownerId: user.id,
+        assigneeId: assignee.id,
+        priority: priority,
+        dueDate: new Date(date),
+        description: description,
+        columnId: columnId,
+        projectId: projectId,
+        totalTime: 0,
+        isTracking: false,
+        lastStartedAt: null
+    }
+});
 
-        await prisma.notification.create({
-            data: {
-                title: "Yeni Görev",
-                message: `${user.name} size yeni bir görev verdi`,
-                userId: assignee.id,
-                type: "TASK",
-                
-            }
-        })
-
+await prisma.notification.create({
+    data: {
+        title: "Yeni Görev",
+        message: `${user.name} size yeni bir görev verdi`,
+        userId: assignee.id,
+        type: "TASK",
+        taskId: newTask.id
+    }
+})
         res.status(200).json({
             message: "Görev verildi."
         });

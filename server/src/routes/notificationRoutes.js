@@ -7,6 +7,7 @@ router.use(authenticateToken);
 
 router.get("/", notificController.getNotifications);
 router.post("/respond-invite", notificController.respondToInvıte);
+router.post("/respond-task", notificController.respondToTask);
 router.patch("/:id/read", notificController.markAsRead);
 
 module.exports = router;

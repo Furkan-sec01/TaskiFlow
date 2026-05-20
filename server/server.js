@@ -40,7 +40,8 @@ app.get("/", (req, res) => {
 });
 
 const PORT = 5000;
-
+const path = require("path");
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server Full Mod (Auth + Task + Payment) çalışıyor: http://localhost:${PORT}`);
 });

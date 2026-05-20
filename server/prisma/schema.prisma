@@ -147,6 +147,7 @@ model Notification {
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
+  taskId         String?
   createdAt      DateTime      @default(now())
 }
 
