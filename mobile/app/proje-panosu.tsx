@@ -164,47 +164,63 @@ export default function ProjePanosuScreen() {
             Alert.alert("Hata", "Görev taşınamadı.");
         }
     };
+const handleMoveToTamamlandi = async (task: Task) => {
+    try {
+        const token = await AsyncStorage.getItem("token");
+        const tamamCol = columns.find(c =>
+            getColName(c).toLowerCase().includes("tamamland") ||
+            getColName(c).toLowerCase().includes("done") ||
+            getColName(c).toLowerCase().includes("bitti")
+        );
+        if (!tamamCol) { Alert.alert("Hata", "Tamamlandı kolonu bulunamadı."); return; }
+        
+        await fetch(`${API_URL}/api/column/task/${task.id}/move`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ columnId: tamamCol.id }),
+        });
 
-    const handleMoveToTamamlandi = async (task: Task) => {
-        try {
-            const token = await AsyncStorage.getItem("token");
-            const tamamCol = columns.find(c =>
-                getColName(c).toLowerCase().includes("tamamland") ||
-                getColName(c).toLowerCase().includes("done") ||
-                getColName(c).toLowerCase().includes("bitti")
-            );
-            if (!tamamCol) { Alert.alert("Hata", "Tamamlandı kolonu bulunamadı."); return; }
-            await fetch(`${API_URL}/api/column/task/${task.id}/move`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ columnId: tamamCol.id }),
-            });
-            fetchBoard();
-        } catch (e) {
-            Alert.alert("Hata", "Görev taşınamadı.");
-        }
-    };
+        await fetch(`${API_URL}/api/tasks/${task.id}/complete`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ action: "COMPLETED" }),
+        });
+
+        fetchBoard();
+    } catch (e) {
+        Alert.alert("Hata", "Görev taşınamadı.");
+    }
+};
 
     const handleDeleteTask = async (taskId: string) => {
-        Alert.alert("Görevi Sil", "Bu görevi silmek istiyor musunuz?", [
-            { text: "İptal", style: "cancel" },
-            {
-                text: "Sil", style: "destructive",
-                onPress: async () => {
-                    try {
-                        const token = await AsyncStorage.getItem("token");
-                        await fetch(`${API_URL}/api/tasks/${taskId}`, {
-                            method: "DELETE",
-                            headers: { Authorization: `Bearer ${token}` },
-                        });
+    Alert.alert("Görevi Sil", "Bu görevi silmek istiyor musunuz?", [
+        { text: "İptal", style: "cancel" },
+        {
+            text: "Sil", style: "destructive",
+            onPress: async () => {
+                try {
+                    const token = await AsyncStorage.getItem("token");
+                    console.log("Token:", token);
+                    console.log("Silme URL:", `${API_URL}/api/tasks/${taskId}`);
+                    const res = await fetch(`${API_URL}/api/tasks/${taskId}`, {
+                        method: "DELETE",
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    console.log("Response status:", res.status);
+                    if (res.ok) {
                         fetchBoard();
-                    } catch (e) {
-                        Alert.alert("Hata", "Görev silinemedi.");
+                    } else {
+                        const data = await res.json();
+                        Alert.alert("Hata", data.error || "Görev silinemedi.");
                     }
+                } catch (e) {
+                    console.log("Silme hatası:", e);
+                    Alert.alert("Hata", "Sunucuya bağlanılamadı.");
                 }
             }
-        ]);
-    };
+        }
+    ]);
+};
 
     const getColName = (col: Column) => col.name || col.title || "";
     const isYapilacakColumn = (col: Column) =>

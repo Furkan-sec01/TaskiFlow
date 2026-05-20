@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
     View,
     Text,
@@ -13,7 +13,7 @@ import {
     Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API_URL = "http://192.168.1.128:5000/api";
@@ -53,8 +53,13 @@ export default function GenelBakisScreen() {
     const [projectDesc, setProjectDesc] = useState("");
     const [newMemberEmail, setNewMemberEmail] = useState("");
     const [addingMember, setAddingMember] = useState(false);
+    const [notifications, setNotifications] = useState<any[]>([]);
 
-    useEffect(() => { loadUserAndOrg(); }, []);
+    useFocusEffect(
+        useCallback(() => {
+            loadUserAndOrg();
+        }, [])
+    );
 
     const loadUserAndOrg = async () => {
         try {
@@ -69,25 +74,21 @@ export default function GenelBakisScreen() {
             const billingRes = await fetch(`${API_URL}/payments/overview`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-
             const billingData = await billingRes.json();
-
             const plan = String(billingData?.subscription?.plan || "FREE").toUpperCase();
-                if (plan === "BUSINESS") {
-                    setUserPlan("BUSINESS");
-                } else if (plan === "PRO") {
-                    setUserPlan("PRO");
-                } else {
-                    setUserPlan("FREE");
-                }
+            if (plan === "BUSINESS") {
+                setUserPlan("BUSINESS");
+            } else if (plan === "PRO") {
+                setUserPlan("PRO");
+            } else {
+                setUserPlan("FREE");
+            }
 
             const res = await fetch(`${API_URL}/organizations`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-
             const data = await res.json();
             let foundOrgId = null;
-
             if (Array.isArray(data) && data.length > 0) {
                 foundOrgId = data[0].id;
                 setOrgId(data[0].id);
@@ -95,8 +96,14 @@ export default function GenelBakisScreen() {
                 foundOrgId = data.id;
                 setOrgId(data.id);
             }
-
             if (foundOrgId) fetchMembers(foundOrgId, token!);
+
+            const notifRes = await fetch(`${API_URL}/notifications`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const notifData = await notifRes.json();
+            if (Array.isArray(notifData)) setNotifications(notifData);
+
         } catch (e) {
             console.log("Org yükleme hatası:", e);
         } finally {
@@ -136,7 +143,6 @@ export default function GenelBakisScreen() {
                         });
                         const boardData = await boardRes.json();
                         const tasks = boardData.columns?.flatMap((c: any) => c.tasks || []) || [];
-                        console.log("Görevler:", JSON.stringify(tasks));
                         const total = tasks.length;
                         const done = tasks.filter((t: any) => t.isCompleted === true).length;
                         const progress = total > 0 ? Math.round((done / total) * 100) : 0;
@@ -145,7 +151,6 @@ export default function GenelBakisScreen() {
                         return { ...p, progress: 0 };
                     }
                 }));
-
                 setProjects(projectsWithProgress);
             }
         } catch (e) {
@@ -185,26 +190,24 @@ export default function GenelBakisScreen() {
         if (!projectName.trim()) return;
         if (!projectDesc.trim()) { Alert.alert("Hata", "Açıklama zorunludur."); return; }
         try {
-    const token = await AsyncStorage.getItem("token");
-    const res = await fetch(`${API_URL}/project`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: projectName, description: projectDesc, organizationId: orgId || null }),
-    });
+            const token = await AsyncStorage.getItem("token");
+            const res = await fetch(`${API_URL}/project`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ title: projectName, description: projectDesc, organizationId: orgId || null }),
+            });
             const newProject = await res.json();
 
             if (newProject.project?.id || newProject.id) {
                 const p = newProject.project || newProject;
                 const defaultColumns = ["Yapılacak", "Devam Ediyor", "Tamamlandı"];
-for (const colName of defaultColumns) {
-    const colRes = await fetch(`${API_URL}/column/create/${p.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: colName }),
-    });
-    const colData = await colRes.json();
-    console.log(`Kolon "${colName}" sonucu:`, JSON.stringify(colData));
-}
+                for (const colName of defaultColumns) {
+                    await fetch(`${API_URL}/column/create/${p.id}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ title: colName }),
+                    });
+                }
                 setProjects([...projects, { ...p, progress: 0 }]);
                 setProjectName("");
                 setProjectDesc("");
@@ -230,9 +233,7 @@ for (const colName of defaultColumns) {
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ email: newMemberEmail.trim(), orgId: orgId }),
             });
-
             const data = await res.json();
-
             if (res.ok) {
                 Alert.alert("Başarılı", `${newMemberEmail} organizasyona davet edildi!`);
                 setNewMemberEmail("");
@@ -275,7 +276,7 @@ for (const colName of defaultColumns) {
                 <Text style={styles.welcomeText}>Hoş Geldiniz, {userName}</Text>
                 <Pressable style={styles.notifBtn} onPress={() => router.push("/(tabs)/notifications")}>
                     <MaterialIcons name="notifications" size={24} color="#111827" />
-                    <View style={styles.notifDot} />
+                    {notifications.length > 0 && <View style={styles.notifDot} />}
                 </Pressable>
             </View>
 
@@ -355,40 +356,40 @@ for (const colName of defaultColumns) {
                         {activeProjects.map((proj) => {
                             const progressColor = getProgressColor(proj.progress || 0);
                             return (
-                               <Pressable
-    key={proj.id}
-    style={styles.projectCard}
-    onPress={() => router.push({ pathname: "/proje-panosu", params: { projectId: proj.id } })}
-    onLongPress={() => {
-        Alert.alert(
-            "Projeyi Sil",
-            `"${proj.title || proj.name}" projesini ve tüm içeriğini silmek istiyor musunuz?`,
-            [
-                { text: "İptal", style: "cancel" },
-                {
-                    text: "Sil", style: "destructive",
-                    onPress: async () => {
-                        try {
-                            const token = await AsyncStorage.getItem("token");
-                            const res = await fetch(`${API_URL}/project/${proj.id}`, {
-                                method: "DELETE",
-                                headers: { Authorization: `Bearer ${token}` },
-                            });
-                            if (res.ok) {
-                                setProjects(prev => prev.filter(p => p.id !== proj.id));
-                                Alert.alert("Başarılı ✅", "Proje silindi.");
-                            } else {
-                                Alert.alert("Hata", "Proje silinemedi.");
-                            }
-                        } catch (e) {
-                            Alert.alert("Hata", "Sunucuya bağlanılamadı.");
-                        }
-                    }
-                }
-            ]
-        );
-    }}
->
+                                <Pressable
+                                    key={proj.id}
+                                    style={styles.projectCard}
+                                    onPress={() => router.push({ pathname: "/proje-panosu", params: { projectId: proj.id } })}
+                                    onLongPress={() => {
+                                        Alert.alert(
+                                            "Projeyi Sil",
+                                            `"${proj.title || proj.name}" projesini ve tüm içeriğini silmek istiyor musunuz?`,
+                                            [
+                                                { text: "İptal", style: "cancel" },
+                                                {
+                                                    text: "Sil", style: "destructive",
+                                                    onPress: async () => {
+                                                        try {
+                                                            const token = await AsyncStorage.getItem("token");
+                                                            const res = await fetch(`${API_URL}/project/${proj.id}`, {
+                                                                method: "DELETE",
+                                                                headers: { Authorization: `Bearer ${token}` },
+                                                            });
+                                                            if (res.ok) {
+                                                                setProjects(prev => prev.filter(p => p.id !== proj.id));
+                                                                Alert.alert("Başarılı ✅", "Proje silindi.");
+                                                            } else {
+                                                                Alert.alert("Hata", "Proje silinemedi.");
+                                                            }
+                                                        } catch (e) {
+                                                            Alert.alert("Hata", "Sunucuya bağlanılamadı.");
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        );
+                                    }}
+                                >
                                     <View style={styles.projectCardTop}>
                                         <View style={styles.projectIconBox}>
                                             <MaterialIcons name="folder" size={24} color="#fff" />
@@ -447,6 +448,35 @@ for (const colName of defaultColumns) {
                                     key={proj.id}
                                     style={[styles.projectCard, { borderWidth: 2, borderColor: "#10B981" }]}
                                     onPress={() => router.push({ pathname: "/proje-panosu", params: { projectId: proj.id } })}
+                                    onLongPress={() => {
+                                        Alert.alert(
+                                            "Projeyi Sil",
+                                            `"${proj.title || proj.name}" projesini ve tüm içeriğini silmek istiyor musunuz?`,
+                                            [
+                                                { text: "İptal", style: "cancel" },
+                                                {
+                                                    text: "Sil", style: "destructive",
+                                                    onPress: async () => {
+                                                        try {
+                                                            const token = await AsyncStorage.getItem("token");
+                                                            const res = await fetch(`${API_URL}/project/${proj.id}`, {
+                                                                method: "DELETE",
+                                                                headers: { Authorization: `Bearer ${token}` },
+                                                            });
+                                                            if (res.ok) {
+                                                                setProjects(prev => prev.filter(p => p.id !== proj.id));
+                                                                Alert.alert("Başarılı ✅", "Proje silindi.");
+                                                            } else {
+                                                                Alert.alert("Hata", "Proje silinemedi.");
+                                                            }
+                                                        } catch (e) {
+                                                            Alert.alert("Hata", "Sunucuya bağlanılamadı.");
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        );
+                                    }}
                                 >
                                     <View style={styles.projectCardTop}>
                                         <View style={[styles.projectIconBox, { backgroundColor: "#10B981" }]}>

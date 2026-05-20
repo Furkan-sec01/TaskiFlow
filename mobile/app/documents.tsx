@@ -105,10 +105,14 @@ export default function DocumentsScreen() {
   };
 
   const handleDownload = (fileUrl: string) => {
-    const url = `http://192.168.1.128:5000${fileUrl}`;
-    Linking.openURL(url);
-  };
-
+  if (!fileUrl) {
+    Alert.alert("Hata", "Dosya bulunamadı.");
+    return;
+  }
+  const url = `http://192.168.1.128:5000${fileUrl}`;
+  console.log("İndirme URL:", url);
+  Linking.openURL(url);
+};
   const filtered = documents.filter(d =>
     d.title?.toLowerCase().includes(search.toLowerCase()) ||
     d.originalName?.toLowerCase().includes(search.toLowerCase())
