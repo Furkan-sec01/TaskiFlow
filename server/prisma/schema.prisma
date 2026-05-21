@@ -132,6 +132,7 @@ model Task {
   isTracking    Boolean   @default(false)
   lastStartedAt DateTime?
   isCompleted   Boolean   @default(false)
+  status        String    @default("PENDING")
   createdAt     DateTime  @default(now())
   completedAt   DateTime?
   updatedAt     DateTime  @updatedAt

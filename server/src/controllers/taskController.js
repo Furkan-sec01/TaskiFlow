@@ -70,7 +70,8 @@ exports.createTask = async (req, res) => {
         projectId: projectId,
         totalTime: 0,
         isTracking: false,
-        lastStartedAt: null
+        lastStartedAt: null,
+        status: "PENDING"
     }
 });
 

@@ -89,7 +89,6 @@ exports.respondToInvıte = async (req, res) => {
 };
 
 
-
 exports.respondToTask = async (req, res) => {
     const { notificationId, action } = req.body;
     const currentUserId = req.user.id || req.user.userId;
@@ -105,15 +104,16 @@ exports.respondToTask = async (req, res) => {
 
         if (action === "ACCEPT") {
             await prisma.$transaction(async (tx) => {
-               if (!notification.taskId) {
-    throw new Error("Bu bildirimde görev bilgisi yok. Lütfen yeni bir görev atayın.");
-}
-
-const task = await tx.task.findUnique({
-    where: { id: notification.taskId },
-});
+                const task = await tx.task.findUnique({
+                    where: { id: notification.taskId },
+                });
 
                 if (task) {
+                    await tx.task.update({
+                        where: { id: task.id },
+                        data: { status: "ACCEPTED" }
+                    });
+
                     const isAlreadyMember = await tx.user_Project.findUnique({
                         where: {
                             userId_projectId: {
@@ -139,8 +139,34 @@ const task = await tx.task.findUnique({
             });
 
         } else if (action === "REJECT") {
-            await prisma.notification.delete({
-                where: { id: notificationId }
+            await prisma.$transaction(async (tx) => {
+                const task = await tx.task.findUnique({
+                    where: { id: notification.taskId },
+                });
+
+                if (task) {
+                 const rejectingUser = await tx.user.findUnique({
+    where: { id: currentUserId },
+    select: { name: true }
+});
+
+await tx.notification.create({
+    data: {
+        title: "Görev Reddedildi",
+        message: `${rejectingUser?.name || "Bir kullanıcı"} "${task.title}" görevini reddetti.`,
+        userId: task.ownerId,
+        type: "TASK_REJECTED",
+    }
+});
+
+                    await tx.task.delete({
+                        where: { id: task.id }
+                    });
+                }
+
+                await tx.notification.delete({
+                    where: { id: notificationId }
+                });
             });
         }
 
@@ -153,6 +179,10 @@ const task = await tx.task.findUnique({
         res.status(500).json({ error: "Görev yanıtlanırken bir sunucu hatası oluştu." });
     }
 };
+
+
+
+
 exports.markAsRead = async (req, res) => {
   try {
     await prisma.notification.update({

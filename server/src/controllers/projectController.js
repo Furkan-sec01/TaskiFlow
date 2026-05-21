@@ -235,6 +235,7 @@ exports.getProjectBoard = async (req, res) => {
                     include: {
                         tasks: {
                             orderBy: { order: "asc" },
+                                where: { status: "ACCEPTED" },
                             include: { assignee: { select: { name: true, email: true } } }
                         }
                     }
