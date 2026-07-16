@@ -12,8 +12,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const API_URL = "http://192.168.43.19:5000/api";
+import { useTheme } from "@/context/ThemeContext";
+import { API_URL } from "@/constants/api";
 
 const STATUS_OPTIONS = [
     { label: "Yapılacak", color: "#F59E0B" },
@@ -25,6 +25,7 @@ const AVATAR_COLORS = ["#2563EB", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#
 
 export default function AddTaskScreen() {
     const router = useRouter();
+    const { colors } = useTheme();
     const [taskName, setTaskName] = useState("");
     const [taskDesc, setTaskDesc] = useState("");
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -75,20 +76,27 @@ export default function AddTaskScreen() {
     };
 
     const handleSave = async () => {
-        console.log("handleSave çalıştı, proje:", selectedProjectId);
         if (!taskName.trim()) { Alert.alert("Hata", "Görev adı boş olamaz."); return; }
         if (!selectedProjectId) { Alert.alert("Hata", "Proje seçmelisiniz."); return; }
 
         try {
             setSaving(true);
             const token = await AsyncStorage.getItem("token");
-console.log("Kolonlar çekiliyor:", `${API_URL}/column/project/${selectedProjectId}`);
+            if (!token) {
+                Alert.alert("Hata", "Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+                return;
+            }
+
             // Önce projenin kolonlarını çek
-           const colRes = await fetch(`${API_URL}/project/${selectedProjectId}/board`,  {
+            const colRes = await fetch(`${API_URL}/project/${selectedProjectId}/board`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            const colData = await colRes.json();
-            console.log("Board data:", JSON.stringify(colData));
+            const colData = await colRes.json().catch(() => null);
+            if (!colRes.ok) {
+                Alert.alert("Hata", colData?.error || "Proje kolonları alınamadı.");
+                return;
+            }
+
             const columns = Array.isArray(colData) ? colData : colData.columns || colData.board?.columns || [];
 
             let columnId = null;
@@ -108,26 +116,29 @@ console.log("Kolonlar çekiliyor:", `${API_URL}/column/project/${selectedProject
 
             if (!columnId) { Alert.alert("Hata", "Proje kolonları bulunamadı. Önce projeyi açıp kolon ekleyin."); return; }
 
-            const res = await fetch(`${API_URL}/task`, {
+            const selectedAssignee = members.find((member) => member.id === selectedAssigneeId);
+            const res = await fetch(`${API_URL}/task/create/${selectedProjectId}/${columnId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({
                     title: taskName.trim(),
                     description: taskDesc.trim(),
-                    columnId,
-                    assignedTo: selectedAssigneeId || undefined,
+                    priority: "MEDIUM",
+                    assignedTo: selectedAssigneeId || null,
+                    assigneeMail: selectedAssignee?.email || null,
                 }),
             });
 
-            const data = await res.json();
+            const data = await res.json().catch(() => null);
             if (res.ok) {
                 Alert.alert("Başarılı ✅", `"${taskName}" görevi eklendi.`, [
                     { text: "Tamam", onPress: () => router.back() },
                 ]);
             } else {
-                Alert.alert("Hata", data.error || "Görev eklenemedi.");
+                Alert.alert("Hata", data?.error || data?.message || "Görev eklenemedi.");
             }
         } catch (e) {
+            console.log("Görev ekleme hatası:", e);
             Alert.alert("Hata", "Sunucuya bağlanılamadı.");
         } finally {
             setSaving(false);
@@ -138,7 +149,7 @@ console.log("Kolonlar çekiliyor:", `${API_URL}/column/project/${selectedProject
 
     if (loading) {
         return (
-            <SafeAreaView style={styles.safe}>
+            <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
                 <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
                     <ActivityIndicator size="large" color="#2563EB" />
                 </View>
@@ -147,69 +158,69 @@ console.log("Kolonlar çekiliyor:", `${API_URL}/column/project/${selectedProject
     }
 
     return (
-        <SafeAreaView style={styles.safe} edges={["top"]}>
+        <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["top"]}>
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                <View style={styles.header}>
+                <View style={[styles.header, { borderBottomColor: colors.border }]}>
                     <Pressable onPress={() => router.back()}>
-                        <Text style={styles.cancelLink}>İptal</Text>
+                        <Text style={[styles.cancelLink, { color: colors.textSecondary }]}>İptal</Text>
                     </Pressable>
-                    <Text style={styles.headerTitle}>Yeni Görev</Text>
+                    <Text style={[styles.headerTitle, { color: colors.text }]}>Yeni Görev</Text>
                     <Pressable onPress={handleSave} disabled={saving}>
                         <Text style={styles.saveLink}>{saving ? "..." : "Kaydet"}</Text>
                     </Pressable>
                 </View>
 
-                <Text style={styles.label}>Görev Adı</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Görev Adı</Text>
                 <TextInput
-                    style={styles.input}
+                    style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
                     placeholder="Görev adını yaz..."
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={colors.placeholder}
                     value={taskName}
                     onChangeText={setTaskName}
                     autoFocus
                 />
 
-                <Text style={styles.label}>Açıklama (isteğe bağlı)</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Açıklama (isteğe bağlı)</Text>
                 <TextInput
-                    style={[styles.input, { height: 80, paddingTop: 12 }]}
+                    style={[styles.input, { height: 80, paddingTop: 12, backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
                     placeholder="Görev açıklaması..."
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={colors.placeholder}
                     value={taskDesc}
                     onChangeText={setTaskDesc}
                     multiline
                     textAlignVertical="top"
                 />
 
-                <Text style={styles.label}>Proje</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Proje</Text>
                 <View style={styles.chipsRow}>
                     {projects.map((p, i) => (
                         <Pressable
                             key={p.id}
-                            style={[styles.projectChip, selectedProjectId === p.id && { backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length], borderColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }]}
+                            style={[styles.projectChip, { backgroundColor: colors.card, borderColor: colors.border }, selectedProjectId === p.id && { backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length], borderColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }]}
                             onPress={() => { setSelectedProjectId(p.id); setSelectedAssigneeId(null); }}
                         >
                             <View style={[styles.projectDot, { backgroundColor: selectedProjectId === p.id ? "#fff" : AVATAR_COLORS[i % AVATAR_COLORS.length] }]} />
-                            <Text style={[styles.projectChipText, selectedProjectId === p.id && { color: "#fff" }]}>{p.title || p.name}</Text>
+                            <Text style={[styles.projectChipText, { color: colors.text }, selectedProjectId === p.id && { color: "#fff" }]}>{p.title || p.name}</Text>
                         </Pressable>
                     ))}
                 </View>
 
-                <Text style={styles.label}>Kişi Ata</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Kişi Ata</Text>
                 <View style={styles.chipsRow}>
-                    <Pressable style={[styles.chip, !selectedAssigneeId && styles.chipActive]} onPress={() => setSelectedAssigneeId(null)}>
-                        <Text style={[styles.chipText, !selectedAssigneeId && styles.chipTextActive]}>Yok</Text>
+                    <Pressable style={[styles.chip, { backgroundColor: colors.card, borderColor: colors.border }, !selectedAssigneeId && styles.chipActive]} onPress={() => setSelectedAssigneeId(null)}>
+                        <Text style={[styles.chipText, { color: colors.text }, !selectedAssigneeId && styles.chipTextActive]}>Yok</Text>
                     </Pressable>
                     {members.map((m, i) => (
-                        <Pressable key={m.id} style={[styles.chip, selectedAssigneeId === m.id && styles.chipActive]} onPress={() => setSelectedAssigneeId(m.id)}>
+                        <Pressable key={m.id} style={[styles.chip, { backgroundColor: colors.card, borderColor: colors.border }, selectedAssigneeId === m.id && styles.chipActive]} onPress={() => setSelectedAssigneeId(m.id)}>
                             <View style={[styles.miniAvatar, { backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }]}>
                                 <Text style={styles.miniAvatarText}>{m.name?.charAt(0).toUpperCase() || "?"}</Text>
                             </View>
-                            <Text style={[styles.chipText, selectedAssigneeId === m.id && styles.chipTextActive]}>{m.name}</Text>
+                            <Text style={[styles.chipText, { color: colors.text }, selectedAssigneeId === m.id && styles.chipTextActive]}>{m.name}</Text>
                         </Pressable>
                     ))}
                 </View>
 
-                <Text style={styles.label}>Durum</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Durum</Text>
                 <View style={styles.chipsRow}>
                     {STATUS_OPTIONS.map((s) => (
                         <Pressable

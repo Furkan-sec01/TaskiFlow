@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useTheme } from "@/context/ThemeContext";
 
 /* ── filter chips ── */
 const FILTERS = ["Tümü", "Bugün", "Yaklaşan", "Tamamlanan"] as const;
@@ -81,6 +82,7 @@ const PRIORITY_MAP = {
 };
 
 export default function TasksScreen() {
+    const { colors } = useTheme();
     const [filter, setFilter] = useState<Filter>("Tümü");
     const [search, setSearch] = useState("");
 
@@ -96,20 +98,20 @@ export default function TasksScreen() {
     );
 
     return (
-        <SafeAreaView style={styles.safe} edges={["top"]}>
+        <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["top"]}>
             {/* ── Header ── */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Görevler</Text>
-                <Text style={styles.headerSub}>{ALL_TASKS.filter((t) => !t.done).length} aktif görev</Text>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>Görevler</Text>
+                <Text style={[styles.headerSub, { color: colors.textSecondary }]}>{ALL_TASKS.filter((t) => !t.done).length} aktif görev</Text>
             </View>
 
             {/* ── Search ── */}
-            <View style={styles.searchWrap}>
-                <IconSymbol name="magnifyingglass" size={18} color="#9CA3AF" />
+            <View style={[styles.searchWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                <IconSymbol name="magnifyingglass" size={18} color={colors.placeholder} />
                 <TextInput
-                    style={styles.searchInput}
+                    style={[styles.searchInput, { color: colors.inputText }]}
                     placeholder="Görev veya proje ara..."
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={colors.placeholder}
                     value={search}
                     onChangeText={setSearch}
                 />
@@ -126,10 +128,14 @@ export default function TasksScreen() {
                 {FILTERS.map((f) => (
                     <Pressable
                         key={f}
-                        style={[styles.filterChip, filter === f && styles.filterChipActive]}
+                        style={[
+                            styles.filterChip,
+                            { backgroundColor: colors.card, borderColor: colors.border },
+                            filter === f && styles.filterChipActive,
+                        ]}
                         onPress={() => setFilter(f)}
                     >
-                        <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>{f}</Text>
+                        <Text style={[styles.filterText, { color: colors.textSecondary }, filter === f && styles.filterTextActive]}>{f}</Text>
                     </Pressable>
                 ))}
             </ScrollView>
@@ -144,27 +150,27 @@ export default function TasksScreen() {
             >
                 {filtered.length === 0 ? (
                     <View style={styles.emptyState}>
-                        <IconSymbol name="tray" size={48} color="#D1D5DB" />
-                        <Text style={styles.emptyTitle}>Görev bulunamadı</Text>
-                        <Text style={styles.emptySub}>Bu filtrede görev yok.</Text>
+                        <IconSymbol name="tray" size={48} color={colors.placeholder} />
+                        <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>Görev bulunamadı</Text>
+                        <Text style={[styles.emptySub, { color: colors.placeholder }]}>Bu filtrede görev yok.</Text>
                     </View>
                 ) : (
                     filtered.map((t) => {
                         const pri = PRIORITY_MAP[t.priority];
                         return (
-                            <Pressable key={t.id} style={[styles.taskCard, t.done && styles.taskCardDone]}>
+                            <Pressable key={t.id} style={[styles.taskCard, { backgroundColor: colors.card }, t.done && styles.taskCardDone]}>
                                 {/* checkbox */}
                                 <Pressable style={[styles.checkbox, t.done && styles.checkboxDone]}>
                                     {t.done && <IconSymbol name="checkmark" size={14} color="#fff" />}
                                 </Pressable>
 
                                 <View style={styles.taskBody}>
-                                    <Text style={[styles.taskTitle, t.done && styles.taskTitleDone]}>
+                                    <Text style={[styles.taskTitle, { color: colors.text }, t.done && styles.taskTitleDone]}>
                                         {t.title}
                                     </Text>
 
                                     <View style={styles.taskMeta}>
-                                        <Text style={styles.taskProject}>{t.project}</Text>
+                                        <Text style={[styles.taskProject, { color: colors.textSecondary }]}>{t.project}</Text>
 
                                         <View style={[styles.priorityBadge, { backgroundColor: pri.bg }]}>
                                             <Text style={[styles.priorityText, { color: pri.color }]}>{pri.label}</Text>
@@ -173,8 +179,8 @@ export default function TasksScreen() {
                                 </View>
 
                                 {!t.done && (
-                                    <View style={styles.dueBadge}>
-                                        <Text style={styles.dueText}>{t.due}</Text>
+                                    <View style={[styles.dueBadge, { backgroundColor: colors.trackBg }]}>
+                                        <Text style={[styles.dueText, { color: colors.textSecondary }]}>{t.due}</Text>
                                     </View>
                                 )}
                             </Pressable>

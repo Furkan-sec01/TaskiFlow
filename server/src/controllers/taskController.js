@@ -4,15 +4,20 @@ const prisma = new PrismaClient();
 
 exports.createTask = async (req, res) => {
     const userId = req.user.id || req.user.userId;
-    const {title,assigneeMail,priority,date,description} = req.body;
+    const {
+        title,
+        assigneeMail,
+        assignedTo,
+        priority = "MEDIUM",
+        date,
+        description = ""
+    } = req.body;
     const {projectId,columnId} = req.params;
     
-    if(!title ||!assigneeMail || !priority || !date || !description){
-        res.status(400).json({
-            error: "Gerekli alanları doldurmalısınız."
+    if(!title?.trim() || !projectId || !columnId){
+        return res.status(400).json({
+            error: "Görev adı, proje ve kolon bilgisi zorunludur."
         });
-
-        return;
     }
 
     try{
@@ -30,18 +35,17 @@ exports.createTask = async (req, res) => {
             return;
         }
 
-        const assignee = await prisma.user.findUnique({
-            where: {
-                email: assigneeMail
-            }
-        });
+        let assignee = null;
+        if (assignedTo) {
+            assignee = await prisma.user.findUnique({ where: { id: assignedTo } });
+        } else if (assigneeMail) {
+            assignee = await prisma.user.findUnique({ where: { email: assigneeMail } });
+        }
 
-        if(!assignee){
-            res.status(404).json({
-                error: "Görevi yapcak üye bulunamadı."
+        if((assignedTo || assigneeMail) && !assignee){
+            return res.status(404).json({
+                error: "Görevin atanacağı üye bulunamadı."
             });
-
-            return;
         }
 
         const project = await prisma.project.findUnique({
@@ -58,14 +62,14 @@ exports.createTask = async (req, res) => {
             return res.status(400).json({error: "Görev ekleme yetkiniz yok."});
         }
 
-        await prisma.task.create({
+        const task = await prisma.task.create({
             data: {
-                title: title,
+                title: title.trim(),
                 ownerId: user.id,
-                assigneeId: assignee.id,
+                assigneeId: assignee?.id || null,
                 priority: priority,
-                dueDate: new Date(date),
-                description: description,
+                dueDate: date ? new Date(date) : null,
+                description: description.trim() || null,
                 columnId: columnId,
                 projectId: projectId,
                 totalTime: 0,
@@ -74,24 +78,26 @@ exports.createTask = async (req, res) => {
             }
         });
 
-        await prisma.notification.create({
-            data: {
-                title: "Yeni Görev",
-                message: `${user.name} size yeni bir görev verdi`,
-                userId: assignee.id,
-                type: "TASK",
-                
-            }
-        })
+        if (assignee && assignee.id !== user.id) {
+            await prisma.notification.create({
+                data: {
+                    title: "Yeni Görev",
+                    message: `${user.name} size yeni bir görev verdi`,
+                    userId: assignee.id,
+                    type: "TASK",
+                }
+            });
+        }
 
-        res.status(200).json({
-            message: "Görev verildi."
+        res.status(201).json({
+            message: "Görev oluşturuldu.",
+            task
         });
     }catch(error){
         res.status(500).json({
             error: "Server Hatası"
         });
-        console.log("createTask hatası.");
+        console.log("createTask hatası:", error);
     }
 
 }

@@ -16,6 +16,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "@/constants/api";
+import { useTheme } from "@/context/ThemeContext";
 
 type Member = {
   id: string;
@@ -27,6 +28,7 @@ type Member = {
 
 export default function MembersScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [members, setMembers] = useState<Member[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -122,42 +124,48 @@ export default function MembersScreen() {
   }, [members, search]);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={colors.text === "#FFFFFF" ? "light-content" : "dark-content"} />
 
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={22} />
+          <MaterialIcons name="arrow-back" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>Üyeler ({members.length})</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Üyeler ({members.length})</Text>
         <Pressable onPress={loadMembers}>
           <MaterialIcons name="refresh" size={20} color="#2563EB" />
         </Pressable>
       </View>
 
-      <View style={styles.searchBox}>
-        <MaterialIcons name="search" size={18} color="#9CA3AF" />
-        <TextInput value={search} onChangeText={setSearch} placeholder="Ara..." style={{ flex: 1 }} />
+      <View style={[styles.searchBox, { borderColor: colors.border, backgroundColor: colors.inputBg }]}>
+        <MaterialIcons name="search" size={18} color={colors.placeholder} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Ara..."
+          placeholderTextColor={colors.placeholder}
+          style={{ flex: 1, color: colors.inputText }}
+        />
       </View>
 
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 50 }} />
+        <ActivityIndicator style={{ marginTop: 50 }} color="#2563EB" />
       ) : (
         <FlatList
           data={filteredMembers}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 100 }}
           renderItem={({ item }) => (
-            <View style={styles.row}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.email}>{item.email}</Text>
+            <View style={[styles.row, { borderColor: colors.border }]}>
+              <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
+              <Text style={[styles.email, { color: colors.textSecondary }]}>{item.email}</Text>
             </View>
           )}
         />
       )}
 
       {/* ÜYE DAVET ET BUTONU */}
-      <View style={styles.bottomActions}>
+      <View style={[styles.bottomActions, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Pressable style={styles.inviteBtn} onPress={() => setModalVisible(true)}>
           <Text style={styles.inviteText}>Üye Davet Et</Text>
         </Pressable>
@@ -166,19 +174,19 @@ export default function MembersScreen() {
       {/* EMAIL MODAL */}
       <Modal visible={modalVisible} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Üye Davet Et</Text>
-            <Text style={styles.modalLabel}>E-POSTA ADRESİ</Text>
+          <View style={[styles.modalBox, { backgroundColor: colors.modalBg }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Üye Davet Et</Text>
+            <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>E-POSTA ADRESİ</Text>
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
               value={email}
               onChangeText={setEmail}
               placeholder="ornek@email.com"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.placeholder}
               keyboardType="email-address"
               autoCapitalize="none"
             />
-            <Text style={styles.modalHint}>Bu e-posta adresiyle kayıtlı kullanıcı organizasyona eklenecek.</Text>
+            <Text style={[styles.modalHint, { color: colors.textSecondary }]}>Bu e-posta adresiyle kayıtlı kullanıcı organizasyona eklenecek.</Text>
             <Pressable
               style={[styles.submitBtn, adding && { opacity: 0.6 }]}
               onPress={handleAddMember}

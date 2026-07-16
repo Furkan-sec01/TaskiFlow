@@ -6,12 +6,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const API_URL = "http://192.168.1.128:5000/api";
+import { API_URL } from "@/constants/api";
+import { useTheme } from "@/context/ThemeContext";
 const AVATAR_COLORS = ["#2563EB", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
 export default function WorkspaceDetail() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState<any>(null);
@@ -41,28 +42,28 @@ export default function WorkspaceDetail() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.container}>
         <Pressable onPress={() => router.back()} style={styles.back}>
-          <MaterialIcons name="arrow-back" size={20} color="#111" />
-          <Text style={styles.backText}>Organizasyonlara Dön</Text>
+          <MaterialIcons name="arrow-back" size={20} color={colors.text} />
+          <Text style={[styles.backText, { color: colors.textSecondary }]}>Organizasyonlara Dön</Text>
         </Pressable>
 
-        <Text style={styles.title}>Çalışma Alanı</Text>
-        <Text style={styles.sectionTitle}>Görev Alınan Projeler</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Çalışma Alanı</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Görev Alınan Projeler</Text>
 
         {loading ? (
           <ActivityIndicator size="small" color="#2563EB" style={{ marginTop: 12 }} />
         ) : projects.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <MaterialIcons name="folder-open" size={36} color="#D1D5DB" />
-            <Text style={styles.emptyText}>Henüz görev alınan proje yok.</Text>
+          <View style={[styles.emptyCard, { backgroundColor: colors.card }]}>
+            <MaterialIcons name="folder-open" size={36} color={colors.placeholder} />
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Henüz görev alınan proje yok.</Text>
           </View>
         ) : (
           projects.map((proj, i) => (
             <Pressable
               key={proj.id}
-              style={styles.projectCard}
+              style={[styles.projectCard, { backgroundColor: colors.card }]}
               onPress={() => router.push({
                 pathname: "/workspace-proje-detay",
                 params: { projectId: proj.id, projectTitle: proj.title || proj.name }
@@ -73,9 +74,9 @@ export default function WorkspaceDetail() {
                   <MaterialIcons name="folder" size={20} color="#fff" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.projectTitle}>{proj.title || proj.name}</Text>
+                  <Text style={[styles.projectTitle, { color: colors.text }]}>{proj.title || proj.name}</Text>
                   {proj.description ? (
-                    <Text style={styles.projectDesc} numberOfLines={1}>{proj.description}</Text>
+                    <Text style={[styles.projectDesc, { color: colors.textSecondary }]} numberOfLines={1}>{proj.description}</Text>
                   ) : null}
                 </View>
               </View>
@@ -85,7 +86,7 @@ export default function WorkspaceDetail() {
                 style={styles.menuBtn}
                 onPress={(e) => { e.stopPropagation(); openMenu(proj); }}
               >
-                <MaterialIcons name="expand-more" size={24} color="#6B7280" />
+                <MaterialIcons name="expand-more" size={24} color={colors.textSecondary} />
               </Pressable>
             </Pressable>
           ))
@@ -97,8 +98,8 @@ export default function WorkspaceDetail() {
       {/* MODAL MENU */}
       <Modal visible={menuVisible} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
-          <View style={styles.menuBox}>
-            <Text style={styles.menuTitle}>{selectedProject?.title || selectedProject?.name}</Text>
+          <View style={[styles.menuBox, { backgroundColor: colors.card }]}>
+            <Text style={[styles.menuTitle, { color: colors.text }]}>{selectedProject?.title || selectedProject?.name}</Text>
 
             <Pressable
               style={styles.leaveBtn}

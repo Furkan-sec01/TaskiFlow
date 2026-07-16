@@ -7,10 +7,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_URL } from "@/constants/api";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 60) / 2;
-const API_URL = "http://192.168.1.128:5000";
 
 const COLORS = [
     { border: "#3B82F6" }, { border: "#EC4899" }, { border: "#10B981" },
@@ -28,7 +28,7 @@ export default function RaporlarScreen() {
         try {
             setLoading(true);
             const token = await AsyncStorage.getItem("token");
-            const res = await fetch(`${API_URL}/api/project`, {
+            const res = await fetch(`${API_URL}/project`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();

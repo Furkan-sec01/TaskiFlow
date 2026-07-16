@@ -7,10 +7,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTheme } from "@/context/ThemeContext";
+import { API_URL } from "@/constants/api";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 60) / 2;
-const API_URL = "http://192.168.43.19:5000";
 
 const COLORS = [
     { border: "#3B82F6" }, { border: "#EC4899" }, { border: "#10B981" },
@@ -19,6 +20,7 @@ const COLORS = [
 
 export default function RaporlarScreen() {
     const router = useRouter();
+    const { colors } = useTheme();
     const [projects, setProjects] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -28,7 +30,7 @@ export default function RaporlarScreen() {
         try {
             setLoading(true);
             const token = await AsyncStorage.getItem("token");
-            const res = await fetch(`${API_URL}/api/project`, {
+            const res = await fetch(`${API_URL}/project`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();
@@ -41,27 +43,27 @@ export default function RaporlarScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.safe} edges={["top"]}>
-            <View style={styles.header}>
+        <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["top"]}>
+            <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <View style={styles.headerLeft}>
-                    <View style={styles.headerIconBox}>
+                    <View style={[styles.headerIconBox, { backgroundColor: colors.cardLight }]}>
                         <MaterialIcons name="bar-chart" size={20} color="#2563EB" />
                     </View>
-                    <Text style={styles.headerTitle}>Raporlar</Text>
+                    <Text style={[styles.headerTitle, { color: colors.text }]}>Raporlar</Text>
                 </View>
-                <Text style={styles.headerCount}>{projects.length} proje</Text>
+                <Text style={[styles.headerCount, { color: colors.textSecondary }]}>{projects.length} proje</Text>
             </View>
 
             <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-                <Text style={styles.sectionTitle}>Proje Raporları</Text>
-                <Text style={styles.sectionDesc}>Detaylı raporu görüntülemek için bir projeye tıklayın.</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Proje Raporları</Text>
+                <Text style={[styles.sectionDesc, { color: colors.textSecondary }]}>Detaylı raporu görüntülemek için bir projeye tıklayın.</Text>
 
                 {loading ? (
                     <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
                 ) : projects.length === 0 ? (
                     <View style={styles.emptyBox}>
-                        <MaterialIcons name="bar-chart" size={48} color="#D1D5DB" />
-                        <Text style={styles.emptyText}>Henüz proje yok.</Text>
+                        <MaterialIcons name="bar-chart" size={48} color={colors.placeholder} />
+                        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Henüz proje yok.</Text>
                     </View>
                 ) : (
                     <View style={styles.cardsGrid}>
@@ -70,7 +72,7 @@ export default function RaporlarScreen() {
                             return (
                                 <Pressable
                                     key={project.id}
-                                    style={styles.card}
+                                    style={[styles.card, { backgroundColor: colors.card }]}
                                     onPress={() => router.push({
                                         pathname: "/proje-panosu",
                                         params: {
@@ -87,14 +89,14 @@ export default function RaporlarScreen() {
                                                 <MaterialIcons name="description" size={22} color={color.border} />
                                             </View>
                                             <View style={styles.cardTitleArea}>
-                                                <Text style={styles.cardName}>{project.title || project.name}</Text>
-                                                <Text style={styles.cardDate}>
+                                                <Text style={[styles.cardName, { color: colors.text }]}>{project.title || project.name}</Text>
+                                                <Text style={[styles.cardDate, { color: colors.textSecondary }]}>
                                                     {new Date(project.createdAt).toLocaleDateString("tr-TR")}
                                                 </Text>
                                             </View>
-                                            <MaterialIcons name="chevron-right" size={20} color="#9CA3AF" />
+                                            <MaterialIcons name="chevron-right" size={20} color={colors.placeholder} />
                                         </View>
-                                        <Text style={styles.cardDesc} numberOfLines={2}>
+                                        <Text style={[styles.cardDesc, { color: colors.textSecondary }]} numberOfLines={2}>
                                             {project.description || "Proje raporu"}
                                         </Text>
                                         <View style={styles.statusRow}>

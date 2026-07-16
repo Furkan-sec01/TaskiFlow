@@ -12,6 +12,7 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  
 } from "react-native";
 import { useRouter } from "expo-router";
 import { API_URL } from "@/constants/api";
@@ -39,19 +40,25 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-          password: password.trim(),
-        }),
-      });
+  console.log("API_URL:", API_URL);
+  console.log("LOGIN URL:", `${API_URL}/auth/login`);
+  console.log("Login başladı");
 
-      const data = await response.json();
-      console.log("LOGIN RESPONSE:", data);
+  const response = await fetch(`${API_URL}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email: email.trim(),
+      password: password.trim(),
+    }),
+  });
+
+  console.log("Status:", response.status);
+
+  const data = await response.json();
+  console.log("LOGIN RESPONSE:", data);
 
       if (!response.ok) {
         Alert.alert(

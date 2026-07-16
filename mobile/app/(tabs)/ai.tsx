@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, SafeAreaView } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const API_URL = "http://192.168.43.19:5000";
+import { useTheme } from "@/context/ThemeContext";
+import { API_URL } from "@/constants/api";
 
 const PROJECT_CONTEXT = {
   name: "PROJ-Alpha", sprint: "Sprint 7", totalTasks: 16, done: 7,
@@ -24,6 +24,7 @@ type Message = { role: "user" | "assistant"; content: string };
 type Analysis = { id: string; content: string; loading: boolean };
 
 export default function AIScreen() {
+  const { colors, isDark } = useTheme();
   const [messages, setMessages] = useState<Message[]>([{ role: "assistant", content: `Merhaba! Ben TaskiFlow AI asistanınım. **${PROJECT_CONTEXT.name}** projeniz hakkında sorularınızı yanıtlayabilirim.` }]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +37,7 @@ export default function AIScreen() {
 
   const callBackend = async (message: string, history: Message[]): Promise<string> => {
     const token = await AsyncStorage.getItem("token");
-    const response = await fetch(`${API_URL}/api/ai/chat`, {
+    const response = await fetch(`${API_URL}/ai/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ message, history, projectContext: PROJECT_CONTEXT }),
@@ -79,15 +80,15 @@ export default function AIScreen() {
   const getAnalysis = (id: string) => analyses.find(a => a.id === id);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
 
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.headerBorder }]}>
           <View style={styles.headerLeft}>
             <View style={styles.botIcon}><MaterialIcons name="auto-awesome" size={18} color="#fff" /></View>
             <View>
-              <Text style={styles.headerTitle}>TaskiFlow AI</Text>
-              <Text style={styles.headerSub}>Proje asistanı · {PROJECT_CONTEXT.name}</Text>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>TaskiFlow AI</Text>
+              <Text style={[styles.headerSub, { color: colors.textSecondary }]}>Proje asistanı · {PROJECT_CONTEXT.name}</Text>
             </View>
           </View>
           <View style={styles.activeBadge}>
@@ -96,40 +97,40 @@ export default function AIScreen() {
           </View>
         </View>
 
-        <Pressable style={styles.toggleBar} onPress={() => setShowAnalysis(!showAnalysis)}>
+        <Pressable style={[styles.toggleBar, { backgroundColor: colors.cardLight, borderBottomColor: colors.border }]} onPress={() => setShowAnalysis(!showAnalysis)}>
           <MaterialIcons name="analytics" size={16} color="#2563EB" />
           <Text style={styles.toggleText}>AI Analizleri & Proje Özeti</Text>
           <MaterialIcons name={showAnalysis ? "expand-less" : "expand-more"} size={20} color="#2563EB" />
         </Pressable>
 
         {showAnalysis && (
-          <ScrollView style={styles.analysisPanel} nestedScrollEnabled>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>📊 Proje Özeti</Text>
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Sprint</Text><Text style={styles.summaryVal}>{PROJECT_CONTEXT.sprint}</Text></View>
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Tamamlanan</Text><Text style={[styles.summaryVal, { color: "#10B981" }]}>{PROJECT_CONTEXT.done}/{PROJECT_CONTEXT.totalTasks}</Text></View>
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Bloke</Text><Text style={[styles.summaryVal, { color: "#EF4444" }]}>{PROJECT_CONTEXT.blocked}</Text></View>
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Velocity</Text><Text style={[styles.summaryVal, { color: "#2563EB" }]}>{PROJECT_CONTEXT.velocity.last} SP</Text></View>
+          <ScrollView style={[styles.analysisPanel, { backgroundColor: colors.card, borderBottomColor: colors.border }]} nestedScrollEnabled>
+            <View style={[styles.summaryCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Text style={[styles.summaryTitle, { color: colors.text }]}>📊 Proje Özeti</Text>
+              <View style={styles.summaryRow}><Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Sprint</Text><Text style={[styles.summaryVal, { color: colors.text }]}>{PROJECT_CONTEXT.sprint}</Text></View>
+              <View style={styles.summaryRow}><Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Tamamlanan</Text><Text style={[styles.summaryVal, { color: "#10B981" }]}>{PROJECT_CONTEXT.done}/{PROJECT_CONTEXT.totalTasks}</Text></View>
+              <View style={styles.summaryRow}><Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Bloke</Text><Text style={[styles.summaryVal, { color: "#EF4444" }]}>{PROJECT_CONTEXT.blocked}</Text></View>
+              <View style={styles.summaryRow}><Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Velocity</Text><Text style={[styles.summaryVal, { color: "#2563EB" }]}>{PROJECT_CONTEXT.velocity.last} SP</Text></View>
             </View>
 
             {ANALYSIS_CARDS.map(card => {
               const analysis = getAnalysis(card.id);
               const isExpanded = expandedCard === card.id;
               return (
-                <View key={card.id} style={styles.analysisCard}>
+                <View key={card.id} style={[styles.analysisCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <Pressable style={styles.analysisCardHeader} onPress={() => analysis ? setExpandedCard(isExpanded ? null : card.id) : runAnalysis(card)}>
-                    <View style={[styles.analysisIcon, { backgroundColor: card.bg }]}>
+                    <View style={[styles.analysisIcon, { backgroundColor: isDark ? colors.cardLight : card.bg }]}>
                       <MaterialIcons name={card.icon} size={18} color={card.color} />
                     </View>
-                    <Text style={styles.analysisTitle}>{card.title}</Text>
+                    <Text style={[styles.analysisTitle, { color: colors.text }]}>{card.title}</Text>
                     {!analysis
-                      ? <View style={styles.runBadge}><Text style={styles.runBadgeText}>Çalıştır</Text></View>
-                      : <MaterialIcons name={isExpanded ? "expand-less" : "expand-more"} size={20} color="#9CA3AF" />
+                      ? <View style={[styles.runBadge, { backgroundColor: colors.cardLight }]}><Text style={styles.runBadgeText}>Çalıştır</Text></View>
+                      : <MaterialIcons name={isExpanded ? "expand-less" : "expand-more"} size={20} color={colors.textSecondary} />
                     }
                   </Pressable>
                   {isExpanded && analysis && (
                     <View style={styles.analysisResult}>
-                      {analysis.loading ? <ActivityIndicator size="small" color="#2563EB" /> : <Text style={styles.analysisText}>{analysis.content}</Text>}
+                      {analysis.loading ? <ActivityIndicator size="small" color="#2563EB" /> : <Text style={[styles.analysisText, { color: colors.textSecondary }]}>{analysis.content}</Text>}
                     </View>
                   )}
                 </View>
@@ -144,31 +145,31 @@ export default function AIScreen() {
               <View style={[styles.msgAvatar, msg.role === "user" && styles.msgAvatarUser]}>
                 <MaterialIcons name={msg.role === "assistant" ? "auto-awesome" : "person"} size={14} color="#fff" />
               </View>
-              <View style={[styles.msgBubble, msg.role === "user" && styles.msgBubbleUser]}>
-                <Text style={[styles.msgText, msg.role === "user" && styles.msgTextUser]}>{msg.content}</Text>
+              <View style={[styles.msgBubble, msg.role === "assistant" && { backgroundColor: colors.card, borderColor: colors.border }, msg.role === "user" && styles.msgBubbleUser]}>
+                <Text style={[styles.msgText, { color: colors.text }, msg.role === "user" && styles.msgTextUser]}>{msg.content}</Text>
               </View>
             </View>
           ))}
           {isLoading && (
             <View style={styles.msgRow}>
               <View style={styles.msgAvatar}><MaterialIcons name="auto-awesome" size={14} color="#fff" /></View>
-              <View style={styles.msgBubble}><ActivityIndicator size="small" color="#2563EB" /></View>
+              <View style={[styles.msgBubble, { backgroundColor: colors.card, borderColor: colors.border }]}><ActivityIndicator size="small" color="#2563EB" /></View>
             </View>
           )}
         </ScrollView>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickRow}>
           {["Sprint'i tamamlayabilir miyiz?", "En riskli görev hangisi?", "Takım iş yükü dengeli mi?"].map(q => (
-            <Pressable key={q} style={styles.quickChip} onPress={() => setInput(q)}>
-              <Text style={styles.quickChipText}>{q}</Text>
+            <Pressable key={q} style={[styles.quickChip, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => setInput(q)}>
+              <Text style={[styles.quickChipText, { color: colors.textSecondary }]}>{q}</Text>
             </Pressable>
           ))}
         </ScrollView>
 
-        <View style={styles.inputRow}>
+        <View style={[styles.inputRow, { backgroundColor: colors.headerBg, borderTopColor: colors.border }]}>
           <TextInput
-            style={styles.input} value={input} onChangeText={setInput}
-            placeholder="Projeniz hakkında bir şey sorun..." placeholderTextColor="#9CA3AF"
+            style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]} value={input} onChangeText={setInput}
+            placeholder="Projeniz hakkında bir şey sorun..." placeholderTextColor={colors.placeholder}
             multiline onSubmitEditing={sendMessage}
           />
           <Pressable style={[styles.sendBtn, (!input.trim() || isLoading) && styles.sendBtnDisabled]} onPress={sendMessage} disabled={!input.trim() || isLoading}>

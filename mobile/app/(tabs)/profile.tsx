@@ -10,7 +10,6 @@ import {
   Alert,
   Switch,
   Image,
-  useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter,useFocusEffect } from "expo-router";
@@ -19,6 +18,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "@/constants/api";
+import { useTheme, ThemeMode, ThemeColors } from "@/context/ThemeContext";
 
 const STORAGE_KEYS = {
   theme: "profile_theme",
@@ -37,11 +37,13 @@ const Sheet = ({
   onClose,
   title,
   children,
+  colors,
 }: {
   visible: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  colors: typeof ThemeColors.light;
 }) => (
   <Modal
     visible={visible}
@@ -50,9 +52,9 @@ const Sheet = ({
     onRequestClose={onClose}
   >
     <View style={styles.sheetOverlay}>
-      <View style={styles.sheetContent}>
-        <View style={styles.sheetHandle} />
-        <Text style={styles.sheetTitle}>{title}</Text>
+      <View style={[styles.sheetContent, { backgroundColor: colors.modalBg }]}>
+        <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+        <Text style={[styles.sheetTitle, { color: colors.text }]}>{title}</Text>
         {children}
       </View>
     </View>
@@ -68,6 +70,7 @@ const SecurityAccordionItem = ({
   danger = false,
   isOpen,
   onToggle,
+  colors,
 }: {
   sectionKey: string;
   icon: keyof typeof MaterialIcons.glyphMap;
@@ -77,12 +80,17 @@ const SecurityAccordionItem = ({
   danger?: boolean;
   isOpen: boolean;
   onToggle: (key: string) => void;
+  colors: typeof ThemeColors.light;
 }) => {
   return (
     <View
       style={[
         styles.securityAccordionCard,
-        danger && styles.securityAccordionDanger,
+        { backgroundColor: colors.card, borderColor: colors.border },
+        danger && {
+          borderColor: colors.dangerBorder,
+          backgroundColor: colors.dangerCardBg,
+        },
       ]}
     >
       <Pressable
@@ -106,23 +114,24 @@ const SecurityAccordionItem = ({
           <Text
             style={[
               styles.securityAccordionTitle,
+              { color: colors.text },
               danger && styles.securityAccordionTitleDanger,
             ]}
           >
             {title}
           </Text>
-          <Text style={styles.securityAccordionSubtitle}>{subtitle}</Text>
+          <Text style={[styles.securityAccordionSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
         </View>
 
         <MaterialIcons
           name={isOpen ? "keyboard-arrow-up" : "keyboard-arrow-down"}
           size={24}
-          color="#9CA3AF"
+          color={colors.textSecondary}
         />
       </Pressable>
 
       {isOpen ? (
-        <View style={styles.securityAccordionBody}>{children}</View>
+        <View style={[styles.securityAccordionBody, { borderTopColor: colors.border }]}>{children}</View>
       ) : null}
     </View>
   );
@@ -130,13 +139,12 @@ const SecurityAccordionItem = ({
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const deviceTheme = useColorScheme();
+  const { theme, setTheme, isDark, colors } = useTheme();
 
   const [currentPlan, setCurrentPlan] = useState("FREE");
 
   const [userName, setUserName] = useState("semra");
   const [userEmail, setUserEmail] = useState("smtosun44@gmail.com");
-  const [theme, setTheme] = useState("Açık");
   const [language, setLanguage] = useState("Türkçe");
   const [notifEnabled, setNotifEnabled] = useState(true);
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -149,9 +157,6 @@ export default function ProfileScreen() {
   const [userLocation, setUserLocation] = useState("");
   const [userRole, setUserRole] = useState("");
   const [organizationName, setOrganizationName] = useState("");
-
-  const isDark =
-    theme === "Sistem" ? deviceTheme === "dark" : theme === "Koyu";
 
   const [profileModal, setProfileModal] = useState(false);
   const [notifModal, setNotifModal] = useState(false);
@@ -250,9 +255,8 @@ export default function ProfileScreen() {
   useEffect(() => {
     const loadPreferences = async () => {
       try {
-        const savedTheme = await AsyncStorage.getItem(STORAGE_KEYS.theme);
         const savedLanguage = await AsyncStorage.getItem(STORAGE_KEYS.language);
-      
+        if (savedLanguage) setLanguage(savedLanguage);
       } catch (error) {
         console.log("Tercihler yüklenemedi:", error);
       }
@@ -337,10 +341,9 @@ export default function ProfileScreen() {
     setOpenSecuritySection((prev) => (prev === key ? null : key));
   };
 
-  const handleThemeChange = async (selectedTheme: string) => {
+  const handleThemeChange = async (selectedTheme: ThemeMode) => {
     try {
-      setTheme(selectedTheme);
-      await AsyncStorage.setItem(STORAGE_KEYS.theme, selectedTheme);
+      await setTheme(selectedTheme);
       setThemeModal(false);
     } catch (error) {
       console.log("Tema kaydedilemedi:", error);
@@ -816,7 +819,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: isDark ? "#000" : "#F8FAFC" }]}
+      style={[styles.safe, { backgroundColor: colors.background }]}
       edges={["top"]}
     >
       <ScrollView
@@ -835,7 +838,7 @@ export default function ProfileScreen() {
               )}
             </View>
 
-            <View style={styles.cameraBadge}>
+            <View style={[styles.cameraBadge, { backgroundColor: colors.card }]}>
               <IconSymbol name="camera.fill" size={14} color="#2563EB" />
             </View>
           </Pressable>
@@ -872,10 +875,10 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.planCard}>
+        <View style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.planInfo}>
-            <Text style={styles.planLabel}>Mevcut Plan</Text>
-            <Text style={styles.planName}>
+            <Text style={[styles.planLabel, { color: colors.textSecondary }]}>Mevcut Plan</Text>
+            <Text style={[styles.planName, { color: colors.text }]}>
               {PLAN_LABELS[currentPlan] || "Ücretsiz Başlangıç"}
             </Text>
           </View>
@@ -892,7 +895,7 @@ export default function ProfileScreen() {
 
         {currentPlan !== "FREE" && (
           <Pressable
-            style={styles.cancelSubscriptionBtn}
+            style={[styles.cancelSubscriptionBtn, { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder }]}
             onPress={handleCancelSubscription}
           >
             <MaterialIcons name="cancel" size={18} color="#DC2626" />
@@ -906,15 +909,15 @@ export default function ProfileScreen() {
 
         {MENU_SECTIONS.map((section, si) => (
           <View key={si} style={styles.menuSection}>
-            <Text style={styles.menuSectionTitle}>{section.title}</Text>
+            <Text style={[styles.menuSectionTitle, { color: colors.textSecondary }]}>{section.title}</Text>
 
-            <View style={styles.menuCard}>
+            <View style={[styles.menuCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               {section.items.map((item, ii) => (
                 <Pressable
                   key={ii}
                   style={[
                     styles.menuItem,
-                    ii < section.items.length - 1 && styles.menuItemBorder,
+                    ii < section.items.length - 1 && [styles.menuItemBorder, { borderBottomColor: colors.border }],
                   ]}
                   onPress={item.onPress}
                 >
@@ -931,16 +934,16 @@ export default function ProfileScreen() {
                     />
                   </View>
 
-                  <Text style={styles.menuLabel}>{item.label}</Text>
+                  <Text style={[styles.menuLabel, { color: colors.text }]}>{item.label}</Text>
 
                   <View style={styles.menuRight}>
                     {"value" in item && item.value ? (
-                      <Text style={styles.menuValue}>{item.value}</Text>
+                      <Text style={[styles.menuValue, { color: colors.textSecondary }]}>{item.value}</Text>
                     ) : null}
                     <IconSymbol
                       name="chevron.right"
                       size={14}
-                      color="#D1D5DB"
+                      color={colors.textSecondary}
                     />
                   </View>
                 </Pressable>
@@ -949,7 +952,7 @@ export default function ProfileScreen() {
           </View>
         ))}
 
-        <Pressable style={styles.logoutBtn} onPress={handleLogout}>
+        <Pressable style={[styles.logoutBtn, { backgroundColor: colors.card, borderColor: isDark ? "#7F1D1D" : "#FEE2E2" }]} onPress={handleLogout}>
           <IconSymbol
             name="rectangle.portrait.and.arrow.right"
             size={20}
@@ -958,7 +961,7 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Çıkış Yap</Text>
         </Pressable>
 
-        <Text style={styles.version}>TaskiFlow v1.0.0</Text>
+        <Text style={[styles.version, { color: colors.textSecondary }]}>TaskiFlow v1.0.0</Text>
         <View style={{ height: 32 }} />
       </ScrollView>
 
@@ -966,87 +969,95 @@ export default function ProfileScreen() {
         visible={profileModal}
         onClose={() => setProfileModal(false)}
         title="Profil Bilgileri"
+        colors={colors}
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 8 }}
         >
-          <Text style={styles.inputLabel}>Ad Soyad</Text>
+          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Ad Soyad</Text>
           <TextInput
-            style={styles.sheetInput}
+            style={[styles.sheetInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
             value={tempName}
             onChangeText={setTempName}
             placeholder="Ad Soyad"
+            placeholderTextColor={colors.placeholder}
           />
 
-          <Text style={styles.inputLabel}>Kullanıcı Adı</Text>
+          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Kullanıcı Adı</Text>
           <TextInput
-            style={styles.sheetInput}
+            style={[styles.sheetInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
             value={tempUsername}
             onChangeText={setTempUsername}
             placeholder="kullaniciadi"
             autoCapitalize="none"
+            placeholderTextColor={colors.placeholder}
           />
 
-          <Text style={styles.inputLabel}>E-posta</Text>
+          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>E-posta</Text>
           <TextInput
-            style={styles.sheetInput}
+            style={[styles.sheetInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
             value={tempEmail}
             onChangeText={setTempEmail}
             keyboardType="email-address"
             autoCapitalize="none"
             placeholder="ornek@mail.com"
+            placeholderTextColor={colors.placeholder}
           />
 
-          <Text style={styles.inputLabel}>Telefon</Text>
+          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Telefon</Text>
           <TextInput
-            style={styles.sheetInput}
+            style={[styles.sheetInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
             value={tempPhone}
             onChangeText={setTempPhone}
             keyboardType="phone-pad"
             placeholder="+90 5xx xxx xx xx"
+            placeholderTextColor={colors.placeholder}
           />
 
-          <Text style={styles.inputLabel}>Biyografi</Text>
+          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Biyografi</Text>
           <TextInput
-            style={[styles.sheetInput, styles.sheetTextArea]}
+            style={[styles.sheetInput, styles.sheetTextArea, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
             value={tempBio}
             onChangeText={setTempBio}
             placeholder="Kendiniz hakkında kısa bir açıklama"
             multiline
             textAlignVertical="top"
+            placeholderTextColor={colors.placeholder}
           />
 
-          <Text style={styles.inputLabel}>Departman / Rol</Text>
+          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Departman / Rol</Text>
           <TextInput
-            style={styles.sheetInput}
+            style={[styles.sheetInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
             value={tempDepartment}
             onChangeText={setTempDepartment}
             placeholder="Mobil Geliştirme"
+            placeholderTextColor={colors.placeholder}
           />
-          <Text style={styles.inputLabel}>Profil Rolü</Text>
+          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Profil Rolü</Text>
           <TextInput
-            style={styles.sheetInput}
+            style={[styles.sheetInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
             value={tempProfileRole}
             onChangeText={setTempProfileRole}
             placeholder="Stajyer / Mobil Developer"
+            placeholderTextColor={colors.placeholder}
           />
-                  
 
-          <Text style={styles.inputLabel}>Şehir / Konum</Text>
+          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Şehir / Konum</Text>
           <TextInput
-            style={styles.sheetInput}
+            style={[styles.sheetInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
             value={tempLocation}
             onChangeText={setTempLocation}
             placeholder="Şehir / Ülke"
+            placeholderTextColor={colors.placeholder}
           />
 
           <View style={styles.sheetButtons}>
             <Pressable
-              style={styles.sheetCancelBtn}
+              style={[styles.sheetCancelBtn, { borderColor: colors.border }]}
               onPress={() => setProfileModal(false)}
             >
-              <Text style={styles.sheetCancelText}>İptal</Text>
+              <Text style={[styles.sheetCancelText, { color: colors.textSecondary }]}>İptal</Text>
             </Pressable>
 
             <Pressable style={styles.sheetSaveBtn} onPress={saveProfile}>
@@ -1060,9 +1071,10 @@ export default function ProfileScreen() {
         visible={notifModal}
         onClose={() => setNotifModal(false)}
         title="Bildirim Ayarları"
+        colors={colors}
       >
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Push Bildirimleri</Text>
+        <View style={[styles.switchRow, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.switchLabel, { color: colors.text }]}>Push Bildirimleri</Text>
           <Switch
             value={notifEnabled}
             onValueChange={handleNotificationChange}
@@ -1082,15 +1094,20 @@ export default function ProfileScreen() {
         visible={themeModal}
         onClose={() => setThemeModal(false)}
         title="Tema Seç"
+        colors={colors}
       >
-        {["Açık", "Koyu", "Sistem"].map((t) => (
+        {(["Açık", "Koyu", "Sistem"] as ThemeMode[]).map((t) => (
           <Pressable
             key={t}
-            style={[styles.optionRow, theme === t && styles.optionRowActive]}
+            style={[
+              styles.optionRow,
+              { backgroundColor: colors.inputBg },
+              theme === t && [styles.optionRowActive, { backgroundColor: colors.cardLight, borderColor: colors.primary }],
+            ]}
             onPress={() => handleThemeChange(t)}
           >
             <Text
-              style={[styles.optionText, theme === t && styles.optionTextActive]}
+              style={[styles.optionText, { color: colors.text }, theme === t && styles.optionTextActive]}
             >
               {t}
             </Text>
@@ -1105,19 +1122,22 @@ export default function ProfileScreen() {
         visible={langModal}
         onClose={() => setLangModal(false)}
         title="Dil Seç"
+        colors={colors}
       >
         {["Türkçe", "English", "العربية"].map((l) => (
           <Pressable
             key={l}
             style={[
               styles.optionRow,
-              language === l && styles.optionRowActive,
+              { backgroundColor: colors.inputBg },
+              language === l && [styles.optionRowActive, { backgroundColor: colors.cardLight, borderColor: colors.primary }],
             ]}
             onPress={() => handleLanguageChange(l)}
           >
             <Text
               style={[
                 styles.optionText,
+                { color: colors.text },
                 language === l && styles.optionTextActive,
               ]}
             >
@@ -1135,22 +1155,22 @@ export default function ProfileScreen() {
         animationType="slide"
         onRequestClose={() => setSecurityModal(false)}
       >
-        <SafeAreaView style={styles.securityScreen}>
-          <View style={styles.securityHeader}>
+        <SafeAreaView style={[styles.securityScreen, { backgroundColor: colors.background }]}>
+          <View style={[styles.securityHeader, { backgroundColor: colors.headerBg, borderBottomColor: colors.headerBorder }]}>
             <Pressable
-              style={styles.securityBackBtn}
+              style={[styles.securityBackBtn, { backgroundColor: colors.cardLight }]}
               onPress={() => setSecurityModal(false)}
             >
               <MaterialIcons
                 name="arrow-back-ios-new"
                 size={20}
-                color="#111827"
+                color={colors.text}
               />
             </Pressable>
 
             <View style={{ flex: 1 }}>
-              <Text style={styles.securityHeaderTitle}>Güvenlik ve Erişim</Text>
-              <Text style={styles.securityHeaderSubtitle}>
+              <Text style={[styles.securityHeaderTitle, { color: colors.text }]}>Güvenlik ve Erişim</Text>
+              <Text style={[styles.securityHeaderSubtitle, { color: colors.textSecondary }]}>
                 Hesap güvenliğini ve erişim ayarlarını yönet
               </Text>
             </View>
@@ -1167,35 +1187,36 @@ export default function ProfileScreen() {
               subtitle="En az 6 karakter, bir büyük harf ve rakam içermelidir"
               isOpen={openSecuritySection === "password"}
               onToggle={toggleSecuritySection}
+              colors={colors}
             >
-              <Text style={styles.securityInputLabel}>Mevcut şifre</Text>
+              <Text style={[styles.securityInputLabel, { color: colors.textSecondary }]}>Mevcut şifre</Text>
               <TextInput
-                style={styles.securityInput}
+                style={[styles.securityInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
                 value={currentPass}
                 onChangeText={setCurrentPass}
                 secureTextEntry
                 placeholder="••••••••"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.placeholder}
               />
 
-              <Text style={styles.securityInputLabel}>Yeni şifre</Text>
+              <Text style={[styles.securityInputLabel, { color: colors.textSecondary }]}>Yeni şifre</Text>
               <TextInput
-                style={styles.securityInput}
+                style={[styles.securityInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
                 value={newPass}
                 onChangeText={setNewPass}
                 secureTextEntry
                 placeholder="••••••••"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.placeholder}
               />
 
-              <Text style={styles.securityInputLabel}>Şifre tekrar</Text>
+              <Text style={[styles.securityInputLabel, { color: colors.textSecondary }]}>Şifre tekrar</Text>
               <TextInput
-                style={styles.securityInput}
+                style={[styles.securityInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
                 value={confirmPass}
                 onChangeText={setConfirmPass}
                 secureTextEntry
                 placeholder="••••••••"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.placeholder}
               />
 
               <Pressable
@@ -1215,13 +1236,14 @@ export default function ProfileScreen() {
               subtitle="Hesabını ek bir güvenlik katmanıyla koru"
               isOpen={openSecuritySection === "2fa"}
               onToggle={toggleSecuritySection}
+              colors={colors}
             >
-              <View style={styles.securitySettingRow}>
+              <View style={[styles.securitySettingRow, { borderBottomColor: colors.border }]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.securitySettingTitle}>
+                  <Text style={[styles.securitySettingTitle, { color: colors.text }]}>
                     Authenticator uygulaması
                   </Text>
-                  <Text style={styles.securitySettingDesc}>
+                  <Text style={[styles.securitySettingDesc, { color: colors.textSecondary }]}>
                     Google Authenticator, Authy vb.
                   </Text>
                 </View>
@@ -1247,8 +1269,8 @@ export default function ProfileScreen() {
 
               <View style={[styles.securitySettingRow, { borderBottomWidth: 0 }]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.securitySettingTitle}>SMS doğrulama</Text>
-                  <Text style={styles.securitySettingDesc}>
+                  <Text style={[styles.securitySettingTitle, { color: colors.text }]}>SMS doğrulama</Text>
+                  <Text style={[styles.securitySettingDesc, { color: colors.textSecondary }]}>
                     Telefon numarası ile giriş koruması
                   </Text>
                 </View>
@@ -1278,11 +1300,12 @@ export default function ProfileScreen() {
               subtitle={tempEmail || userEmail}
               isOpen={openSecuritySection === "email"}
               onToggle={toggleSecuritySection}
+              colors={colors}
             >
               <View style={[styles.securitySettingRow, { borderBottomWidth: 0 }]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.securitySettingTitle}>Hesap e-postası</Text>
-                  <Text style={styles.securitySettingDesc}>{userEmail}</Text>
+                  <Text style={[styles.securitySettingTitle, { color: colors.text }]}>Hesap e-postası</Text>
+                  <Text style={[styles.securitySettingDesc, { color: colors.textSecondary }]}>{userEmail}</Text>
                 </View>
 
                 <View style={styles.securityStatusSwitch}>
@@ -1310,22 +1333,23 @@ export default function ProfileScreen() {
               subtitle="Hesabınıza bağlı tüm cihazlar"
               isOpen={openSecuritySection === "sessions"}
               onToggle={toggleSecuritySection}
+              colors={colors}
             >
               {sessions.map((session, index) => (
                 <View
                   key={session.id}
                   style={[
                     styles.sessionRow,
-                    index < sessions.length - 1 && styles.sessionRowBorder,
+                    index < sessions.length - 1 && [styles.sessionRowBorder, { borderBottomColor: colors.border }],
                   ]}
                 >
-                  <View style={styles.sessionIcon}>
-                    <MaterialIcons name="devices" size={18} color="#6B7280" />
+                  <View style={[styles.sessionIcon, { backgroundColor: colors.cardLight }]}>
+                    <MaterialIcons name="devices" size={18} color={colors.textSecondary} />
                   </View>
 
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.sessionDevice}>{session.device}</Text>
-                    <Text style={styles.sessionLocation}>{session.location}</Text>
+                    <Text style={[styles.sessionDevice, { color: colors.text }]}>{session.device}</Text>
+                    <Text style={[styles.sessionLocation, { color: colors.textSecondary }]}>{session.location}</Text>
                   </View>
 
                   {session.current ? (
@@ -1352,13 +1376,14 @@ export default function ProfileScreen() {
               danger
               isOpen={openSecuritySection === "danger"}
               onToggle={toggleSecuritySection}
+              colors={colors}
             >
-              <View style={styles.dangerActionRow}>
+              <View style={[styles.dangerActionRow, { borderBottomColor: colors.border }]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.dangerActionTitle}>
+                  <Text style={[styles.dangerActionTitle, { color: colors.text }]}>
                     Tüm oturumları sonlandır
                   </Text>
-                  <Text style={styles.dangerActionDesc}>
+                  <Text style={[styles.dangerActionDesc, { color: colors.textSecondary }]}>
                     Bu cihaz dışındaki tüm oturumları kapat
                   </Text>
                 </View>
@@ -1373,14 +1398,14 @@ export default function ProfileScreen() {
 
               <View style={[styles.dangerActionRow, { borderBottomWidth: 0 }]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.dangerActionTitle}>Hesabı sil</Text>
-                  <Text style={styles.dangerActionDesc}>
+                  <Text style={[styles.dangerActionTitle, { color: colors.text }]}>Hesabı sil</Text>
+                  <Text style={[styles.dangerActionDesc, { color: colors.textSecondary }]}>
                     Tüm veriler kalıcı olarak silinir
                   </Text>
                 </View>
 
                 <Pressable
-                  style={styles.dangerOutlineBtn}
+                  style={[styles.dangerOutlineBtn, { backgroundColor: colors.card }]}
                   onPress={handleDeleteAccount}
                 >
                   <Text style={styles.dangerOutlineBtnText}>Hesabı sil</Text>

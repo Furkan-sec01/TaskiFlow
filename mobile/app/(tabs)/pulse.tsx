@@ -5,14 +5,15 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const API_URL = "http://192.168.1.128:5000";
+import { API_URL } from "@/constants/api";
+import { useTheme } from "@/context/ThemeContext";
 
 const AVATAR_COLORS = ["#2563EB", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
 const BAR_DATA = [40, 70, 45, 90, 65, 80, 50];
 
 export default function PulseScreen() {
+  const { colors } = useTheme();
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
@@ -23,7 +24,7 @@ export default function PulseScreen() {
   const fetchProjects = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/project/my-projects`, {
+      const res = await fetch(`${API_URL}/project/my-projects`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -55,13 +56,13 @@ export default function PulseScreen() {
   const totalCompleted = membersData.reduce((acc, m) => acc + m.done, 0);
 
   if (isLoading) return (
-    <View style={styles.loadingContainer}>
+    <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
       <ActivityIndicator size="large" color="#2563EB" />
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Header */}
@@ -70,10 +71,10 @@ export default function PulseScreen() {
             <MaterialIcons name="show-chart" size={22} color="#fff" />
           </View>
           <View>
-            <Text style={styles.headerTitle}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
               Pulse / <Text style={styles.headerProject}>{selectedProject?.title || "Proje Seçin"}</Text>
             </Text>
-            <Text style={styles.headerSub}>HAFTALIK TAKIM NABZI</Text>
+            <Text style={[styles.headerSub, { color: colors.textSecondary }]}>HAFTALIK TAKIM NABZI</Text>
           </View>
         </View>
 
@@ -83,10 +84,18 @@ export default function PulseScreen() {
             {projects.map(p => (
               <Pressable
                 key={p.id}
-                style={[styles.projectChip, selectedProject?.id === p.id && styles.projectChipActive]}
+                style={[
+                  styles.projectChip,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  selectedProject?.id === p.id && styles.projectChipActive,
+                ]}
                 onPress={() => selectProject(p)}
               >
-                <Text style={[styles.projectChipText, selectedProject?.id === p.id && styles.projectChipTextActive]}>
+                <Text style={[
+                  styles.projectChipText,
+                  { color: colors.textSecondary },
+                  selectedProject?.id === p.id && styles.projectChipTextActive,
+                ]}>
                   {p.title}
                 </Text>
               </Pressable>
@@ -106,14 +115,14 @@ export default function PulseScreen() {
         </View>
 
         {/* Ekip Üyeleri */}
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
           <View style={styles.cardHeader}>
-            <MaterialIcons name="people" size={18} color="#6B7280" />
-            <Text style={styles.cardTitle}>Ekip Üyeleri</Text>
-            <Text style={styles.cardCount}>{membersData.length}</Text>
+            <MaterialIcons name="people" size={18} color={colors.textSecondary} />
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Ekip Üyeleri</Text>
+            <Text style={[styles.cardCount, { color: colors.textSecondary }]}>{membersData.length}</Text>
           </View>
           {membersData.length === 0 ? (
-            <Text style={styles.emptyText}>Henüz üye yok</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Henüz üye yok</Text>
           ) : (
             membersData.map((m, i) => (
               <View key={m.id} style={styles.memberRow}>
@@ -121,8 +130,8 @@ export default function PulseScreen() {
                   <Text style={styles.memberAvatarText}>{m.name?.charAt(0).toUpperCase() || "?"}</Text>
                 </View>
                 <View style={styles.memberInfo}>
-                  <Text style={styles.memberName}>{m.name}</Text>
-                  <Text style={styles.memberDone}>{m.done} Görev Tamamlandı</Text>
+                  <Text style={[styles.memberName, { color: colors.text }]}>{m.name}</Text>
+                  <Text style={[styles.memberDone, { color: colors.textSecondary }]}>{m.done} Görev Tamamlandı</Text>
                 </View>
                 <View style={styles.activeDot} />
               </View>
@@ -131,42 +140,42 @@ export default function PulseScreen() {
         </View>
 
         {/* En Aktif Kullanıcılar */}
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
           <View style={styles.cardHeader}>
             <MaterialIcons name="emoji-events" size={18} color="#F59E0B" />
-            <Text style={styles.cardTitle}>En Aktif Kullanıcılar</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>En Aktif Kullanıcılar</Text>
           </View>
           {membersData.slice(0, 4).map((m, i) => (
             <View key={m.id} style={styles.performanceRow}>
               <View style={styles.performanceTop}>
-                <Text style={styles.performanceName}>{m.name}</Text>
+                <Text style={[styles.performanceName, { color: colors.text }]}>{m.name}</Text>
                 <Text style={styles.performanceScore}>%{m.score}</Text>
               </View>
-              <View style={styles.progressBg}>
+              <View style={[styles.progressBg, { backgroundColor: colors.trackBg }]}>
                 <View style={[styles.progressFill, { width: `${m.score}%` as any }]} />
               </View>
             </View>
           ))}
-          {membersData.length === 0 && <Text style={styles.emptyText}>Henüz veri yok</Text>}
+          {membersData.length === 0 && <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Henüz veri yok</Text>}
         </View>
 
         {/* Aktivite Grafiği */}
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
           <View style={styles.cardHeader}>
             <MaterialIcons name="trending-up" size={18} color="#10B981" />
-            <Text style={styles.cardTitle}>Aktivite Grafiği</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Aktivite Grafiği</Text>
           </View>
           <View style={styles.barChart}>
             {BAR_DATA.map((h, i) => (
               <View key={i} style={styles.barCol}>
-                <View style={styles.barBg}>
+                <View style={[styles.barBg, { backgroundColor: colors.trackBg }]}>
                   <View style={[styles.barFill, { height: `${h}%` as any }]} />
                 </View>
-                <Text style={styles.barLabel}>G{i + 1}</Text>
+                <Text style={[styles.barLabel, { color: colors.textSecondary }]}>G{i + 1}</Text>
               </View>
             ))}
           </View>
-          <Text style={styles.barSubLabel}>SON 7 GÜNLÜK GÖREV DAĞILIMI</Text>
+          <Text style={[styles.barSubLabel, { color: colors.textSecondary }]}>SON 7 GÜNLÜK GÖREV DAĞILIMI</Text>
         </View>
 
       </ScrollView>

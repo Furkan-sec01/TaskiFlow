@@ -9,6 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useTheme } from "@/context/ThemeContext";
 
 type Plan = {
   id: "starter" | "pro" | "enterprise";
@@ -25,6 +26,7 @@ type Plan = {
 
 export default function Plans() {
   const router = useRouter();
+  const { colors } = useTheme();
 
   const plans: Plan[] = [
     {
@@ -84,20 +86,20 @@ export default function Plans() {
   ];
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
         <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>←</Text>
+          <Pressable onPress={() => router.back()} style={[styles.backBtn, { borderColor: colors.border }]}>
+            <Text style={[styles.backText, { color: colors.text }]}>←</Text>
           </Pressable>
 
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Planınızı Seçin</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.title, { color: colors.text }]}>Planınızı Seçin</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               Şeffaf fiyatlandırma. Gizli ücret yok. İstediğiniz zaman iptal
               edebilir veya paketinizi değiştirebilirsiniz.
             </Text>
@@ -111,6 +113,7 @@ export default function Plans() {
               key={p.id}
               style={[
                 styles.card,
+                { backgroundColor: colors.card, borderColor: colors.border },
                 p.popular && styles.cardPopularBorder,
                 p.id === "enterprise" && styles.cardPurpleBorder,
               ]}
@@ -121,16 +124,16 @@ export default function Plans() {
                 </View>
               )}
 
-              <Text style={styles.planName}>{p.name}</Text>
+              <Text style={[styles.planName, { color: colors.text }]}>{p.name}</Text>
 
               <View style={styles.priceRow}>
-                <Text style={styles.price}>{p.priceText}</Text>
+                <Text style={[styles.price, { color: colors.text }]}>{p.priceText}</Text>
                 {!!p.periodText && (
-                  <Text style={styles.period}>{p.periodText}</Text>
+                  <Text style={[styles.period, { color: colors.textSecondary }]}>{p.periodText}</Text>
                 )}
               </View>
 
-              <Text style={styles.desc}>{p.desc}</Text>
+              <Text style={[styles.desc, { color: colors.textSecondary }]}>{p.desc}</Text>
 
               <View style={styles.featureList}>
                 {p.features.map((f) => (
@@ -150,7 +153,7 @@ export default function Plans() {
                         ✓
                       </Text>
                     </View>
-                    <Text style={styles.featureText}>{f}</Text>
+                    <Text style={[styles.featureText, { color: colors.text }]}>{f}</Text>
                   </View>
                 ))}
               </View>
@@ -160,7 +163,7 @@ export default function Plans() {
                 style={[
                   styles.cta,
                   p.variant === "primary" && styles.ctaPrimary,
-                  p.variant === "ghost" && styles.ctaGhost,
+                  p.variant === "ghost" && [styles.ctaGhost, { backgroundColor: colors.trackBg, borderColor: colors.border }],
                   p.variant === "purple" && styles.ctaPurple,
                 ]}
               >
@@ -168,7 +171,7 @@ export default function Plans() {
                   style={[
                     styles.ctaText,
                     p.variant === "primary" && styles.ctaTextPrimary,
-                    p.variant === "ghost" && styles.ctaTextGhost,
+                    p.variant === "ghost" && [styles.ctaTextGhost, { color: colors.text }],
                     p.variant === "purple" && styles.ctaTextPrimary,
                   ]}
                 >
@@ -180,29 +183,29 @@ export default function Plans() {
         </View>
 
         {/* Trust Badges */}
-        <View style={styles.badgeWrap}>
-          <View style={styles.badge}>
+        <View style={[styles.badgeWrap, { borderTopColor: colors.border }]}>
+          <View style={[styles.badge, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={[styles.badgeIcon, styles.badgeGreen]}>
               <Text style={styles.badgeIconText}>🛡️</Text>
             </View>
-            <Text style={styles.badgeTitle}>256-bit SSL</Text>
-            <Text style={styles.badgeDesc}>Bankacılık düzeyinde şifreleme</Text>
+            <Text style={[styles.badgeTitle, { color: colors.text }]}>256-bit SSL</Text>
+            <Text style={[styles.badgeDesc, { color: colors.textSecondary }]}>Bankacılık düzeyinde şifreleme</Text>
           </View>
 
-          <View style={styles.badge}>
+          <View style={[styles.badge, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={[styles.badgeIcon, styles.badgeYellow]}>
               <Text style={styles.badgeIconText}>⚡</Text>
             </View>
-            <Text style={styles.badgeTitle}>Anında Aktivasyon</Text>
-            <Text style={styles.badgeDesc}>Satın aldıktan sonra hemen başlayın</Text>
+            <Text style={[styles.badgeTitle, { color: colors.text }]}>Anında Aktivasyon</Text>
+            <Text style={[styles.badgeDesc, { color: colors.textSecondary }]}>Satın aldıktan sonra hemen başlayın</Text>
           </View>
 
-          <View style={styles.badge}>
+          <View style={[styles.badge, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={[styles.badgeIcon, styles.badgeBlue]}>
               <Text style={styles.badgeIconText}>✅</Text>
             </View>
-            <Text style={styles.badgeTitle}>14 Gün İade</Text>
-            <Text style={styles.badgeDesc}>Koşulsuz iade garantisi</Text>
+            <Text style={[styles.badgeTitle, { color: colors.text }]}>14 Gün İade</Text>
+            <Text style={[styles.badgeDesc, { color: colors.textSecondary }]}>Koşulsuz iade garantisi</Text>
           </View>
         </View>
 

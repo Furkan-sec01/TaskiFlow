@@ -14,6 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { API_URL } from "@/constants/api";
+import { useTheme } from "@/context/ThemeContext";
 
 type NotificationItem = {
   id: string;
@@ -35,6 +36,7 @@ type FilterKey = "ALL" | "UNREAD" | "ALERTS";
 type SortKey = "NEWEST" | "UNREAD_FIRST";
 
 export default function BildirimlerScreen() {
+  const { colors } = useTheme();
   const [token, setToken] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -268,14 +270,19 @@ export default function BildirimlerScreen() {
   }) => (
     <Pressable
       onPress={onPress}
-      style={[styles.chip, active ? styles.chipActive : styles.chipPassive]}
+      style={[
+        styles.chip,
+        active
+          ? styles.chipActive
+          : [styles.chipPassive, { backgroundColor: colors.card, borderColor: colors.border }],
+      ]}
     >
-      <Text style={active ? styles.chipTextActive : styles.chipTextPassive}>
+      <Text style={active ? styles.chipTextActive : [styles.chipTextPassive, { color: colors.textSecondary }]}>
         {label}
       </Text>
 
       {!!badge && badge > 0 && (
-        <View style={active ? styles.badgeActive : styles.badgePassive}>
+        <View style={active ? styles.badgeActive : [styles.badgePassive, { backgroundColor: colors.cardLight }]}>
           <Text style={active ? styles.badgeTextActive : styles.badgeTextPassive}>
             {badge}
           </Text>
@@ -290,7 +297,12 @@ export default function BildirimlerScreen() {
 
     return (
       <Pressable
-        style={[styles.card, item.isRead ? styles.cardRead : styles.cardUnread]}
+        style={[
+          styles.card,
+          item.isRead
+            ? [styles.cardRead, { backgroundColor: colors.background, borderColor: colors.border }]
+            : [styles.cardUnread, { backgroundColor: colors.card, borderColor: colors.primary }],
+        ]}
         onPress={() => {
           if (!item.isRead) markAsRead(item.id);
         }}
@@ -306,24 +318,24 @@ export default function BildirimlerScreen() {
 
           <View style={styles.cardTextArea}>
             <View style={styles.cardHeaderRow}>
-              <Text style={styles.title}>{item.title}</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
 
               <View style={styles.rightInfo}>
                 {!!item.createdAt && (
-                  <Text style={styles.dateText}>{formatDate(item.createdAt)}</Text>
+                  <Text style={[styles.dateText, { color: colors.textSecondary }]}>{formatDate(item.createdAt)}</Text>
                 )}
 
                 {!item.isRead && <View style={styles.unreadDot} />}
               </View>
             </View>
 
-            <Text style={styles.msg}>{item.message}</Text>
+            <Text style={[styles.msg, { color: colors.textSecondary }]}>{item.message}</Text>
 
             {isInvite && !!workspaceName && (
               <View style={styles.workspaceBox}>
                 <MaterialIcons name="groups" size={15} color="#2563EB" />
                 <Text style={styles.workspaceLabel}>Davet edildiğin ekip:</Text>
-                <Text style={styles.workspaceName}>{workspaceName}</Text>
+                <Text style={[styles.workspaceName, { color: colors.text }]}>{workspaceName}</Text>
               </View>
             )}
 
@@ -338,11 +350,11 @@ export default function BildirimlerScreen() {
                 </Pressable>
 
                 <Pressable
-                  style={styles.rejectButton}
+                  style={[styles.rejectButton, { backgroundColor: colors.trackBg }]}
                   onPress={() => respondInvite(item.id, "REJECT")}
                 >
-                  <MaterialIcons name="close" size={16} color="#334155" />
-                  <Text style={styles.rejectText}>Reddet</Text>
+                  <MaterialIcons name="close" size={16} color={colors.textSecondary} />
+                  <Text style={[styles.rejectText, { color: colors.textSecondary }]}>Reddet</Text>
                 </Pressable>
               </View>
             )}
@@ -360,24 +372,24 @@ export default function BildirimlerScreen() {
 
   if (firstLoading) {
     return (
-      <SafeAreaView style={styles.center}>
+      <SafeAreaView style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color="#2563EB" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.headerLeft}>
-            <View style={styles.iconBox}>
+            <View style={[styles.iconBox, { backgroundColor: colors.cardLight }]}>
               <MaterialIcons name="notifications-none" size={24} color="#2563EB" />
             </View>
 
             <View style={styles.headerTextArea}>
-              <Text style={styles.headerTitle}>Bildirimler</Text>
-              <Text style={styles.headerSub}>{allReadText}</Text>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>Bildirimler</Text>
+              <Text style={[styles.headerSub, { color: colors.textSecondary }]}>{allReadText}</Text>
             </View>
           </View>
 
@@ -395,11 +407,11 @@ export default function BildirimlerScreen() {
         </View>
 
         <View style={styles.filtersWrap}>
-          <Pressable style={styles.sortButton} onPress={toggleSort}>
+          <Pressable style={[styles.sortButton, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={toggleSort}>
             <MaterialIcons
               name={sortBy === "NEWEST" ? "filter-list" : "sort"}
               size={20}
-              color="#64748B"
+              color={colors.textSecondary}
             />
           </Pressable>
 
@@ -427,11 +439,11 @@ export default function BildirimlerScreen() {
 
         {filteredAndSorted.length === 0 ? (
           <View style={styles.empty}>
-            <View style={styles.emptyIconBox}>
-              <MaterialIcons name="notifications-none" size={34} color="#CBD5E1" />
+            <View style={[styles.emptyIconBox, { backgroundColor: colors.card }]}>
+              <MaterialIcons name="notifications-none" size={34} color={colors.placeholder} />
             </View>
-            <Text style={styles.emptyTitle}>Hiç bildirim yok</Text>
-            <Text style={styles.emptyDesc}>Şu an gösterilecek bir şey yok.</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>Hiç bildirim yok</Text>
+            <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>Şu an gösterilecek bir şey yok.</Text>
           </View>
         ) : (
           <FlatList
