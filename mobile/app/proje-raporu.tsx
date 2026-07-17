@@ -230,7 +230,7 @@ export default function ProjePanosuScreen() {
                         ) : (
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.boardScroll}>
                                 {filteredColumns.map((col) => (
-                                    <View key={col.id} style={[styles.column, showRapor && { width: width * 0.55 }]}>
+                                    <View key={col.id} style={[styles.column, showRapor && { width: 300 * 0.55 }]}>
                                         <View style={styles.columnHeader}>
                                             <Text style={styles.columnTitle}>{getColName(col).toUpperCase()}</Text>
                                             <View style={styles.countBadge}>
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     filterBtnTextActive: { color: '#6366F1' },
     mainContent: { flex: 1, flexDirection: 'row' },
     boardScroll: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 20 },
-    column: { width: COLUMN_WIDTH, backgroundColor: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 16, marginRight: 16, maxHeight: '92%' },
+    column: { width: 300, backgroundColor: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 16, marginRight: 16, maxHeight: '92%' },
     columnHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
     columnTitle: { fontSize: 13, fontWeight: '900', color: '#111827', letterSpacing: 0.5 },
     countBadge: { backgroundColor: '#E0E7FF', width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },

@@ -32,6 +32,7 @@ app.get("/", (req, res) => {
 
 const PORT = 5000;
 
+// Yanlış olan satırı komple sil ve şunu yaz:
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server Full Mod (Auth + Task + Payment) çalışıyor: http://localhost:${PORT}`);
+  console.log(`Server Full Mod çalışıyor: http://0.0.0.0:${PORT}`);
 });

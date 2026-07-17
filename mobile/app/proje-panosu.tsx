@@ -14,7 +14,6 @@ const BACKGROUNDS = [
     'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&q=80&w=2000',
     'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&q=80&w=2000',
 ];
-
 interface Task {
     id: string;
     title: string;
@@ -502,7 +501,7 @@ resimBtnText: { fontSize: 11, fontWeight: '700', color: '#6B7280' },
     filterBtnTextActive: { color: '#6366F1' },
     mainContent: { flex: 1, flexDirection: 'row' },
     boardScroll: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 20 },
-    column: { width: COLUMN_WIDTH, backgroundColor: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 16, marginRight: 16, maxHeight: '92%' },
+    column: { width: 300, backgroundColor: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 16, marginRight: 16, maxHeight: '92%' },
     columnHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
     columnTitle: { fontSize: 13, fontWeight: '900', color: '#111827', letterSpacing: 0.5 },
     countBadge: { backgroundColor: '#E0E7FF', width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
