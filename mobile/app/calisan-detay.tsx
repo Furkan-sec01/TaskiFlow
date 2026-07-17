@@ -62,7 +62,7 @@ export default function CalisanDetayScreen() {
         {/* Sağ üst köşe - Pulse butonu */}
         <Pressable
           style={styles.pulseBtn}
-          onPress={() => router.push({ pathname: "/(tabs)/pulse" })}
+          onPress={() => router.push("/pulse")}
         >
           <MaterialIcons name="show-chart" size={16} color="#2563EB" />
           <Text style={styles.pulseBtnText}>Pulse</Text>

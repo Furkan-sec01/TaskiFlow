@@ -101,7 +101,7 @@ export default function LoginScreen() {
 }
 
       Alert.alert("Başarılı", "Giriş yapıldı.");
-      router.replace("/(tabs)/genel-bakis");
+      router.replace("/genel-bakis");
     } catch (error) {
       Alert.alert("Bağlantı Hatası", "Sunucuya bağlanılamadı.");
     } finally {

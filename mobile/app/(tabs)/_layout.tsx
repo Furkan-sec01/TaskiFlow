@@ -44,7 +44,6 @@ export default function TabLayout() {
       <Tabs.Screen name="profile" options={{ title: 'Profil', tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.fill" color={color} /> }} />
 
       {/* Gizli sayfalar */}
-      <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen name="tasks" options={{ href: null }} />
       <Tabs.Screen name="pulse" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />

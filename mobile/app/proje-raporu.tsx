@@ -9,6 +9,9 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "@/constants/api";
 
+const { width } = Dimensions.get("window");
+const COLUMN_WIDTH = Math.min(width * 0.78, 320);
+
 const BACKGROUNDS = [
     'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=2000',
     'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&q=80&w=2000',

@@ -274,11 +274,11 @@ for (const colName of defaultColumns) {
     return (
         <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
             <View style={[styles.topHeader, { backgroundColor: colors.headerBg, borderBottomColor: colors.headerBorder }]}>
-                <Pressable onPress={() => router.back()} style={styles.backButton}>
-                    <MaterialIcons name="arrow-back" size={24} color={colors.text} />
-                </Pressable>
+                <View style={styles.backButton}>
+                    <MaterialIcons name="home" size={24} color={colors.text} />
+                </View>
                 <Text style={[styles.welcomeText, { color: colors.text }]}>Hoş Geldiniz, {userName}</Text>
-                <Pressable style={styles.notifBtn} onPress={() => router.push("/(tabs)/notifications")}>
+                <Pressable style={styles.notifBtn} onPress={() => router.push("/notifications")}>
                     <MaterialIcons name="notifications" size={24} color={colors.text} />
                     <View style={styles.notifDot} />
                 </Pressable>
@@ -363,7 +363,7 @@ for (const colName of defaultColumns) {
                                 <Pressable
                                     key={proj.id}
                                     style={[styles.projectCard, { backgroundColor: colors.card }]}
-                                    onPress={() => router.push({ pathname: "/proje-panosu", params: { projectId: proj.id } })}
+                                    onPress={() => router.push({ pathname: "/proje-panosu", params: { projectId: String(proj.id) } })}
                                 >
                                     <View style={styles.projectCardTop}>
                                         <View style={styles.projectIconBox}>
@@ -422,7 +422,7 @@ for (const colName of defaultColumns) {
                                 <Pressable
                                     key={proj.id}
                                     style={[styles.projectCard, { borderWidth: 2, borderColor: "#10B981", backgroundColor: colors.card }]}
-                                    onPress={() => router.push({ pathname: "/proje-panosu", params: { projectId: proj.id } })}
+                                    onPress={() => router.push({ pathname: "/proje-panosu", params: { projectId: String(proj.id) } })}
                                 >
                                     <View style={styles.projectCardTop}>
                                         <View style={[styles.projectIconBox, { backgroundColor: "#10B981" }]}>

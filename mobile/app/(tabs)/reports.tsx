@@ -76,7 +76,7 @@ export default function RaporlarScreen() {
                                     onPress={() => router.push({
                                         pathname: "/proje-panosu",
                                         params: {
-                                            projectId: project.id,
+                                            projectId: String(project.id),
                                             projectName: project.title || project.name,
                                             showRapor: "true",
                                         },

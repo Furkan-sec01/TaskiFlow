@@ -8,6 +8,10 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "@/constants/api";
+import { useTheme } from "@/context/ThemeContext";
+
+const { width } = Dimensions.get("window");
+const COLUMN_WIDTH = Math.min(width * 0.78, 320);
 
 const BACKGROUNDS = [
     'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=2000',
@@ -41,6 +45,8 @@ interface Member {
 
 export default function ProjePanosuScreen() {
     const router = useRouter();
+    const { colors, isDark } = useTheme();
+    const styles = createStyles(colors, isDark);
     const { projectId, showRapor: showRaporParam } = useLocalSearchParams<{ projectId: string; showRapor?: string }>();
     const [columns, setColumns] = useState<Column[]>([]);
     const [loading, setLoading] = useState(true);
@@ -187,8 +193,8 @@ export default function ProjePanosuScreen() {
                 <SafeAreaView style={styles.safe}>
                     <View style={styles.header}>
                         <View style={styles.headerRow1}>
-                           <Pressable onPress={() => router.back()} style={styles.backBtn}>
-    <MaterialIcons name="arrow-back" size={20} color="#6B7280" />
+                           <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace("/genel-bakis")} style={styles.backBtn}>
+    <MaterialIcons name="arrow-back" size={20} color={colors.textSecondary} />
 </Pressable>
 <Text style={styles.headerTitle}>{projectTitle.toUpperCase()}</Text>
 <View style={styles.headerActions}>
@@ -199,11 +205,11 @@ export default function ProjePanosuScreen() {
                 <Text style={styles.actionBtnText}>RAPOR</Text>
             </Pressable>
             <Pressable style={styles.actionBtn} onPress={() => setShowBgPicker(true)}>
-                <MaterialIcons name="image" size={14} color="#6B7280" />
+                <MaterialIcons name="image" size={14} color={colors.textSecondary} />
                 <Text style={styles.actionBtnText}>RESİM</Text>
             </Pressable>
-            <Pressable style={styles.actionBtn} onPress={() => router.push({ pathname: "/documents", params: { projectId } })}>
-                <MaterialIcons name="attach-file" size={14} color="#6B7280" />
+            <Pressable style={styles.actionBtn} onPress={() => router.push({ pathname: "/documents", params: { projectId: String(projectId) } })}>
+                <MaterialIcons name="attach-file" size={14} color={colors.textSecondary} />
                 <Text style={styles.actionBtnText}>BELGE</Text>
             </Pressable>
         </>
@@ -214,11 +220,11 @@ export default function ProjePanosuScreen() {
                         {showRaporParam !== "true" && (
                             <>
                                 <View style={styles.searchBox}>
-                                    <MaterialIcons name="search" size={18} color="#9CA3AF" />
+                                    <MaterialIcons name="search" size={18} color={colors.placeholder} />
                                     <TextInput
                                         style={styles.searchInput}
                                         placeholder="Görevlerde ara..."
-                                        placeholderTextColor="#9CA3AF"
+                                        placeholderTextColor={colors.placeholder}
                                         value={searchQuery}
                                         onChangeText={setSearchQuery}
                                     />
@@ -427,11 +433,11 @@ export default function ProjePanosuScreen() {
                         <View style={styles.addModalHeader}>
                             <Text style={styles.addModalTitle}>Yeni Görev</Text>
                             <Pressable onPress={() => setAddModalVisible(false)}>
-                                <MaterialIcons name="close" size={22} color="#374151" />
+                                <MaterialIcons name="close" size={22} color={colors.text} />
                             </Pressable>
                         </View>
                         <Text style={styles.addLabel}>GÖREV ADI</Text>
-                        <TextInput style={styles.addInput} value={newTitle} onChangeText={setNewTitle} placeholder="Görev başlığı..." placeholderTextColor="#9CA3AF" />
+                        <TextInput style={styles.addInput} value={newTitle} onChangeText={setNewTitle} placeholder="Görev başlığı..." placeholderTextColor={colors.placeholder} />
                         <Text style={styles.addLabel}>ATANAN KİŞİ</Text>
                         {members.length === 0 ? (
                             <Text style={{ color: "#9CA3AF", fontSize: 13, marginBottom: 8 }}>Ekip üyesi bulunamadı.</Text>
@@ -468,7 +474,7 @@ export default function ProjePanosuScreen() {
                             ))}
                         </View>
                         <Text style={styles.addLabel}>AÇIKLAMA</Text>
-                        <TextInput style={[styles.addInput, { height: 80 }]} value={newDesc} onChangeText={setNewDesc} placeholder="Görev açıklaması..." placeholderTextColor="#9CA3AF" multiline textAlignVertical="top" />
+                        <TextInput style={[styles.addInput, { height: 80 }]} value={newDesc} onChangeText={setNewDesc} placeholder="Görev açıklaması..." placeholderTextColor={colors.placeholder} multiline textAlignVertical="top" />
                         <Pressable style={styles.addSubmitBtn} onPress={handleAddTask} disabled={addLoading}>
                             {addLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.addSubmitText}>Görevi Ekle</Text>}
                         </Pressable>
@@ -479,94 +485,96 @@ export default function ProjePanosuScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1 },
+const createStyles = (colors: Record<string, string>, isDark: boolean) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     background: { flex: 1 },
-    safe: { flex: 1, backgroundColor: 'rgba(255,255,255,0.35)' },
-    header: { paddingHorizontal: 16, paddingTop: Platform.OS === 'android' ? 40 : 10, backgroundColor: 'rgba(255,255,255,0.88)', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingBottom: 12 },
+    safe: { flex: 1, backgroundColor: isDark ? 'rgba(11,18,31,0.78)' : 'rgba(255,255,255,0.35)' },
+    header: { paddingHorizontal: 16, paddingTop: Platform.OS === 'android' ? 40 : 10, backgroundColor: isDark ? 'rgba(11,18,31,0.94)' : 'rgba(255,255,255,0.88)', borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 12 },
     headerRow1: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
  backBtn: { padding: 4 },
-    headerTitle: { fontSize: 16, fontWeight: '900', color: '#111827', letterSpacing: 1, flex: 1, textAlign: 'center' },
+    headerTitle: { fontSize: 16, fontWeight: '900', color: colors.text, letterSpacing: 1, flex: 1, textAlign: 'center' },
     headerActions: { flexDirection: 'row', gap: 8 },
+    actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.cardLight, paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8 },
+    actionBtnText: { fontSize: 10, fontWeight: '700', color: colors.textSecondary },
    raporBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
 raporBtnText: { fontSize: 11, fontWeight: '700', color: '#2563EB' },
 resimBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F3F4F6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
 resimBtnText: { fontSize: 11, fontWeight: '700', color: '#6B7280' },
-    searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, height: 40, marginBottom: 10, borderWidth: 1, borderColor: '#E5E7EB' },
-    searchInput: { flex: 1, marginLeft: 8, fontSize: 13, color: '#111827' },
-    filterGroup: { flexDirection: 'row', backgroundColor: '#F3F4F6', borderRadius: 20, padding: 4, alignSelf: 'flex-start' },
+    searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.inputBg, borderRadius: 12, paddingHorizontal: 12, height: 40, marginBottom: 10, borderWidth: 1, borderColor: colors.inputBorder },
+    searchInput: { flex: 1, marginLeft: 8, fontSize: 13, color: colors.inputText },
+    filterGroup: { flexDirection: 'row', backgroundColor: colors.trackBg, borderRadius: 20, padding: 4, alignSelf: 'flex-start' },
     filterBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 },
-    filterBtnActive: { backgroundColor: '#fff', elevation: 1 },
-    filterBtnText: { fontSize: 10, fontWeight: '700', color: '#9CA3AF' },
+    filterBtnActive: { backgroundColor: colors.card, elevation: 1 },
+    filterBtnText: { fontSize: 10, fontWeight: '700', color: colors.textSecondary },
     filterBtnTextActive: { color: '#6366F1' },
     mainContent: { flex: 1, flexDirection: 'row' },
     boardScroll: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 20 },
-    column: { width: 300, backgroundColor: 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 16, marginRight: 16, maxHeight: '92%' },
+    column: { width: COLUMN_WIDTH, backgroundColor: isDark ? 'rgba(23,34,55,0.92)' : 'rgba(255,255,255,0.75)', borderRadius: 24, padding: 16, marginRight: 16, maxHeight: '92%' },
     columnHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
-    columnTitle: { fontSize: 13, fontWeight: '900', color: '#111827', letterSpacing: 0.5 },
-    countBadge: { backgroundColor: '#E0E7FF', width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+    columnTitle: { fontSize: 13, fontWeight: '900', color: colors.text, letterSpacing: 0.5 },
+    countBadge: { backgroundColor: colors.cardLight, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
     countText: { fontSize: 10, fontWeight: '800', color: '#6366F1' },
     taskList: { flex: 1 },
-    taskCard: { backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 10, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
+    taskCard: { backgroundColor: colors.card, borderRadius: 16, padding: 14, marginBottom: 10, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
     taskCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
     priorityTag: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
     priorityTagText: { color: '#fff', fontSize: 9, fontWeight: '900' },
-    checkbox: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#D1D5DB', alignItems: 'center', justifyContent: 'center' },
+    checkbox: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
     checkboxDone: { backgroundColor: '#10B981', borderColor: '#10B981' },
-    taskTitle: { fontSize: 14, fontWeight: '800', color: '#111827', marginBottom: 4 },
-    taskDesc: { fontSize: 11, color: '#9CA3AF', marginBottom: 10 },
+    taskTitle: { fontSize: 14, fontWeight: '800', color: colors.text, marginBottom: 4 },
+    taskDesc: { fontSize: 11, color: colors.textSecondary, marginBottom: 10 },
     taskFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     assigneeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     miniAvatar: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center' },
     miniAvatarText: { color: '#fff', fontSize: 9, fontWeight: '800' },
     assigneeName: { fontSize: 11, fontWeight: '700', color: '#6366F1' },
-    taskDate: { fontSize: 10, color: '#9CA3AF' },
-    addCardBtn: { borderWidth: 1, borderColor: '#E5E7EB', borderStyle: 'dashed', borderRadius: 12, height: 44, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-    addCardText: { fontSize: 12, fontWeight: '800', color: '#9CA3AF' },
-    raporPanelFullScreen: { flex: 1, padding: 24, backgroundColor: 'rgba(255,255,255,0.92)' },
-    raporPanel: { width: 160, backgroundColor: 'rgba(255,255,255,0.92)', padding: 14, borderLeftWidth: 1, borderLeftColor: '#E5E7EB' },
-    raporTitle: { fontSize: 11, fontWeight: '900', color: '#111827', letterSpacing: 1, marginBottom: 16, textAlign: 'center' },
+    taskDate: { fontSize: 10, color: colors.textSecondary },
+    addCardBtn: { borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed', borderRadius: 12, height: 44, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+    addCardText: { fontSize: 12, fontWeight: '800', color: colors.textSecondary },
+    raporPanelFullScreen: { flex: 1, padding: 24, backgroundColor: isDark ? 'rgba(11,18,31,0.94)' : 'rgba(255,255,255,0.92)' },
+    raporPanel: { width: 160, backgroundColor: isDark ? 'rgba(11,18,31,0.94)' : 'rgba(255,255,255,0.92)', padding: 14, borderLeftWidth: 1, borderLeftColor: colors.border },
+    raporTitle: { fontSize: 11, fontWeight: '900', color: colors.text, letterSpacing: 1, marginBottom: 16, textAlign: 'center' },
     raporCircleBox: { alignItems: 'center', marginBottom: 12 },
     raporCircle: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#EEF2FF', borderWidth: 6, borderColor: '#2563EB', alignItems: 'center', justifyContent: 'center' },
     raporCirclePercent: { fontSize: 20, fontWeight: '900', color: '#2563EB' },
-    raporCircleLabel: { fontSize: 8, color: '#6B7280', fontWeight: '600' },
-    raporProgressBg: { height: 6, backgroundColor: '#F3F4F6', borderRadius: 3, overflow: 'hidden', marginBottom: 16 },
+    raporCircleLabel: { fontSize: 8, color: colors.textSecondary, fontWeight: '600' },
+    raporProgressBg: { height: 6, backgroundColor: colors.trackBg, borderRadius: 3, overflow: 'hidden', marginBottom: 16 },
     raporProgressFill: { height: 6, backgroundColor: '#2563EB', borderRadius: 3 },
     raporStats: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
     raporStatItem: { alignItems: 'center' },
-    raporStatNum: { fontSize: 18, fontWeight: '900', color: '#111827' },
-    raporStatLabel: { fontSize: 9, color: '#9CA3AF', fontWeight: '600' },
-    raporColItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
-    raporColName: { fontSize: 10, fontWeight: '700', color: '#374151' },
+    raporStatNum: { fontSize: 18, fontWeight: '900', color: colors.text },
+    raporStatLabel: { fontSize: 9, color: colors.textSecondary, fontWeight: '600' },
+    raporColItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: 1, borderTopColor: colors.border },
+    raporColName: { fontSize: 10, fontWeight: '700', color: colors.text },
     raporColCount: { fontSize: 10, fontWeight: '900', color: '#6366F1' },
     raporMemberItem: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
     raporMemberAvatar: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center' },
     raporMemberAvatarText: { color: '#fff', fontSize: 10, fontWeight: '800' },
-    raporMemberName: { fontSize: 10, color: '#374151', fontWeight: '600', flex: 1 },
+    raporMemberName: { fontSize: 10, color: colors.text, fontWeight: '600', flex: 1 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-    bgPickerModal: { backgroundColor: '#fff', borderRadius: 24, padding: 24, width: '100%' },
-    bgPickerTitle: { fontSize: 18, fontWeight: '800', color: '#111827', marginBottom: 16, textAlign: 'center' },
+    bgPickerModal: { backgroundColor: colors.modalBg, borderRadius: 24, padding: 24, width: '100%' },
+    bgPickerTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 16, textAlign: 'center' },
     bgPickerRow: { flexDirection: 'row', gap: 12, justifyContent: 'center', marginBottom: 16 },
     bgThumb: { width: 80, height: 80, borderRadius: 14, overflow: 'hidden', borderWidth: 3, borderColor: 'transparent' },
     bgThumbActive: { borderColor: '#2563EB' },
     bgThumbImg: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
     bgThumbCheck: { backgroundColor: 'rgba(37,99,235,0.7)', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
     bgPickerClose: { alignItems: 'center', paddingVertical: 10 },
-    bgPickerCloseText: { color: '#6B7280', fontWeight: '700' },
-    addModal: { backgroundColor: '#fff', borderRadius: 24, padding: 24, width: '100%', maxHeight: '90%' },
+    bgPickerCloseText: { color: colors.textSecondary, fontWeight: '700' },
+    addModal: { backgroundColor: colors.modalBg, borderRadius: 24, padding: 24, width: '100%', maxHeight: '90%' },
     addModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    addModalTitle: { fontSize: 20, fontWeight: '800', color: '#111827' },
-    addLabel: { fontSize: 11, fontWeight: '700', color: '#6B7280', marginBottom: 6, marginTop: 12, letterSpacing: 0.5 },
-    addInput: { height: 46, backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, paddingHorizontal: 14, fontSize: 14, color: '#111827' },
+    addModalTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
+    addLabel: { fontSize: 11, fontWeight: '700', color: colors.textSecondary, marginBottom: 6, marginTop: 12, letterSpacing: 0.5 },
+    addInput: { height: 46, backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 12, paddingHorizontal: 14, fontSize: 14, color: colors.inputText },
     membersSelectRow: { flexDirection: 'row', gap: 10, paddingVertical: 4 },
-    memberChip: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 2, borderColor: 'transparent' },
+    memberChip: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.trackBg, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 2, borderColor: 'transparent' },
     memberChipActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
     memberChipAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center' },
     memberChipAvatarText: { color: '#fff', fontSize: 12, fontWeight: '800' },
-    memberChipName: { fontSize: 13, fontWeight: '600', color: '#374151' },
+    memberChipName: { fontSize: 13, fontWeight: '600', color: colors.text },
     priorityRow: { flexDirection: 'row', gap: 8 },
-    priorityChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#E5E7EB' },
-    priorityChipText: { fontSize: 12, fontWeight: '700', color: '#6B7280' },
+    priorityChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: colors.border },
+    priorityChipText: { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
     addSubmitBtn: { backgroundColor: '#2563EB', height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
     addSubmitText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

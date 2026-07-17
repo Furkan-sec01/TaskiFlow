@@ -10,15 +10,7 @@ function RootLayoutContent() {
 
   return (
     <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="welcome" />
-        <Stack.Screen name="login" />
-        <Stack.Screen name="register" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="proje-panosu" />
-        <Stack.Screen name="proje-raporu" />
-        <Stack.Screen name="calisan-detay" />
-      </Stack>
+      <Stack screenOptions={{ headerShown: false }} />
       <StatusBar style={isDark ? "light" : "dark"} />
     </ThemeProvider>
   );
@@ -31,5 +23,3 @@ export default function RootLayout() {
     </AppThemeProvider>
   );
 }
-
-
