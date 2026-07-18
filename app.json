@@ -1,0 +1,12 @@
+{
+  "android": {
+    "package": "com.meryemmm.taskiflowroot"
+  },
+  "ios": {
+    "bundleIdentifier": "com.meryemmm.taskiflowroot"
+  },
+  "plugins": [
+    "expo-router",
+    "expo-status-bar"
+  ]
+}
