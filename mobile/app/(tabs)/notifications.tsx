@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { API_URL } from "@/constants/api";
 import { useTheme } from "@/context/ThemeContext";
+import { useLanguage } from "@/context/LanguageContext";
 
 type NotificationItem = {
   id: string;
@@ -37,6 +38,7 @@ type SortKey = "NEWEST" | "UNREAD_FIRST";
 
 export default function BildirimlerScreen() {
   const { colors } = useTheme();
+  const { t } = useLanguage();
   const [token, setToken] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -208,14 +210,21 @@ export default function BildirimlerScreen() {
 
     setLoading(true);
     try {
-      await fetch(`${API_URL}/notifications/read-all`, {
+      const res = await fetch(`${API_URL}/notifications/read-all`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        Alert.alert("Hata", data?.error || data?.message || "Bildirimler güncellenemedi.");
+        return;
+      }
+
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch (err) {
       console.log("Tümü okundu yapılamadı:", err);
+      Alert.alert("Hata", "Bildirimler güncellenemedi.");
     } finally {
       setLoading(false);
     }
@@ -388,7 +397,7 @@ export default function BildirimlerScreen() {
             </View>
 
             <View style={styles.headerTextArea}>
-              <Text style={[styles.headerTitle, { color: colors.text }]}>Bildirimler</Text>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>{t("notifications.title")}</Text>
               <Text style={[styles.headerSub, { color: colors.textSecondary }]}>{allReadText}</Text>
             </View>
           </View>

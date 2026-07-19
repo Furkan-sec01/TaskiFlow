@@ -6,9 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useTheme } from '@/context/ThemeContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function TabLayout() {
   const { colors } = useTheme();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
 
   return (
@@ -31,8 +33,8 @@ export default function TabLayout() {
         },
       }}>
 
-      <Tabs.Screen name="genel-bakis" options={{ title: 'Genel Bakış', tabBarIcon: ({ color }) => <IconSymbol size={24} name="folder.fill" color={color} /> }} />
-      <Tabs.Screen name="ai" options={{ title: 'AI', tabBarIcon: ({ color }) => <IconSymbol size={24} name="sparkles" color={color} /> }} />
+      <Tabs.Screen name="genel-bakis" options={{ title: t('tabs.overview'), tabBarIcon: ({ color }) => <IconSymbol size={24} name="folder.fill" color={color} /> }} />
+      <Tabs.Screen name="ai" options={{ title: t('tabs.ai'), tabBarIcon: ({ color }) => <IconSymbol size={24} name="sparkles" color={color} /> }} />
       <Tabs.Screen name="add" options={{ title: '', tabBarIcon: () => (
         <View style={styles.centerBtn}>
           <View style={styles.centerBtnInner}>
@@ -40,8 +42,8 @@ export default function TabLayout() {
           </View>
         </View>
       ), tabBarLabel: () => null }} />
-      <Tabs.Screen name="reports" options={{ title: 'Raporlar', tabBarIcon: ({ color }) => <IconSymbol size={24} name="chart.bar.fill" color={color} /> }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profil', tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.fill" color={color} /> }} />
+      <Tabs.Screen name="reports" options={{ title: t('tabs.reports'), tabBarIcon: ({ color }) => <IconSymbol size={24} name="chart.bar.fill" color={color} /> }} />
+      <Tabs.Screen name="profile" options={{ title: t('tabs.profile'), tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.fill" color={color} /> }} />
 
       {/* Gizli sayfalar */}
       <Tabs.Screen name="tasks" options={{ href: null }} />

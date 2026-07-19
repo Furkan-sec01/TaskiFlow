@@ -294,10 +294,18 @@ exports.changePassword = async (req, res) => {
       return res.status(400).json({ error: "Tüm alanlar doldurulmalıdır." });
     }
 
-    if (newPasswordTrimmed.length < 6) {
-      return res
-        .status(400)
-        .json({ error: "Yeni şifre en az 6 karakter olmalıdır." });
+    const passwordPolicyOk =
+      newPasswordTrimmed.length >= 8 &&
+      /[A-Z]/.test(newPasswordTrimmed) &&
+      /[a-z]/.test(newPasswordTrimmed) &&
+      /\d/.test(newPasswordTrimmed) &&
+      /[^A-Za-z0-9]/.test(newPasswordTrimmed);
+
+    if (!passwordPolicyOk) {
+      return res.status(400).json({
+        error:
+          "Yeni şifre en az 8 karakter olmalı ve büyük harf, küçük harf, rakam ile özel karakter içermelidir.",
+      });
     }
 
     if (newPasswordTrimmed !== confirmPasswordTrimmed) {

@@ -10,6 +10,20 @@ exports.register = async (req, res) => {
   const { email, password, name } = req.body;
 
   try {
+    if (
+      typeof password !== "string" ||
+      password.length < 8 ||
+      !/[A-Z]/.test(password) ||
+      !/[a-z]/.test(password) ||
+      !/\d/.test(password) ||
+      !/[^A-Za-z0-9]/.test(password)
+    ) {
+      return res.status(400).json({
+        error:
+          "Şifre en az 8 karakter olmalı; büyük harf, küçük harf, rakam ve özel karakter içermelidir.",
+      });
+    }
+
     const user = await prisma.user.findUnique({
       where: {email}
     });

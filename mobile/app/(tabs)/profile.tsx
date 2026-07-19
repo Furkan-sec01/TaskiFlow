@@ -10,6 +10,7 @@ import {
   Alert,
   Switch,
   Image,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter,useFocusEffect } from "expo-router";
@@ -19,12 +20,16 @@ import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "@/constants/api";
 import { useTheme, ThemeMode, ThemeColors } from "@/context/ThemeContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { validatePasswordPolicy } from "@/utils/passwordPolicy";
 
 const STORAGE_KEYS = {
   theme: "profile_theme",
   language: "profile_language",
   notifications: "profile_notifications",
 };
+
+const SUPPORT_EMAIL = "support@ndmsoftware.com";
 
 const PLAN_LABELS: Record<string, string> = {
   FREE: "Ücretsiz Başlangıç",
@@ -140,12 +145,12 @@ const SecurityAccordionItem = ({
 export default function ProfileScreen() {
   const router = useRouter();
   const { theme, setTheme, isDark, colors } = useTheme();
+  const { languageLabel, setLanguage, t, languageOptions } = useLanguage();
 
   const [currentPlan, setCurrentPlan] = useState("FREE");
 
   const [userName, setUserName] = useState("semra");
   const [userEmail, setUserEmail] = useState("smtosun44@gmail.com");
-  const [language, setLanguage] = useState("Türkçe");
   const [notifEnabled, setNotifEnabled] = useState(true);
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
@@ -188,6 +193,11 @@ export default function ProfileScreen() {
   const [completedTaskCount, setCompletedTaskCount] = useState(0);
   const [newPass, setNewPass] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   const [sessions, setSessions] = useState([
     {
@@ -252,19 +262,6 @@ export default function ProfileScreen() {
    }, [])
   );
   
-  useEffect(() => {
-    const loadPreferences = async () => {
-      try {
-        const savedLanguage = await AsyncStorage.getItem(STORAGE_KEYS.language);
-        if (savedLanguage) setLanguage(savedLanguage);
-      } catch (error) {
-        console.log("Tercihler yüklenemedi:", error);
-      }
-    };
-
-    loadPreferences();
-  }, []);
-
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -353,12 +350,12 @@ export default function ProfileScreen() {
 
   const handleLanguageChange = async (selectedLanguage: string) => {
     try {
-      setLanguage(selectedLanguage);
-      await AsyncStorage.setItem(STORAGE_KEYS.language, selectedLanguage);
+      await setLanguage(selectedLanguage);
       setLangModal(false);
+      Alert.alert(t("common.success"), t("profile.languageChanged"));
     } catch (error) {
       console.log("Dil kaydedilemedi:", error);
-      Alert.alert("Hata", "Dil kaydedilemedi.");
+      Alert.alert(t("common.error"), "Dil kaydedilemedi.");
     }
   };
 
@@ -520,26 +517,37 @@ export default function ProfileScreen() {
   };
 
   const saveSecurityPassword = async () => {
+    setPasswordError("");
+
     if (!currentPass.trim()) {
-      Alert.alert("Hata", "Mevcut şifrenizi girin.");
+      const msg = t("password.needCurrent");
+      setPasswordError(msg);
+      Alert.alert(t("common.error"), msg);
       return;
     }
 
-    if (newPass.trim().length < 6) {
-      Alert.alert("Hata", "Yeni şifre en az 6 karakter olmalı.");
+    if (!validatePasswordPolicy(newPass)) {
+      const msg = t("password.policyFail");
+      setPasswordError(msg);
+      Alert.alert(t("common.error"), msg);
       return;
     }
 
     if (newPass !== confirmPass) {
-      Alert.alert("Hata", "Şifreler eşleşmiyor.");
+      const msg = t("password.mismatch");
+      setPasswordError(msg);
+      Alert.alert(t("common.error"), msg);
       return;
     }
 
     try {
+      setPasswordSaving(true);
       const token = await AsyncStorage.getItem("token");
 
       if (!token) {
-        Alert.alert("Hata", "Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+        const msg = t("password.sessionMissing");
+        setPasswordError(msg);
+        Alert.alert(t("common.error"), msg);
         return;
       }
 
@@ -557,32 +565,41 @@ export default function ProfileScreen() {
       });
 
       const data = await res.json().catch(() => null);
-      console.log("CHANGE PASSWORD RESPONSE:", data);
+      console.log("CHANGE PASSWORD RESPONSE:", res.status, data);
 
       if (!res.ok) {
-        Alert.alert(
-          "Hata",
-          data?.error || data?.message || "Şifre güncellenemedi."
-        );
+        const msg =
+          data?.error ||
+          data?.message ||
+          (res.status === 404
+            ? "Şifre değiştirme servisi bulunamadı."
+            : t("password.updateFailed"));
+        setPasswordError(msg);
+        Alert.alert(t("common.error"), msg);
         return;
       }
 
       setCurrentPass("");
       setNewPass("");
       setConfirmPass("");
+      setPasswordError("");
 
-      Alert.alert("Başarılı ✅", data?.message || "Şifre güncellendi.");
+      Alert.alert(t("common.success"), data?.message || t("password.updated"));
     } catch (error) {
       console.log("Şifre değiştirme hatası:", error);
-      Alert.alert("Hata", "Sunucu hatası");
+      const msg = t("password.serverError");
+      setPasswordError(msg);
+      Alert.alert(t("common.error"), msg);
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
   const handleLogout = async () => {
-    Alert.alert("Çıkış Yap", "Çıkış yapmak istediğinize emin misiniz?", [
-      { text: "İptal", style: "cancel" },
+    Alert.alert(t("profile.logout"), t("profile.logoutConfirm"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Çıkış Yap",
+        text: t("profile.logout"),
         style: "destructive",
         onPress: async () => {
           await AsyncStorage.removeItem("token");
@@ -685,37 +702,51 @@ export default function ProfileScreen() {
     );
   };
 
+  const openSupportEmail = async () => {
+    const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("TaskiFlow Destek")}`;
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (!canOpen) {
+        Alert.alert(t("profile.helpTitle"), SUPPORT_EMAIL);
+        return;
+      }
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert(t("profile.helpTitle"), SUPPORT_EMAIL);
+    }
+  };
+
   const MENU_SECTIONS = [
     {
-      title: "Organizasyon",
+      title: t("profile.section.org"),
       items: [
         {
           icon: "business-center",
-          label: "Çalışma Alanı",
+          label: t("profile.workspace"),
           color: "#2563EB",
-          value: "Detaylar",
+          value: t("profile.details"),
           onPress: () => router.push("/workspace"),
         },
         {
           icon: "groups",
-          label: "Takımlar",
+          label: t("profile.teams"),
           color: "#0EA5E9",
           onPress: () => router.push("/teams"),
         },
         {
           icon: "people",
-          label: "Üyeler",
+          label: t("profile.members"),
           color: "#14B8A6",
           onPress: () => router.push("/members"),
         },
       ],
     },
     {
-      title: "Hesap",
+      title: t("profile.section.account"),
       items: [
         {
           icon: "person",
-          label: "Profil Bilgileri",
+          label: t("profile.profileInfo"),
           color: "#2563EB",
           onPress: () => {
             setTempName(userName);
@@ -731,86 +762,92 @@ export default function ProfileScreen() {
         },
         {
           icon: "security",
-          label: "Güvenlik ve Erişim",
+          label: t("profile.security"),
           color: "#DC2626",
           onPress: () => {
             setCurrentPass("");
             setNewPass("");
             setConfirmPass("");
+            setPasswordError("");
+            setShowCurrentPass(false);
+            setShowNewPass(false);
+            setShowConfirmPass(false);
             setSecurityModal(true);
           },
         },
         {
           icon: "link",
-          label: "Bağlı Hesaplar",
+          label: t("profile.connected"),
           color: "#8B5CF6",
-          onPress: () => showComingSoon("Bağlı Hesaplar"),
+          onPress: () => router.push("/connected-accounts"),
         },
         {
           icon: "credit-card",
-          label: "Abonelik ve Planlar",
+          label: t("profile.plans"),
           color: "#2563EB",
           onPress: () => router.push("/plans"),
         },
         {
           icon: "receipt-long",
-          label: "Ödeme Geçmişi",
+          label: t("profile.paymentHistory"),
           color: "#10B981",
           onPress: () => router.push("/payment-history"),
         },
       ],
     },
     {
-      title: "Tercihler",
+      title: t("profile.section.prefs"),
       items: [
         {
           icon: "notifications",
-          label: "Bildirim Ayarları",
+          label: t("profile.notifSettings"),
           color: "#F59E0B",
-          value: notifEnabled ? "Açık" : "Kapalı",
+          value: notifEnabled ? t("common.on") : t("common.off"),
           onPress: () => setNotifModal(true),
         },
         {
           icon: "dark-mode",
-          label: "Tema",
+          label: t("profile.theme"),
           color: "#6366F1",
           value: theme,
           onPress: () => setThemeModal(true),
         },
         {
           icon: "language",
-          label: "Dil",
+          label: t("profile.language"),
           color: "#2563EB",
-          value: language,
+          value: languageLabel,
           onPress: () => setLangModal(true),
         },
       ],
     },
     {
-      title: "Diğer",
+      title: t("profile.section.other"),
       items: [
         {
           icon: "help",
-          label: "Yardım & Destek",
+          label: t("profile.help"),
           color: "#8B5CF6",
           onPress: () =>
-            Alert.alert("Yardım & Destek", "support@ndmsoftware.com"),
+            Alert.alert(t("profile.helpTitle"), `${t("profile.helpBody")}\n${SUPPORT_EMAIL}`, [
+              { text: t("common.cancel"), style: "cancel" },
+              { text: t("profile.helpOpen"), onPress: openSupportEmail },
+            ]),
         },
         {
           icon: "description",
-          label: "Gizlilik Politikası",
+          label: t("profile.privacy"),
           color: "#6B7280",
-          onPress: () =>
-            Alert.alert("Gizlilik Politikası", "Verileriniz güvende."),
+          onPress: () => router.push("/privacy"),
         },
         {
           icon: "star",
-          label: "Uygulamayı Değerlendir",
+          label: t("profile.rate"),
           color: "#F59E0B",
           onPress: () =>
             Alert.alert(
-              "Teşekkürler ⭐",
-              "Geri bildiriminiz için teşekkür ederiz."
+              "⭐",
+              t("profile.rateThanks")
             ),
         },
       ],
@@ -849,7 +886,7 @@ export default function ProfileScreen() {
           <View style={styles.roleRow}>
             <View style={styles.roleBadge}>
               <Text style={styles.roleBadgeText}>
-                {userDepartment || "Rol Seçilmedi"}
+                {userDepartment || t("profile.roleFallback")}
               </Text>
             </View>
             <View style={styles.roleBadge}>
@@ -958,7 +995,7 @@ export default function ProfileScreen() {
             size={20}
             color="#EF4444"
           />
-          <Text style={styles.logoutText}>Çıkış Yap</Text>
+          <Text style={styles.logoutText}>{t("profile.logout")}</Text>
         </Pressable>
 
         <Text style={[styles.version, { color: colors.textSecondary }]}>TaskiFlow v1.0.0</Text>
@@ -1121,29 +1158,29 @@ export default function ProfileScreen() {
       <Sheet
         visible={langModal}
         onClose={() => setLangModal(false)}
-        title="Dil Seç"
+        title={t("profile.chooseLanguage")}
         colors={colors}
       >
-        {["Türkçe", "English", "العربية"].map((l) => (
+        {languageOptions.map((l) => (
           <Pressable
-            key={l}
+            key={l.code}
             style={[
               styles.optionRow,
               { backgroundColor: colors.inputBg },
-              language === l && [styles.optionRowActive, { backgroundColor: colors.cardLight, borderColor: colors.primary }],
+              languageLabel === l.label && [styles.optionRowActive, { backgroundColor: colors.cardLight, borderColor: colors.primary }],
             ]}
-            onPress={() => handleLanguageChange(l)}
+            onPress={() => handleLanguageChange(l.code)}
           >
             <Text
               style={[
                 styles.optionText,
                 { color: colors.text },
-                language === l && styles.optionTextActive,
+                languageLabel === l.label && styles.optionTextActive,
               ]}
             >
-              {l}
+              {l.label}
             </Text>
-            {language === l && (
+            {languageLabel === l.label && (
               <IconSymbol name="checkmark" size={18} color="#2563EB" />
             )}
           </Pressable>
@@ -1183,48 +1220,89 @@ export default function ProfileScreen() {
             <SecurityAccordionItem
               sectionKey="password"
               icon="lock-outline"
-              title="Şifre değiştir"
-              subtitle="En az 6 karakter, bir büyük harf ve rakam içermelidir"
+              title={t("password.changeTitle")}
+              subtitle={t("password.policy")}
               isOpen={openSecuritySection === "password"}
               onToggle={toggleSecuritySection}
               colors={colors}
             >
-              <Text style={[styles.securityInputLabel, { color: colors.textSecondary }]}>Mevcut şifre</Text>
-              <TextInput
-                style={[styles.securityInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
-                value={currentPass}
-                onChangeText={setCurrentPass}
-                secureTextEntry
-                placeholder="••••••••"
-                placeholderTextColor={colors.placeholder}
-              />
+              <Text style={[styles.securityInputLabel, { color: colors.textSecondary }]}>{t("password.current")}</Text>
+              <View style={[styles.passwordField, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                <TextInput
+                  style={[styles.passwordFieldInput, { color: colors.inputText }]}
+                  value={currentPass}
+                  onChangeText={(v) => {
+                    setCurrentPass(v);
+                    setPasswordError("");
+                  }}
+                  secureTextEntry={!showCurrentPass}
+                  placeholder="••••••••"
+                  placeholderTextColor={colors.placeholder}
+                />
+                <Pressable onPress={() => setShowCurrentPass((p) => !p)} hitSlop={8}>
+                  <MaterialIcons
+                    name={showCurrentPass ? "visibility-off" : "visibility"}
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                </Pressable>
+              </View>
 
-              <Text style={[styles.securityInputLabel, { color: colors.textSecondary }]}>Yeni şifre</Text>
-              <TextInput
-                style={[styles.securityInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
-                value={newPass}
-                onChangeText={setNewPass}
-                secureTextEntry
-                placeholder="••••••••"
-                placeholderTextColor={colors.placeholder}
-              />
+              <Text style={[styles.securityInputLabel, { color: colors.textSecondary }]}>{t("password.new")}</Text>
+              <View style={[styles.passwordField, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                <TextInput
+                  style={[styles.passwordFieldInput, { color: colors.inputText }]}
+                  value={newPass}
+                  onChangeText={(v) => {
+                    setNewPass(v);
+                    setPasswordError("");
+                  }}
+                  secureTextEntry={!showNewPass}
+                  placeholder="••••••••"
+                  placeholderTextColor={colors.placeholder}
+                />
+                <Pressable onPress={() => setShowNewPass((p) => !p)} hitSlop={8}>
+                  <MaterialIcons
+                    name={showNewPass ? "visibility-off" : "visibility"}
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                </Pressable>
+              </View>
 
-              <Text style={[styles.securityInputLabel, { color: colors.textSecondary }]}>Şifre tekrar</Text>
-              <TextInput
-                style={[styles.securityInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.inputText }]}
-                value={confirmPass}
-                onChangeText={setConfirmPass}
-                secureTextEntry
-                placeholder="••••••••"
-                placeholderTextColor={colors.placeholder}
-              />
+              <Text style={[styles.securityInputLabel, { color: colors.textSecondary }]}>{t("password.confirm")}</Text>
+              <View style={[styles.passwordField, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                <TextInput
+                  style={[styles.passwordFieldInput, { color: colors.inputText }]}
+                  value={confirmPass}
+                  onChangeText={(v) => {
+                    setConfirmPass(v);
+                    setPasswordError("");
+                  }}
+                  secureTextEntry={!showConfirmPass}
+                  placeholder="••••••••"
+                  placeholderTextColor={colors.placeholder}
+                />
+                <Pressable onPress={() => setShowConfirmPass((p) => !p)} hitSlop={8}>
+                  <MaterialIcons
+                    name={showConfirmPass ? "visibility-off" : "visibility"}
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                </Pressable>
+              </View>
+
+              {!!passwordError && (
+                <Text style={styles.passwordErrorText}>{passwordError}</Text>
+              )}
 
               <Pressable
-                style={styles.securityPrimaryButton}
+                style={[styles.securityPrimaryButton, passwordSaving && { opacity: 0.7 }]}
                 onPress={saveSecurityPassword}
+                disabled={passwordSaving}
               >
                 <Text style={styles.securityPrimaryButtonText}>
-                  Şifreyi güncelle
+                  {passwordSaving ? t("common.loading") : t("password.update")}
                 </Text>
               </Pressable>
             </SecurityAccordionItem>
@@ -1919,6 +1997,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     fontSize: 14,
     color: "#111827",
+  },
+  passwordField: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+  },
+  passwordFieldInput: {
+    flex: 1,
+    height: 48,
+    fontSize: 14,
+    paddingRight: 8,
+  },
+  passwordErrorText: {
+    marginTop: 12,
+    color: "#DC2626",
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
   },
   securityPrimaryButton: {
     marginTop: 18,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
     View,
     Text,
@@ -13,9 +13,10 @@ import {
     Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "@/context/ThemeContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { API_URL } from "@/constants/api";
 
 interface Member {
@@ -39,6 +40,7 @@ const AVATAR_COLORS = ["#2563EB", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#
 
 export default function GenelBakisScreen() {
     const { isDark, colors } = useTheme();
+    const { t } = useLanguage();
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
@@ -54,8 +56,36 @@ export default function GenelBakisScreen() {
     const [projectDesc, setProjectDesc] = useState("");
     const [newMemberEmail, setNewMemberEmail] = useState("");
     const [addingMember, setAddingMember] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    const fetchUnreadCount = useCallback(async () => {
+        try {
+            const token = await AsyncStorage.getItem("token");
+            if (!token) {
+                setUnreadCount(0);
+                return;
+            }
+            const res = await fetch(`${API_URL}/notifications/unread-count`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) {
+                setUnreadCount(0);
+                return;
+            }
+            const data = await res.json();
+            setUnreadCount(Number(data?.count) || 0);
+        } catch {
+            setUnreadCount(0);
+        }
+    }, []);
 
     useEffect(() => { loadUserAndOrg(); }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchUnreadCount();
+        }, [fetchUnreadCount])
+    );
 
     const loadUserAndOrg = async () => {
         try {
@@ -277,10 +307,10 @@ for (const colName of defaultColumns) {
                 <View style={styles.backButton}>
                     <MaterialIcons name="home" size={24} color={colors.text} />
                 </View>
-                <Text style={[styles.welcomeText, { color: colors.text }]}>Hoş Geldiniz, {userName}</Text>
+                <Text style={[styles.welcomeText, { color: colors.text }]}>{t("overview.welcome", { name: userName })}</Text>
                 <Pressable style={styles.notifBtn} onPress={() => router.push("/notifications")}>
                     <MaterialIcons name="notifications" size={24} color={colors.text} />
-                    <View style={styles.notifDot} />
+                    {unreadCount > 0 ? <View style={styles.notifDot} /> : null}
                 </Pressable>
             </View>
 
@@ -290,7 +320,7 @@ for (const colName of defaultColumns) {
                         <MaterialIcons name="search" size={20} color={colors.placeholder} />
                         <TextInput
                             style={[styles.searchInput, { color: colors.inputText }]}
-                            placeholder="Proje kayıtlarında ara..."
+                            placeholder={t("overview.search")}
                             placeholderTextColor={colors.placeholder}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
@@ -298,15 +328,15 @@ for (const colName of defaultColumns) {
                     </View>
                     <Pressable style={styles.newProjectBtn} onPress={() => setModalVisible(true)}>
                         <MaterialIcons name="add" size={20} color="#fff" />
-                        <Text style={styles.newProjectBtnText}>Yeni Proje</Text>
+                        <Text style={styles.newProjectBtnText}>{t("overview.newProject")}</Text>
                     </Pressable>
                 </View>
 
                 <View style={styles.teamSection}>
                     <View style={styles.sectionHeader}>
-                        <Text style={[styles.sectionTitle, { color: colors.text }]}>Şirket Çalışanları</Text>
+                        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t("overview.employees")}</Text>
                         <View style={[styles.line, { backgroundColor: colors.line }]} />
-                        <Text style={[styles.sectionCount, { color: colors.textSecondary }]}>{members.length} ÜYE</Text>
+                        <Text style={[styles.sectionCount, { color: colors.textSecondary }]}>{t("overview.membersCount", { count: members.length })}</Text>
                         <Pressable style={styles.addMemberBtn} onPress={() => setAddMemberModal(true)}>
                             <MaterialIcons name="person-add" size={18} color={colors.primary} />
                         </Pressable>
@@ -315,7 +345,7 @@ for (const colName of defaultColumns) {
                     {membersLoading ? (
                         <ActivityIndicator size="small" color={colors.primary} />
                     ) : members.length === 0 ? (
-                        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Henüz ekip üyesi yok.</Text>
+                        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t("overview.noMembers")}</Text>
                     ) : (
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.membersList}>
                             {members.map((m, i) => (
@@ -343,9 +373,9 @@ for (const colName of defaultColumns) {
                 </View>
 
                 <View style={styles.sectionHeader}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Kayıtlı Projeler</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>{t("overview.savedProjects")}</Text>
                     <View style={[styles.line, { backgroundColor: colors.line }]} />
-                    <Text style={[styles.sectionCount, { color: colors.textSecondary }]}>{activeProjects.length} TOPLAM</Text>
+                    <Text style={[styles.sectionCount, { color: colors.textSecondary }]}>{t("overview.total", { count: activeProjects.length })}</Text>
                 </View>
 
                 {loading ? (
@@ -353,7 +383,7 @@ for (const colName of defaultColumns) {
                 ) : activeProjects.length === 0 ? (
                     <View style={[styles.emptyProjectsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <MaterialIcons name="web-asset" size={48} color={colors.placeholder} />
-                        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Görüntülenecek proje bulunamadı.</Text>
+                        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t("overview.noProjects")}</Text>
                     </View>
                 ) : (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.projectsList}>
@@ -377,7 +407,7 @@ for (const colName of defaultColumns) {
                                     {proj.description ? <Text style={[styles.projectDesc, { color: colors.textSecondary }]} numberOfLines={1}>{proj.description}</Text> : null}
                                     <View style={styles.progressSection}>
                                         <View style={styles.progressLabelRow}>
-                                            <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>İlerleme</Text>
+                                            <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>{t("overview.progress")}</Text>
                                             <Text style={[styles.progressPercent, { color: progressColor }]}>%{proj.progress || 0}</Text>
                                         </View>
                                         <View style={[styles.progressBarBg, { backgroundColor: isDark ? '#1E293B' : '#F3F4F6' }]}>
@@ -402,7 +432,7 @@ for (const colName of defaultColumns) {
                                             <MaterialIcons name="calendar-today" size={12} color={colors.placeholder} />
                                             <Text style={[styles.dateText, { color: colors.textSecondary }]}>{formatDate(proj.createdAt)}</Text>
                                         </View>
-                                        <Text style={[styles.openFileText, { color: colors.primary }]}>Dosyayı Aç {">"}</Text>
+                                        <Text style={[styles.openFileText, { color: colors.primary }]}>{t("overview.openFile")}</Text>
                                     </View>
                                 </Pressable>
                             );
@@ -413,9 +443,9 @@ for (const colName of defaultColumns) {
                 {completedProjects.length > 0 && (
                     <>
                         <View style={styles.sectionHeader}>
-                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Tamamlanan Projeler</Text>
+                            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t("overview.completedProjects")}</Text>
                             <View style={[styles.line, { backgroundColor: colors.line }]} />
-                            <Text style={[styles.sectionCount, { color: colors.textSecondary }]}>{completedProjects.length} TOPLAM</Text>
+                            <Text style={[styles.sectionCount, { color: colors.textSecondary }]}>{t("overview.total", { count: completedProjects.length })}</Text>
                         </View>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.projectsList}>
                             {completedProjects.map((proj) => (
@@ -436,7 +466,7 @@ for (const colName of defaultColumns) {
                                     {proj.description ? <Text style={[styles.projectDesc, { color: colors.textSecondary }]} numberOfLines={1}>{proj.description}</Text> : null}
                                     <View style={styles.progressSection}>
                                         <View style={styles.progressLabelRow}>
-                                            <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>İlerleme</Text>
+                                            <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>{t("overview.progress")}</Text>
                                             <Text style={[styles.progressPercent, { color: "#10B981" }]}>%100</Text>
                                         </View>
                                         <View style={[styles.progressBarBg, { backgroundColor: isDark ? '#1E293B' : '#F3F4F6' }]}>
@@ -448,7 +478,7 @@ for (const colName of defaultColumns) {
                                             <MaterialIcons name="calendar-today" size={12} color={colors.placeholder} />
                                             <Text style={[styles.dateText, { color: colors.textSecondary }]}>{formatDate(proj.createdAt)}</Text>
                                         </View>
-                                        <Text style={[styles.openFileText, { color: "#10B981" }]}>Dosyayı Aç {">"}</Text>
+                                        <Text style={[styles.openFileText, { color: "#10B981" }]}>{t("overview.openFile")}</Text>
                                     </View>
                                 </Pressable>
                             ))}
@@ -459,14 +489,14 @@ for (const colName of defaultColumns) {
                 <View style={styles.statsLayout}>
                     <View style={[styles.totalCard, { backgroundColor: colors.card }]}>
                         <View style={styles.totalCardHeader}>
-                            <Text style={[styles.totalCardTitle, { color: colors.textSecondary }]}>TOPLAM PROJE</Text>
+                            <Text style={[styles.totalCardTitle, { color: colors.textSecondary }]}>{t("overview.totalProjects")}</Text>
                             <View style={[styles.folderIconLight, { backgroundColor: isDark ? '#1E293B' : '#EEF2FF' }]}><MaterialIcons name="folder" size={20} color={colors.primary} /></View>
                         </View>
                         <Text style={[styles.totalNumber, { color: colors.text }]}>{projects.length}</Text>
                     </View>
                     <View style={[styles.avgCard, { backgroundColor: colors.card }]}>
                         <View style={styles.totalCardHeader}>
-                            <Text style={[styles.totalCardTitle, { color: colors.textSecondary }]}>ORTALAMA İLERLEME</Text>
+                            <Text style={[styles.totalCardTitle, { color: colors.textSecondary }]}>{t("overview.avgProgress")}</Text>
                             <View style={[styles.folderIconLight, { backgroundColor: isDark ? '#065F46' : "#F0FDF4" }]}><MaterialIcons name="trending-up" size={20} color="#10B981" /></View>
                         </View>
                         <Text style={[styles.totalNumber, { color: "#10B981" }]}>

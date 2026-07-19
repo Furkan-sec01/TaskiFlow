@@ -37,8 +37,17 @@ export default function RegisterScreen() {
             Alert.alert("Hata", "Geçerli e-posta girin.");
             return;
         }
-        if (password.length < 6) {
-            Alert.alert("Hata", "Şifre en az 6 karakter.");
+        if (
+            password.length < 8 ||
+            !/[A-Z]/.test(password) ||
+            !/[a-z]/.test(password) ||
+            !/\d/.test(password) ||
+            !/[^A-Za-z0-9]/.test(password)
+        ) {
+            Alert.alert(
+                "Hata",
+                "Şifre en az 8 karakter olmalı; büyük harf, küçük harf, rakam ve özel karakter içermelidir."
+            );
             return;
         }
         if (name.trim().split(" ").length < 2) {

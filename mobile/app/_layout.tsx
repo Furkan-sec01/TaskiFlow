@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { AppThemeProvider, useTheme } from '@/context/ThemeContext';
+import { LanguageProvider } from '@/context/LanguageContext';
 
 function RootLayoutContent() {
   const { isDark } = useTheme();
@@ -19,7 +20,9 @@ function RootLayoutContent() {
 export default function RootLayout() {
   return (
     <AppThemeProvider>
-      <RootLayoutContent />
+      <LanguageProvider>
+        <RootLayoutContent />
+      </LanguageProvider>
     </AppThemeProvider>
   );
 }
